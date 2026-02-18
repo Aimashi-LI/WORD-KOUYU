@@ -2,13 +2,15 @@ import React, { useState, useMemo, useRef } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { PanGestureHandler, GestureHandlerRootView, State } from 'react-native-gesture-handler';
-import Animated, { 
-  useAnimatedStyle, 
+import Animated, {
+  useAnimatedStyle,
   withSpring,
   withTiming,
   runOnJS,
-  useSharedValue 
+  useSharedValue
 } from 'react-native-reanimated';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -27,7 +29,7 @@ export default function BrushWordsScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   const { projectId } = useSafeSearchParams<{ projectId?: string }>();
-  
+
   const [words, setWords] = useState<Word[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -39,10 +41,14 @@ export default function BrushWordsScreen() {
   const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
   const [showOverlapAlert, setShowOverlapAlert] = useState(false);
   const [overlapInfo, setOverlapInfo] = useState<{ overlapCount: number; existingWordbookName: string } | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
 
   // 手势相关
   const translateX = useSharedValue(0);
   const swipeThreshold = 100;
+
+  // 卡片引用，用于截图分享
+  const cardRef = useRef<View>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -249,6 +255,36 @@ export default function BrushWordsScreen() {
     };
   });
 
+  // 分享单词卡片
+  const handleShare = async () => {
+    if (!currentWord || !cardRef.current) return;
+
+    try {
+      setIsSharing(true);
+
+      // 捕获卡片视图为图片
+      const uri = await captureRef(cardRef, {
+        format: 'png',
+        quality: 1,
+      });
+
+      // 检查设备是否支持分享
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          dialogTitle: `分享单词：${currentWord.word}`,
+          mimeType: 'image/png',
+        });
+      } else {
+        Alert.alert('提示', '您的设备不支持分享功能');
+      }
+    } catch (error) {
+      console.error('分享失败:', error);
+      Alert.alert('错误', '分享失败，请重试');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   if (loading) {
     return (
       <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
@@ -314,58 +350,72 @@ export default function BrushWordsScreen() {
             onHandlerStateChange={onHandlerStateChange}
           >
             <Animated.View style={[styles.cardContainer, animatedStyle]}>
-              <ThemedView level="default" style={styles.wordCard}>
-                {/* 单词 */}
-                <View style={styles.wordSection}>
-                  <ThemedText variant="h1" color={theme.textPrimary} style={styles.wordText}>
-                    {currentWord.word}
-                  </ThemedText>
-                  {currentWord.phonetic && (
-                    <ThemedText variant="body" color={theme.textSecondary} style={styles.phonetic}>
-                      {currentWord.phonetic}
+              <View ref={cardRef} collapsable={false}>
+                <ThemedView level="default" style={styles.wordCard}>
+                  {/* 单词 */}
+                  <View style={styles.wordSection}>
+                    <ThemedText variant="h1" color={theme.textPrimary} style={styles.wordText}>
+                      {currentWord.word}
                     </ThemedText>
-                  )}
-                </View>
+                    {currentWord.phonetic && (
+                      <ThemedText variant="body" color={theme.textSecondary} style={styles.phonetic}>
+                        {currentWord.phonetic}
+                      </ThemedText>
+                    )}
+                  </View>
 
-                {/* 分割 */}
-                {currentWord.split && (
-                  <ThemedView level="tertiary" style={styles.splitSection}>
-                    <FontAwesome6 name="scissors" size={16} color={theme.accent} />
-                    <ThemedText variant="body" color={theme.textSecondary} style={styles.splitText}>
-                      {currentWord.split}
-                    </ThemedText>
-                  </ThemedView>
-                )}
-
-                {/* 助记符 */}
-                {currentWord.mnemonic && (
-                  <ThemedView level="tertiary" style={styles.mnemonicSection}>
-                    <FontAwesome6 name="lightbulb" size={16} color={theme.accent} />
-                    <ThemedText variant="body" color={theme.textSecondary} style={styles.mnemonicText}>
-                      {currentWord.mnemonic}
-                    </ThemedText>
-                  </ThemedView>
-                )}
-
-                {/* 词性和释义 - 始终显示 */}
-                <View style={styles.definitionSection}>
-                  {currentWord.partOfSpeech && (
-                    <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.partOfSpeech}>
-                      {currentWord.partOfSpeech}.
-                    </ThemedText>
+                  {/* 分割 */}
+                  {currentWord.split && (
+                    <ThemedView level="tertiary" style={styles.splitSection}>
+                      <FontAwesome6 name="scissors" size={16} color={theme.accent} />
+                      <ThemedText variant="body" color={theme.textSecondary} style={styles.splitText}>
+                        {currentWord.split}
+                      </ThemedText>
+                    </ThemedView>
                   )}
-                  <ThemedText variant="body" color={theme.textPrimary}>
-                    {currentWord.definition}
-                  </ThemedText>
-                  {currentWord.sentence && (
-                    <ThemedText variant="caption" color={theme.textSecondary} style={styles.sentence}>
-                      例句：{currentWord.sentence}
-                    </ThemedText>
+
+                  {/* 助记符 */}
+                  {currentWord.mnemonic && (
+                    <ThemedView level="tertiary" style={styles.mnemonicSection}>
+                      <FontAwesome6 name="lightbulb" size={16} color={theme.accent} />
+                      <ThemedText variant="body" color={theme.textSecondary} style={styles.mnemonicText}>
+                        {currentWord.mnemonic}
+                      </ThemedText>
+                    </ThemedView>
                   )}
-                </View>
-              </ThemedView>
+
+                  {/* 词性和释义 - 始终显示 */}
+                  <View style={styles.definitionSection}>
+                    {currentWord.partOfSpeech && (
+                      <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.partOfSpeech}>
+                        {currentWord.partOfSpeech}.
+                      </ThemedText>
+                    )}
+                    <ThemedText variant="body" color={theme.textPrimary}>
+                      {currentWord.definition}
+                    </ThemedText>
+                    {currentWord.sentence && (
+                      <ThemedText variant="caption" color={theme.textSecondary} style={styles.sentence}>
+                        例句：{currentWord.sentence}
+                      </ThemedText>
+                    )}
+                  </View>
+                </ThemedView>
+              </View>
             </Animated.View>
           </PanGestureHandler>
+
+          {/* 分享按钮 */}
+          <TouchableOpacity
+            style={[styles.shareButton, { backgroundColor: theme.backgroundTertiary }]}
+            onPress={handleShare}
+            disabled={isSharing}
+          >
+            <FontAwesome6 name="share-nodes" size={20} color={theme.primary} />
+            <ThemedText variant="body" color={theme.primary}>
+              {isSharing ? '生成中...' : '分享'}
+            </ThemedText>
+          </TouchableOpacity>
 
           {/* 滑动提示 */}
           <View style={styles.hintContainer}>

@@ -120,6 +120,17 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       paddingVertical: Spacing.md,
     },
+    shareButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.xl,
+      borderRadius: BorderRadius.lg,
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+    },
     finishButtonContainer: {
       padding: Spacing.lg,
     },
