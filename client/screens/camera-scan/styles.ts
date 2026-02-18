@@ -1,0 +1,129 @@
+import { StyleSheet } from 'react-native';
+import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+
+export const createStyles = (theme: Theme) => {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    camera: {
+      flex: 1,
+    },
+    scanBox: {
+      position: 'absolute',
+      top: '30%',
+      left: '15%',
+      width: '70%',
+      height: '25%',
+    },
+    scanCorner: {
+      position: 'absolute',
+      width: 30,
+      height: 30,
+      borderColor: '#fff',
+      borderWidth: 3,
+      borderTopLeftRadius: 10,
+    },
+    topRight: {
+      left: undefined,
+      right: 0,
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 10,
+    },
+    bottomLeft: {
+      top: undefined,
+      bottom: 0,
+      borderTopLeftRadius: 0,
+      borderBottomLeftRadius: 10,
+    },
+    bottomRight: {
+      top: undefined,
+      bottom: 0,
+      left: undefined,
+      right: 0,
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 10,
+    },
+    hintContainer: {
+      position: 'absolute',
+      top: '58%',
+      left: '15%',
+      width: '70%',
+      padding: Spacing.md,
+      borderRadius: BorderRadius.lg,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      alignItems: 'center',
+    },
+    captureButton: {
+      position: 'absolute',
+      bottom: 80,
+      left: '50%',
+      transform: [{ translateX: -35 }],
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      backgroundColor: '#fff',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    captureButtonInner: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: theme.primary,
+    },
+    cancelButtonTop: {
+      position: 'absolute',
+      top: 50,
+      right: 20,
+      padding: Spacing.md,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    permissionContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    permissionIcon: {
+      marginBottom: Spacing.lg,
+    },
+    permissionTitle: {
+      marginBottom: Spacing.md,
+      textAlign: 'center',
+    },
+    permissionText: {
+      marginBottom: Spacing.xl,
+      textAlign: 'center',
+    },
+    permissionButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.xl,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.md,
+    },
+    cancelButton: {
+      paddingVertical: Spacing.md,
+    },
+    scanningOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    scanningText: {
+      marginTop: Spacing.lg,
+    },
+  });
+};
