@@ -102,8 +102,8 @@ export const createStyles = (theme: Theme) => {
     },
     modalContent: {
       backgroundColor: theme.backgroundRoot,
-      borderTopLeftRadius: BorderRadius.xl,
-      borderTopRightRadius: BorderRadius.xl,
+      borderTopLeftRadius: BorderRadius['2xl'],
+      borderTopRightRadius: BorderRadius['2xl'],
       maxHeight: '90%',
     },
     modalHeader: {
