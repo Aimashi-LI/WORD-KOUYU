@@ -99,7 +99,43 @@ export const createStyles = (theme: Theme) => {
     statsRow: {
       flexDirection: 'row',
       gap: Spacing.xl,
-      marginBottom: Spacing['2xl'],
+      marginBottom: Spacing.md,
+    },
+    masteredBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+      borderWidth: 2,
+      borderColor: theme.success,
+    },
+    masteredBannerContent: {
+      flex: 1,
+    },
+    masteredTitle: {
+      marginBottom: Spacing.xs,
+    },
+    masteredWordsList: {
+      width: '100%',
+      maxHeight: 200,
+      marginBottom: Spacing.xl,
+    },
+    masteredListHeader: {
+      marginBottom: Spacing.sm,
+      textAlign: 'center',
+    },
+    masteredWordItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.sm,
+    },
+    masteredWordInfo: {
+      flex: 1,
     },
     completeButton: {
       backgroundColor: theme.primary,

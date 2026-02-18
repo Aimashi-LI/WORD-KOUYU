@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -20,9 +20,17 @@ import {
   checkMastery,
   getTestWeight,
   calculateMasteryRate,
-  getRating
+  getRating,
+  needsReview
 } from '@/algorithm/fsrs';
 import { useCallback } from 'react';
+
+// 掌握标准配置
+const MASTERY_CONFIG = {
+  stabilityThreshold: 30, // 稳定性阈值（天）
+  consecutiveHighScores: 3, // 连续高分次数
+  highScoreThreshold: 5, // 高分标准
+};
 
 type ReviewState = 'idle' | 'reviewing' | 'completed';
 
@@ -39,6 +47,9 @@ export default function ReviewScreen() {
   const [session, setSession] = useState<ReviewSession | null>(null);
   const [totalScore, setTotalScore] = useState(0);
   const [loading, setLoading] = useState(false);
+  
+  // 新增：跟踪已掌握的单词
+  const [masteredWords, setMasteredWords] = useState<Word[]>([]);
   
   const startTimeRef = useRef<number>(0);
 
@@ -58,10 +69,14 @@ export default function ReviewScreen() {
       if (projectId) {
         // 从指定词库加载单词
         const allWords = await getWordsInWordbook(parseInt(projectId));
-        const now = new Date();
         
-        // 只加载需要复习的单词
+        // 只加载需要复习且未掌握的单词
         words = allWords.filter(w => {
+          // 已掌握的单词不加载
+          if (w.is_mastered === 1) return false;
+          
+          // 检查是否需要复习
+          const now = new Date();
           if (!w.next_review) return true;
           return new Date(w.next_review) <= now;
         }).slice(0, 20);
@@ -111,7 +126,7 @@ export default function ReviewScreen() {
     const currentWordScore = newScores.reduce((sum, s) => sum + s, 0);
     
     // 更新数据库
-    const recentLogs = await getRecentReviewLogs(currentWord.id, 3);
+    const recentLogs = await getRecentReviewLogs(currentWord.id, MASTERY_CONFIG.consecutiveHighScores);
     const recentScores = recentLogs.map(log => log.score);
     recentScores.push(score);
     
@@ -122,7 +137,8 @@ export default function ReviewScreen() {
       nextReviewDate
     } = await updateWithTimeWeight(currentWord, currentWordScore, responseTime);
     
-    const isMastered = checkMastery(currentWord, recentScores);
+    // 检查是否掌握
+    const isMastered = checkMasteryWithConfig(currentWord, recentScores);
     
     await updateWord(currentWord.id, {
       difficulty: newDifficulty,
@@ -140,6 +156,11 @@ export default function ReviewScreen() {
       reviewed_at: new Date().toISOString()
     });
     
+    // 如果单词已掌握，添加到已掌握列表
+    if (isMastered && !currentWord.is_mastered) {
+      setMasteredWords(prev => [...prev, currentWord]);
+    }
+    
     // 累加总分
     setTotalScore(prev => prev + currentWordScore);
     
@@ -151,6 +172,18 @@ export default function ReviewScreen() {
     } else {
       setState('completed');
     }
+  };
+
+  // 使用配置的掌握标准判断
+  const checkMasteryWithConfig = (word: Word, recentScores: number[]): boolean => {
+    // 条件1：稳定性达到阈值
+    const condition1 = word.stability >= MASTERY_CONFIG.stabilityThreshold;
+    
+    // 条件2：最近N次得分都≥高分标准
+    const condition2 = recentScores.length >= MASTERY_CONFIG.consecutiveHighScores && 
+                      recentScores.slice(0, MASTERY_CONFIG.consecutiveHighScores).every(s => s >= MASTERY_CONFIG.highScoreThreshold);
+    
+    return condition1 && condition2;
   };
 
   const renderReviewContent = () => {
@@ -258,6 +291,8 @@ export default function ReviewScreen() {
         <ThemedText variant="h3" color={theme.primary} style={styles.rating}>
           {rating}
         </ThemedText>
+        
+        {/* 基础统计 */}
         <View style={styles.statsRow}>
           <ThemedText variant="body" color={theme.textSecondary}>
             复习 {queue.length} 个单词
@@ -266,11 +301,50 @@ export default function ReviewScreen() {
             掌握率 {masteryRate}%
           </ThemedText>
         </View>
+
+        {/* 已掌握单词提示 */}
+        {masteredWords.length > 0 && (
+          <ThemedView level="tertiary" style={styles.masteredBanner}>
+            <FontAwesome6 name="star" size={20} color={theme.success} />
+            <View style={styles.masteredBannerContent}>
+              <ThemedText variant="h3" color={theme.success} style={styles.masteredTitle}>
+                🎉 恭喜！有 {masteredWords.length} 个单词已掌握
+              </ThemedText>
+              <ThemedText variant="caption" color={theme.textSecondary}>
+                这些单词将不再出现在复习队列中
+              </ThemedText>
+            </View>
+          </ThemedView>
+        )}
+
+        {/* 已掌握单词列表 */}
+        {masteredWords.length > 0 && (
+          <ScrollView style={styles.masteredWordsList}>
+            <ThemedText variant="body" color={theme.textMuted} style={styles.masteredListHeader}>
+              已掌握的单词：
+            </ThemedText>
+            {masteredWords.map(word => (
+              <ThemedView key={word.id} level="tertiary" style={styles.masteredWordItem}>
+                <View style={styles.masteredWordInfo}>
+                  <ThemedText variant="body" color={theme.textPrimary}>
+                    {word.word}
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    稳定性：{Math.round(word.stability)} 天
+                  </ThemedText>
+                </View>
+                <FontAwesome6 name="circle-check" size={20} color={theme.success} />
+              </ThemedView>
+            ))}
+          </ScrollView>
+        )}
+
         <TouchableOpacity 
           style={styles.completeButton}
           onPress={() => {
             setCurrentIndex(0);
             setTotalScore(0);
+            setMasteredWords([]);
             loadReviewQueue();
           }}
         >
