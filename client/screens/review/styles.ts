@@ -53,6 +53,14 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.lg,
       marginBottom: Spacing.xl,
     },
+    partOfSpeech: {
+      marginBottom: Spacing.xs,
+    },
+    sentence: {
+      marginTop: Spacing.sm,
+      fontStyle: 'italic',
+      lineHeight: 18,
+    },
     scoreButtons: {
       flexDirection: 'row',
       justifyContent: 'space-around',

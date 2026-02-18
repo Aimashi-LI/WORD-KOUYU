@@ -193,9 +193,18 @@ export default function ReviewScreen() {
       <View style={styles.reviewContainer}>
         {/* 顶部栏 */}
         <View style={styles.topBar}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              Alert.alert(
+                '提示',
+                '确定要退出复习吗？当前进度将不会保存',
+                [
+                  { text: '取消', style: 'cancel' },
+                  { text: '确定退出', onPress: () => router.back(), style: 'destructive' }
+                ]
+              );
+            }}
           >
             <FontAwesome6 name="arrow-left" size={24} color={theme.textPrimary} />
           </TouchableOpacity>
@@ -229,8 +238,17 @@ export default function ReviewScreen() {
 
         {/* 释义 */}
         <ThemedView level="tertiary" style={styles.definitionDisplay}>
-          <ThemedText variant="h3" color={theme.textPrimary}>释义</ThemedText>
-          <ThemedText variant="body" color={theme.textSecondary}>{currentWord.definition}</ThemedText>
+          {currentWord.partOfSpeech && (
+            <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.partOfSpeech}>
+              {currentWord.partOfSpeech}.
+            </ThemedText>
+          )}
+          <ThemedText variant="body" color={theme.textPrimary}>{currentWord.definition}</ThemedText>
+          {currentWord.sentence && (
+            <ThemedText variant="caption" color={theme.textSecondary} style={styles.sentence}>
+              例句：{currentWord.sentence}
+            </ThemedText>
+          )}
         </ThemedView>
 
         {/* 评分按钮 */}

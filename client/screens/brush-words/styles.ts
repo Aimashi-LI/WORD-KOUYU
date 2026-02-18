@@ -59,7 +59,7 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.full,
     },
     cardContainer: {
-      flexGrow: 1,
+      flex: 1,
       padding: Spacing.lg,
       justifyContent: 'center',
     },
@@ -105,46 +105,76 @@ export const createStyles = (theme: Theme) => {
       flex: 1,
       lineHeight: 22,
     },
+    partOfSpeech: {
+      marginBottom: Spacing.xs,
+    },
     definitionSection: {
       gap: Spacing.md,
-    },
-    definitionHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.sm,
-    },
-    definitionTitle: {
-      fontWeight: '600',
-    },
-    definitionContent: {
-      padding: Spacing.lg,
-      borderRadius: BorderRadius.md,
-      gap: Spacing.sm,
     },
     sentence: {
       marginTop: Spacing.sm,
       fontStyle: 'italic',
+      color: theme.textMuted,
     },
-    bottomBar: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    hintContainer: {
+      alignItems: 'center',
+      paddingVertical: Spacing.md,
+    },
+    finishButtonContainer: {
       padding: Spacing.lg,
-      gap: Spacing.lg,
     },
-    navButton: {
-      flex: 1,
+    finishButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: Spacing.sm,
       paddingVertical: Spacing.lg,
+      paddingHorizontal: Spacing.xl,
       borderRadius: BorderRadius.lg,
-      backgroundColor: theme.backgroundDefault,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
     },
-    navButtonDisabled: {
-      opacity: 0.5,
+    finishButtonText: {
+      fontWeight: '600',
+    },
+    // Alert Modal 样式
+    alertOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    alertContent: {
+      width: '100%',
+      maxWidth: 400,
+      padding: Spacing.xl,
+      borderRadius: BorderRadius['4xl'],
+      alignItems: 'center',
+    },
+    alertIconContainer: {
+      marginBottom: Spacing.md,
+    },
+    alertTitle: {
+      marginBottom: Spacing.sm,
+      textAlign: 'center',
+    },
+    alertMessage: {
+      marginBottom: Spacing.lg,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    alertButton: {
+      width: '100%',
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+    },
+    alertButtons: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      width: '100%',
+    },
+    alertButtonCancel: {
+      flex: 1,
     },
     // Modal 样式
     modalOverlay: {
