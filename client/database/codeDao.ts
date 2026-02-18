@@ -25,7 +25,7 @@ export async function getCodesByLetter(letter: string): Promise<Code[]> {
   const db = getDatabase();
   const rows = await db.getAllAsync<any>(
     'SELECT * FROM codes WHERE letter = ? ORDER BY chinese ASC',
-    [letter.toUpperCase()]
+    [letter]
   );
   return rows.map(mapToCode);
 }
@@ -38,14 +38,14 @@ export async function addCode(letter: string, chinese: string): Promise<number> 
   try {
     const result = await db.runAsync(
       'INSERT INTO codes (letter, chinese, created_at) VALUES (?, ?, ?)',
-      [letter.toUpperCase(), chinese, now]
+      [letter, chinese, now]
     );
     return result.lastInsertRowId;
   } catch (error) {
     // 如果已存在，查找并返回现有 ID
     const existing = await db.getFirstAsync<any>(
       'SELECT id FROM codes WHERE letter = ? AND chinese = ?',
-      [letter.toUpperCase(), chinese]
+      [letter, chinese]
     );
     return existing?.id || 0;
   }
@@ -62,7 +62,7 @@ export async function addCodes(codes: { letter: string; chinese: string }[]): Pr
       try {
         const result = await db.runAsync(
           'INSERT INTO codes (letter, chinese, created_at) VALUES (?, ?, ?)',
-          [code.letter.toUpperCase(), code.chinese, now]
+          [code.letter, code.chinese, now]
         );
         ids.push(result.lastInsertRowId);
       } catch (error) {
@@ -79,7 +79,7 @@ export async function searchCodesByPrefix(prefix: string): Promise<Code[]> {
   const db = getDatabase();
   const rows = await db.getAllAsync<any>(
     'SELECT * FROM codes WHERE letter LIKE ? ORDER BY letter ASC LIMIT 10',
-    [`${prefix.toUpperCase()}%`]
+    [`${prefix}%`]
   );
   return rows.map(mapToCode);
 }
@@ -88,8 +88,8 @@ export async function searchCodesByPrefix(prefix: string): Promise<Code[]> {
 export async function getCodeByLetter(letter: string): Promise<Code | null> {
   const db = getDatabase();
   const row = await db.getFirstAsync<any>(
-    'SELECT * FROM codes WHERE UPPER(letter) = ?',
-    [letter.toUpperCase()]
+    'SELECT * FROM codes WHERE letter = ?',
+    [letter]
   );
   return row ? mapToCode(row) : null;
 }
@@ -99,7 +99,7 @@ export async function updateCode(id: number, letter: string, chinese: string): P
   const db = getDatabase();
   await db.runAsync(
     'UPDATE codes SET letter = ?, chinese = ? WHERE id = ?',
-    [letter.toUpperCase(), chinese, id]
+    [letter, chinese, id]
   );
 }
 

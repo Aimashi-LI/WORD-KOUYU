@@ -80,7 +80,7 @@ function CodeGroup({ letter, codes, selectedIds, onToggleSelection, onEdit }: Co
             )}
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <ThemedText variant="h3" style={{ marginBottom: 2 }}>{code.letter.toUpperCase()}</ThemedText>
+            <ThemedText variant="h3" style={{ marginBottom: 2 }}>{code.letter}</ThemedText>
             <ThemedText variant="body" style={{ color: '#6b7280' }}>{code.chinese}</ThemedText>
           </View>
           <TouchableOpacity
@@ -380,7 +380,6 @@ export default function CodebaseScreen() {
                   placeholderTextColor={theme.textMuted}
                   value={editingCode?.letter}
                   onChangeText={(text) => setEditingCode(prev => prev ? { ...prev, letter: text } : null)}
-                  autoCapitalize="characters"
                 />
               </ThemedView>
 
@@ -445,7 +444,6 @@ export default function CodebaseScreen() {
                   placeholderTextColor={theme.textMuted}
                   value={newCodeLetter}
                   onChangeText={setNewCodeLetter}
-                  autoCapitalize="characters"
                 />
               </ThemedView>
 
