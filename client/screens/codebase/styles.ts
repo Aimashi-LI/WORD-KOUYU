@@ -29,6 +29,10 @@ export const createStyles = (theme: Theme) => {
       fontSize: 16,
       color: theme.textPrimary,
     },
+    resetButton: {
+      padding: Spacing.md,
+      marginLeft: Spacing.sm,
+    },
     actionBar: {
       flexDirection: 'row',
       justifyContent: 'space-between',

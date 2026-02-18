@@ -20,7 +20,8 @@ import {
   updateCode,
   deleteCode,
   addCode,
-  initDefaultCodes
+  initDefaultCodes,
+  resetCodes
 } from '@/database/codeDao';
 import { initDatabase } from '@/database';
 import { Code } from '@/database/types';
@@ -191,6 +192,31 @@ export default function CodebaseScreen() {
     setShowEditModal(true);
   };
 
+  // 重置编码库
+  const handleResetCodes = async () => {
+    Alert.alert(
+      '确认重置',
+      '此操作将删除所有现有编码并重新加载默认编码库，确定继续吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '重置',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const count = await resetCodes();
+              await loadData();
+              Alert.alert('成功', `已重置编码库，共加载 ${count} 个编码`);
+            } catch (error) {
+              console.error('重置失败:', error);
+              Alert.alert('错误', '重置失败');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   // 保存编辑
   const handleSaveEdit = async () => {
     if (!editingCode || !editingCode.letter || !editingCode.chinese) {
@@ -268,6 +294,12 @@ export default function CodebaseScreen() {
             value={searchText}
             onChangeText={handleSearch}
           />
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleResetCodes}
+          >
+            <FontAwesome6 name="rotate-right" size={18} color={theme.primary} />
+          </TouchableOpacity>
         </ThemedView>
 
         {/* 操作栏 */}
