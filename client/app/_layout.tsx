@@ -49,6 +49,13 @@ export default function RootLayout() {
                 animation: 'fade'
               }} 
             />
+            <Stack.Screen 
+              name="word-detail" 
+              options={{ 
+                title: "单词详情",
+                presentation: 'card'
+              }} 
+            />
           </Stack>
           <Toast />
         </GestureHandlerRootView>
