@@ -27,8 +27,8 @@ import { useCallback } from 'react';
 
 // 掌握标准配置
 const MASTERY_CONFIG = {
-  stabilityThreshold: 30, // 稳定性阈值（天）
-  consecutiveHighScores: 3, // 连续高分次数
+  stabilityThreshold: 14, // 稳定性阈值（天）- 2周内很难遗忘
+  consecutiveHighScores: 2, // 连续高分次数 - 连续2次高分
   highScoreThreshold: 5, // 高分标准
 };
 
