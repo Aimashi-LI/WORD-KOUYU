@@ -63,6 +63,13 @@ export default function RootLayout() {
                 presentation: 'card'
               }} 
             />
+            <Stack.Screen 
+              name="brush-words" 
+              options={{ 
+                title: "刷单词",
+                presentation: 'card'
+              }} 
+            />
           </Stack>
           <Toast />
         </GestureHandlerRootView>

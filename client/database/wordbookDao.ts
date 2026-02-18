@@ -106,6 +106,45 @@ export async function getWordsInWordbook(wordbookId: number): Promise<Word[]> {
   return rows.map(mapToWord);
 }
 
+// 获取词库统计
+export async function getWordbookStats(wordbookId: number): Promise<{
+  total: number;
+  mastered: number;
+  pending: number;
+}> {
+  const db = getDatabase();
+  
+  const totalRow = await db.getFirstAsync<any>(
+    `SELECT COUNT(*) as count FROM wordbook_words WHERE wordbook_id = ?`,
+    [wordbookId]
+  );
+  
+  const masteredRow = await db.getFirstAsync<any>(
+    `SELECT COUNT(*) as count 
+     FROM wordbook_words ww
+     INNER JOIN words w ON ww.word_id = w.id
+     WHERE ww.wordbook_id = ? AND w.is_mastered = 1`,
+    [wordbookId]
+  );
+  
+  const now = new Date().toISOString();
+  const pendingRow = await db.getFirstAsync<any>(
+    `SELECT COUNT(*) as count 
+     FROM wordbook_words ww
+     INNER JOIN words w ON ww.word_id = w.id
+     WHERE ww.wordbook_id = ? 
+     AND (w.is_mastered = 0 OR w.is_mastered IS NULL)
+     AND (w.next_review IS NULL OR w.next_review <= ?)`,
+    [wordbookId, now]
+  );
+  
+  return {
+    total: totalRow?.count || 0,
+    mastered: masteredRow?.count || 0,
+    pending: pendingRow?.count || 0
+  };
+}
+
 // 更新词库单词数
 async function updateWordbookCount(wordbookId: number): Promise<void> {
   const db = getDatabase();

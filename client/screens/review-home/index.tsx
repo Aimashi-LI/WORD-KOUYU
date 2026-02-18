@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -8,7 +8,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
-import { getAllWordbooks, createWordbook, deleteWordbook, getWordsInWordbook } from '@/database/wordbookDao';
+import { getAllWordbooks, deleteWordbook, getWordsInWordbook } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
 import { useCallback } from 'react';
@@ -25,10 +25,6 @@ export default function ReviewHomeScreen() {
   
   const [projects, setProjects] = useState<ReviewProject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectDesc, setNewProjectDesc] = useState('');
-  const [creating, setCreating] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -68,28 +64,6 @@ export default function ReviewHomeScreen() {
       Alert.alert('错误', '加载复习项目失败');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCreateProject = async () => {
-    if (!newProjectName.trim()) {
-      Alert.alert('提示', '请输入项目名称');
-      return;
-    }
-
-    setCreating(true);
-    try {
-      await createWordbook(newProjectName.trim(), newProjectDesc.trim() || undefined);
-      setNewProjectName('');
-      setNewProjectDesc('');
-      setShowCreateModal(false);
-      await loadProjects();
-      Alert.alert('成功', '复习项目已创建');
-    } catch (error) {
-      console.error('创建项目失败:', error);
-      Alert.alert('错误', '创建失败，请重试');
-    } finally {
-      setCreating(false);
     }
   };
 
@@ -199,15 +173,6 @@ export default function ReviewHomeScreen() {
         {/* 标题栏 */}
         <View style={styles.header}>
           <ThemedText variant="h1" color={theme.textPrimary}>复习</ThemedText>
-          <TouchableOpacity 
-            style={styles.createButton}
-            onPress={() => setShowCreateModal(true)}
-          >
-            <FontAwesome6 name="plus" size={20} color={theme.buttonPrimaryText} />
-            <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>
-              新建项目
-            </ThemedText>
-          </TouchableOpacity>
         </View>
 
         {/* 项目列表 */}
@@ -223,7 +188,7 @@ export default function ReviewHomeScreen() {
                 暂无复习项目
               </ThemedText>
               <ThemedText variant="body" color={theme.textSecondary} style={styles.emptyText}>
-                点击右上角创建新的复习项目
+                请在单词本页面创建词库后进行复习
               </ThemedText>
             </View>
           ) : (
@@ -231,70 +196,6 @@ export default function ReviewHomeScreen() {
           )}
         </ScrollView>
       </View>
-
-      {/* 创建项目模态框 */}
-      <Modal visible={showCreateModal} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <ThemedText variant="h3" color={theme.textPrimary}>新建复习项目</ThemedText>
-                <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-                  <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.modalBody}>
-                <ThemedText variant="caption" color={theme.textMuted} style={styles.label}>
-                  项目名称 *
-                </ThemedText>
-                <TextInput
-                  style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]}
-                  value={newProjectName}
-                  onChangeText={setNewProjectName}
-                  placeholder="例如：四级词汇"
-                  placeholderTextColor={theme.textMuted}
-                  autoFocus
-                />
-
-                <ThemedText variant="caption" color={theme.textMuted} style={styles.label}>
-                  描述（可选）
-                </ThemedText>
-                <TextInput
-                  style={[styles.input, styles.textArea, { color: theme.textPrimary, borderColor: theme.border }]}
-                  value={newProjectDesc}
-                  onChangeText={setNewProjectDesc}
-                  placeholder="添加项目描述..."
-                  placeholderTextColor={theme.textMuted}
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.backgroundTertiary }]}
-                  onPress={() => setShowCreateModal(false)}
-                >
-                  <ThemedText variant="body" color={theme.textPrimary}>取消</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.primary }]}
-                  onPress={handleCreateProject}
-                  disabled={creating}
-                >
-                  <ThemedText variant="body" color={theme.buttonPrimaryText}>
-                    {creating ? '创建中...' : '创建'}
-                  </ThemedText>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </Screen>
   );
 }

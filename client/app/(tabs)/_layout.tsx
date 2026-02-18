@@ -37,7 +37,7 @@ export default function TabLayout() {
         options={{
           title: '复习',
           tabBarIcon: ({ color }) => (
-            <FontAwesome6 name="graduation-cap" size={20} color={color} />
+            <FontAwesome6 name="graduation-cap" size={30} color={color} />
           ),
         }}
       />

@@ -7,6 +7,42 @@ export const createStyles = (theme: Theme) => {
       flexGrow: 1,
       padding: Spacing.lg,
     },
+    // 词库切换栏
+    wordbookBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.sm,
+      backgroundColor: theme.backgroundDefault,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      gap: Spacing.sm,
+    },
+    wordbookScrollContainer: {
+      flex: 1,
+    },
+    wordbookScroll: {
+      flex: 1,
+    },
+    wordbookScrollContent: {
+      gap: Spacing.sm,
+      paddingHorizontal: Spacing.xs,
+    },
+    wordbookChip: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs,
+      borderRadius: BorderRadius.md,
+      backgroundColor: theme.backgroundTertiary,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    wordbookChipActive: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    addWordbookButton: {
+      padding: Spacing.sm,
+    },
     statsCard: {
       padding: Spacing.lg,
       borderRadius: BorderRadius.lg,
@@ -34,7 +70,23 @@ export const createStyles = (theme: Theme) => {
     actionButtons: {
       flexDirection: 'row',
       gap: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    brushWordsButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      backgroundColor: theme.accent,
       marginBottom: Spacing.xl,
+      shadowColor: theme.accent,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 2,
     },
     actionButton: {
       flex: 1,
@@ -56,6 +108,10 @@ export const createStyles = (theme: Theme) => {
     loadingContainer: {
       paddingVertical: Spacing.xl,
       alignItems: 'center',
+      gap: Spacing.md,
+    },
+    loadingText: {
+      marginTop: Spacing.sm,
     },
     emptyContainer: {
       paddingVertical: Spacing['3xl'],
@@ -82,6 +138,9 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       marginBottom: Spacing.xs,
     },
+    addToBookButton: {
+      padding: Spacing.xs,
+    },
     mnemonicContainer: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -93,6 +152,67 @@ export const createStyles = (theme: Theme) => {
     },
     mnemonicText: {
       flex: 1,
+    },
+    // Modal 样式
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: theme.backgroundRoot,
+      borderTopLeftRadius: BorderRadius['2xl'],
+      borderTopRightRadius: BorderRadius['2xl'],
+      maxHeight: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: Spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
+    },
+    modalBody: {
+      padding: Spacing.lg,
+      maxHeight: 300,
+    },
+    modalFooter: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      padding: Spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderLight,
+    },
+    inputGroup: {
+      marginBottom: Spacing.lg,
+    },
+    inputLabel: {
+      marginBottom: Spacing.sm,
+    },
+    input: {
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    textArea: {
+      height: 80,
+      textAlignVertical: 'top',
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+    },
+    cancelButton: {
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    submitButton: {
+      borderWidth: 1,
+      borderColor: theme.primary,
     },
   });
 };
