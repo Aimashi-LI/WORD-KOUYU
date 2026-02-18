@@ -4,6 +4,52 @@ import * as FileSystem from 'expo-file-system/legacy';
 const DB_NAME = 'word_review.db';
 let db: SQLite.SQLiteDatabase | null = null;
 
+// 数据库迁移：检查并添加缺失的字段
+async function migrateDatabase(): Promise<void> {
+  if (!db) return;
+
+  try {
+    // 检查并添加 partOfSpeech 字段
+    const result = await db.getFirstAsync<{ name: string }>(
+      "SELECT name FROM pragma_table_info('words') WHERE name = 'partOfSpeech'"
+    );
+
+    if (!result) {
+      try {
+        await db.execAsync('ALTER TABLE words ADD COLUMN partOfSpeech TEXT');
+        console.log('Added partOfSpeech column to words table');
+      } catch (error: any) {
+        // 如果字段已存在，忽略错误
+        if (!error.message?.includes('duplicate column')) {
+          throw error;
+        }
+      }
+    }
+
+    // 检查并添加 sentence 字段
+    const sentenceResult = await db.getFirstAsync<{ name: string }>(
+      "SELECT name FROM pragma_table_info('words') WHERE name = 'sentence'"
+    );
+
+    if (!sentenceResult) {
+      try {
+        await db.execAsync('ALTER TABLE words ADD COLUMN sentence TEXT');
+        console.log('Added sentence column to words table');
+      } catch (error: any) {
+        // 如果字段已存在，忽略错误
+        if (!error.message?.includes('duplicate column')) {
+          throw error;
+        }
+      }
+    }
+
+    console.log('Database migration completed');
+  } catch (error) {
+    console.error('Database migration failed:', error);
+    // 迁移失败不应该阻止应用启动，继续运行
+  }
+}
+
 // 数据库初始化
 export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (db) return db;
@@ -85,6 +131,9 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     CREATE INDEX IF NOT EXISTS idx_wordbook_words_wordbook_id ON wordbook_words(wordbook_id);
     CREATE INDEX IF NOT EXISTS idx_wordbook_words_word_id ON wordbook_words(word_id);
   `);
+
+  // 数据库迁移：添加缺失的字段
+  await migrateDatabase();
 
   console.log('Database initialized successfully');
   return db;
