@@ -44,7 +44,7 @@ export default function BrushWordsScreen() {
   const [isSharing, setIsSharing] = useState(false);
 
   // 手势相关
-  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
   const swipeThreshold = 100;
 
   // 卡片引用，用于截图分享
@@ -229,29 +229,29 @@ export default function BrushWordsScreen() {
   // 手势处理函数
   const onGestureEvent = (event: any) => {
     if (event.nativeEvent.state === State.ACTIVE) {
-      translateX.value = event.nativeEvent.translationX;
+      translateY.value = event.nativeEvent.translationY;
     }
   };
 
   const onHandlerStateChange = (event: any) => {
     if (event.nativeEvent.state === State.END) {
-      const { translationX } = event.nativeEvent;
+      const { translationY } = event.nativeEvent;
 
-      if (translationX < -swipeThreshold) {
-        // 左滑
+      if (translationY < -swipeThreshold) {
+        // 上滑 - 下一个
         runOnJS(handleSwipeLeft)();
-      } else if (translationX > swipeThreshold) {
-        // 右滑
+      } else if (translationY > swipeThreshold) {
+        // 下滑 - 上一个
         runOnJS(handleSwipeRight)();
       }
 
-      translateX.value = withSpring(0);
+      translateY.value = withSpring(0);
     }
   };
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ translateX: translateX.value }],
+      transform: [{ translateY: translateY.value }],
     };
   });
 
@@ -420,7 +420,7 @@ export default function BrushWordsScreen() {
           {/* 滑动提示 */}
           <View style={styles.hintContainer}>
             <ThemedText variant="caption" color={theme.textMuted}>
-              ← 左滑下一个 | 右滑上一个 →
+              ↑ 上滑下一个 | 下滑上一个 ↓
             </ThemedText>
           </View>
 

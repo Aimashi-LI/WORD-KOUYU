@@ -91,6 +91,31 @@ export const createStyles = (theme: Theme) => {
     loadingText: {
       marginTop: Spacing.md,
     },
+    startScreen: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    startIcon: {
+      marginBottom: Spacing.xl,
+    },
+    startTitle: {
+      marginBottom: Spacing.sm,
+    },
+    startSubtitle: {
+      marginBottom: Spacing['3xl'],
+    },
+    startButton: {
+      paddingVertical: Spacing.lg,
+      paddingHorizontal: Spacing['3xl'],
+      borderRadius: BorderRadius.lg,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 4,
+    },
     completedContainer: {
       flex: 1,
       justifyContent: 'center',

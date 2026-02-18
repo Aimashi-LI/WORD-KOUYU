@@ -63,18 +63,18 @@ export default function ReviewScreen() {
     setLoading(true);
     try {
       await initDatabase();
-      
+
       let words: Word[];
-      
+
       if (projectId) {
         // 从指定词库加载单词
         const allWords = await getWordsInWordbook(parseInt(projectId));
-        
+
         // 只加载需要复习且未掌握的单词
         words = allWords.filter(w => {
           // 已掌握的单词不加载
           if (w.is_mastered === 1) return false;
-          
+
           // 检查是否需要复习
           const now = new Date();
           if (!w.next_review) return true;
@@ -84,18 +84,21 @@ export default function ReviewScreen() {
         // 从所有单词加载需要复习的单词
         words = await getReviewWords(20);
       }
-      
+
       setQueue(words);
-      if (words.length > 0) {
-        startReview(words[0]);
-      } else {
-        setState('completed');
-      }
+      setCurrentIndex(0);
+      setState('idle');
     } catch (error) {
       console.error('加载复习队列失败:', error);
       Alert.alert('错误', '加载复习队列失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStartReview = () => {
+    if (queue.length > 0) {
+      startReview(queue[0]);
     }
   };
 
@@ -184,6 +187,27 @@ export default function ReviewScreen() {
                       recentScores.slice(0, MASTERY_CONFIG.consecutiveHighScores).every(s => s >= MASTERY_CONFIG.highScoreThreshold);
     
     return condition1 && condition2;
+  };
+
+  const renderStartScreen = () => {
+    return (
+      <View style={styles.startScreen}>
+        <FontAwesome6 name="book-open" size={80} color={theme.primary} style={styles.startIcon} />
+        <ThemedText variant="h2" color={theme.textPrimary} style={styles.startTitle}>
+          复习单词
+        </ThemedText>
+        <ThemedText variant="body" color={theme.textSecondary} style={styles.startSubtitle}>
+          本次需要复习 {queue.length} 个单词
+        </ThemedText>
+
+        <TouchableOpacity
+          style={[styles.startButton, { backgroundColor: theme.primary }]}
+          onPress={handleStartReview}
+        >
+          <ThemedText variant="h3" color={theme.buttonPrimaryText}>点击开始</ThemedText>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   const renderReviewContent = () => {
@@ -381,6 +405,8 @@ export default function ReviewScreen() {
             加载中...
           </ThemedText>
         </View>
+      ) : state === 'idle' && queue.length > 0 ? (
+        renderStartScreen()
       ) : state === 'completed' || queue.length === 0 ? (
         renderCompleted()
       ) : (
