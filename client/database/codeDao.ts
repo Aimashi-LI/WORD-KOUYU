@@ -148,7 +148,7 @@ export async function resetCodes(): Promise<number> {
     { letter: 'cr', chinese: '超人' }, { letter: 'hy', chinese: '花园' }, { letter: 'of', chinese: '零分' },
     { letter: 'cu', chinese: '醋' }, { letter: 'ho', chinese: '猴' }, { letter: 'olo', chinese: '火箭' },
     { letter: 'dr', chinese: '敌人' }, { letter: 'hu', chinese: '湖' }, { letter: 'ow', chinese: '灯泡' },
-    { letter: 'dy', chinese: '地狱' }, { letter: 'IC', chinese: 'IC卡' }, { letter: 'ob', chinese: '氧吧' },
+    { letter: 'dy', chinese: '地狱' }, { letter: 'ic', chinese: 'IC卡' }, { letter: 'ob', chinese: '氧吧' },
     { letter: 'pa', chinese: '怕' }, { letter: 'se', chinese: '蛇' }, { letter: 'tl', chinese: '铁路' },
     { letter: 'ph', chinese: '炮灰' }, { letter: 'sw', chinese: '丝袜' }, { letter: 'tele', chinese: '泰勒' },
     { letter: 'pl', chinese: '漂亮' }, { letter: 'sp', chinese: '水瓶、山坡' }, { letter: 'ture', chinese: '土热' },
