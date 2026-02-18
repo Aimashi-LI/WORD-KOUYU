@@ -9,7 +9,7 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getAllWords, getWordStats } from '@/database/wordDao';
-import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordbook, getWordsInWordbook, getWordbookStats } from '@/database/wordbookDao';
+import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordbook, getWordsInWordbook, getWordbookStats, getWordbookNamesByWordId } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
 import { useCallback } from 'react';
@@ -59,7 +59,18 @@ export default function WordbookScreen() {
           getAllWords()
         ]);
         setStats(wordStats);
-        setWords(wordList);
+        
+        // 为每个单词添加词库信息
+        const wordsWithBookInfo = await Promise.all(
+          wordList.map(async (word) => {
+            const bookNames = await getWordbookNamesByWordId(word.id);
+            return {
+              ...word,
+              wordbooks: bookNames,
+            };
+          })
+        );
+        setWords(wordsWithBookInfo);
       }
     } catch (error) {
       console.error('加载失败:', error);
@@ -198,7 +209,7 @@ export default function WordbookScreen() {
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => router.push('/add-word')}
+            onPress={() => router.push(currentWordbookId ? `/add-word?wordbookId=${currentWordbookId}` : '/add-word')}
           >
             <FontAwesome6 name="plus" size={24} color={theme.buttonPrimaryText} />
             <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>手动添加</ThemedText>
@@ -206,7 +217,7 @@ export default function WordbookScreen() {
           
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => router.push('/import-words')}
+            onPress={() => router.push(currentWordbookId ? `/import-words?wordbookId=${currentWordbookId}` : '/import-words')}
           >
             <FontAwesome6 name="file-import" size={24} color={theme.buttonPrimaryText} />
             <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>批量导入</ThemedText>
@@ -214,7 +225,7 @@ export default function WordbookScreen() {
           
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => router.push('/camera-scan')}
+            onPress={() => router.push(currentWordbookId ? `/camera-scan?wordbookId=${currentWordbookId}` : '/camera-scan')}
           >
             <FontAwesome6 name="camera" size={24} color={theme.buttonPrimaryText} />
             <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>拍照识别</ThemedText>
@@ -253,18 +264,37 @@ export default function WordbookScreen() {
               onPress={() => router.push('/word-detail', { id: word.id.toString() })}
             >
               <View style={styles.wordHeader}>
-                <ThemedText variant="h3" color={theme.textPrimary}>{word.word}</ThemedText>
-                {word.phonetic && (
-                  <ThemedText variant="caption" color={theme.textMuted}>{word.phonetic}</ThemedText>
+                <View style={styles.wordInfoLeft}>
+                  <ThemedText variant="h3" color={theme.textPrimary}>{word.word}</ThemedText>
+                  {word.phonetic && (
+                    <ThemedText variant="caption" color={theme.textMuted}>{word.phonetic}</ThemedText>
+                  )}
+                </View>
+                {/* 添加到词库按钮 - 只在非全部单词视图中显示 */}
+                {currentWordbookId !== null && (
+                  <TouchableOpacity 
+                    style={styles.addToBookButton}
+                    onPress={() => handleAddWordToBook(word.id)}
+                  >
+                    <FontAwesome6 name="circle-plus" size={20} color={theme.primary} />
+                  </TouchableOpacity>
                 )}
-                {/* 添加到词库按钮 */}
-                <TouchableOpacity 
-                  style={styles.addToBookButton}
-                  onPress={() => handleAddWordToBook(word.id)}
-                >
-                  <FontAwesome6 name="circle-plus" size={20} color={theme.primary} />
-                </TouchableOpacity>
               </View>
+              
+              {/* 显示词库名称 - 只在全部单词视图中显示 */}
+              {currentWordbookId === null && word.wordbooks && word.wordbooks.length > 0 && (
+                <View style={styles.wordbookTags}>
+                  {word.wordbooks.map((book: any) => (
+                    <View key={book.id} style={styles.wordbookTag}>
+                      <FontAwesome6 name="folder" size={12} color={theme.primary} />
+                      <ThemedText variant="caption" color={theme.primary} style={styles.wordbookTagText}>
+                        {book.name}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              )}
+              
               <ThemedText variant="body" color={theme.textSecondary} numberOfLines={2}>
                 {word.definition}
               </ThemedText>

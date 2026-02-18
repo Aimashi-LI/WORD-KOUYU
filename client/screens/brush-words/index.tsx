@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -9,7 +9,7 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getAllWords } from '@/database/wordDao';
-import { getWordsInWordbook } from '@/database/wordbookDao';
+import { getWordsInWordbook, createWordbook, addWordToWordbook } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
 import { Word } from '@/database/types';
 import { useCallback } from 'react';
@@ -24,6 +24,10 @@ export default function BrushWordsScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showDefinition, setShowDefinition] = useState(false);
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
+  const [projectName, setProjectName] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
+  const [browsingWords, setBrowsingWords] = useState<number[]>([]); // 记录浏览过的单词ID
 
   useFocusEffect(
     useCallback(() => {
@@ -49,6 +53,8 @@ export default function BrushWordsScreen() {
       setWords(wordList);
       setCurrentIndex(0);
       setShowDefinition(false);
+      // 记录所有单词ID
+      setBrowsingWords(wordList.map(w => w.id));
     } catch (error) {
       console.error('加载单词失败:', error);
     } finally {
@@ -60,6 +66,45 @@ export default function BrushWordsScreen() {
     if (currentIndex < words.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setShowDefinition(false);
+    } else {
+      // 到达最后一个单词，询问是否创建复习项目
+      if (!projectId) {
+        // 如果不是在词库中刷单词，询问是否创建项目
+        Alert.alert(
+          '浏览完成',
+          '您已浏览完所有单词。是否要将这些单词创建为一个复习项目？',
+          [
+            { text: '不创建', onPress: () => router.back() },
+            { text: '创建项目', onPress: () => setShowCreateProjectModal(true) }
+          ]
+        );
+      } else {
+        // 在词库中刷单词，直接返回
+        router.back();
+      }
+    }
+  };
+
+  const handleCreateProject = async () => {
+    if (!projectName.trim()) {
+      Alert.alert('提示', '请输入项目名称');
+      return;
+    }
+    
+    try {
+      const wordbookId = await createWordbook(projectName.trim(), projectDescription.trim());
+      
+      // 将浏览过的单词添加到词库
+      for (const wordId of browsingWords) {
+        await addWordToWordbook(wordbookId, wordId);
+      }
+      
+      Alert.alert('成功', '复习项目创建成功', [
+        { text: '确定', onPress: () => router.back() }
+      ]);
+    } catch (error) {
+      console.error('创建项目失败:', error);
+      Alert.alert('错误', '创建失败，请重试');
     }
   };
 
@@ -247,6 +292,88 @@ export default function BrushWordsScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* 创建复习项目 Modal */}
+      <Modal
+        visible={showCreateProjectModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCreateProjectModal(false)}
+      >
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <TouchableOpacity 
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowCreateProjectModal(false)}
+          >
+            <TouchableOpacity 
+              activeOpacity={1}
+              style={styles.modalContent}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalHeader}>
+                <ThemedText variant="h3" color={theme.textPrimary}>创建复习项目</ThemedText>
+                <TouchableOpacity onPress={() => setShowCreateProjectModal(false)}>
+                  <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalBody}>
+                <View style={styles.inputGroup}>
+                  <ThemedText variant="body" color={theme.textSecondary} style={styles.inputLabel}>
+                    项目名称 <ThemedText color={theme.error}>*</ThemedText>
+                  </ThemedText>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.backgroundTertiary, color: theme.textPrimary }]}
+                    placeholder="请输入项目名称"
+                    placeholderTextColor={theme.textMuted}
+                    value={projectName}
+                    onChangeText={setProjectName}
+                    autoFocus
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <ThemedText variant="body" color={theme.textSecondary} style={styles.inputLabel}>
+                    项目描述
+                  </ThemedText>
+                  <TextInput
+                    style={[styles.input, styles.textArea, { backgroundColor: theme.backgroundTertiary, color: theme.textPrimary }]}
+                    placeholder="请输入项目描述（可选）"
+                    placeholderTextColor={theme.textMuted}
+                    value={projectDescription}
+                    onChangeText={setProjectDescription}
+                    multiline
+                    numberOfLines={3}
+                  />
+                </View>
+
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  将本次浏览的 {browsingWords.length} 个单词添加到项目中
+                </ThemedText>
+              </ScrollView>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.backgroundTertiary }]}
+                  onPress={() => setShowCreateProjectModal(false)}
+                >
+                  <ThemedText variant="body" color={theme.textPrimary}>取消</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.submitButton, { backgroundColor: theme.primary }]}
+                  onPress={handleCreateProject}
+                >
+                  <ThemedText variant="body" color={theme.buttonPrimaryText}>创建</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
     </Screen>
   );
 }

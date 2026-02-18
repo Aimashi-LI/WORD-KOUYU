@@ -8,6 +8,19 @@ export async function getAllWordbooks(): Promise<Wordbook[]> {
   return rows.map(mapToWordbook);
 }
 
+// 获取单词所在的词库列表
+export async function getWordbookNamesByWordId(wordId: number): Promise<Wordbook[]> {
+  const db = getDatabase();
+  const rows = await db.getAllAsync<any>(
+    `SELECT wb.* FROM wordbooks wb
+     INNER JOIN wordbook_words ww ON wb.id = ww.wordbook_id
+     WHERE ww.word_id = ?
+     ORDER BY wb.name ASC`,
+    [wordId]
+  );
+  return rows.map(mapToWordbook);
+}
+
 // 获取词库及其单词数
 export async function getWordbookWithCount(wordbookId: number): Promise<Wordbook | null> {
   const db = getDatabase();

@@ -14,9 +14,10 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { createWord, getWordByText } from '@/database/wordDao';
+import { addWordToWordbook } from '@/database/wordbookDao';
 import { getAllCodes, addCode } from '@/database/codeDao';
 import { initDatabase } from '@/database';
 import { NewWord, Code } from '@/database/types';
@@ -42,6 +43,7 @@ export default function AddWordScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
+  const { wordbookId } = useSafeSearchParams<{ wordbookId?: string }>();
   
   // 基础字段
   const [word, setWord] = useState('');
@@ -264,7 +266,12 @@ export default function AddWordScreen() {
         sentence: sentence.trim() || undefined,
       };
       
-      await createWord(newWord);
+      const wordId = await createWord(newWord);
+      
+      // 如果有词库ID，将单词添加到词库
+      if (wordbookId) {
+        await addWordToWordbook(parseInt(wordbookId), wordId);
+      }
       
       // 同步新编码到编码库
       await syncNewCodesToLib();
@@ -314,12 +321,14 @@ export default function AddWordScreen() {
     const lines = importText.split('\n').filter(line => line.trim());
     let successCount = 0;
     let failedCount = 0;
+    const importedWordIds: number[] = [];
 
     for (const line of lines) {
       try {
         const wordData = parseImportLine(line);
         if (wordData) {
-          await createWord(wordData);
+          const wordId = await createWord(wordData);
+          importedWordIds.push(wordId);
           successCount++;
         } else {
           failedCount++;
@@ -327,6 +336,17 @@ export default function AddWordScreen() {
       } catch (error) {
         console.error('导入失败:', line, error);
         failedCount++;
+      }
+    }
+
+    // 如果有词库ID，将导入的单词添加到词库
+    if (wordbookId && importedWordIds.length > 0) {
+      try {
+        for (const wordId of importedWordIds) {
+          await addWordToWordbook(parseInt(wordbookId), wordId);
+        }
+      } catch (error) {
+        console.error('添加到词库失败:', error);
       }
     }
 

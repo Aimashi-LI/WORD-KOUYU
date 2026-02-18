@@ -138,6 +138,27 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       marginBottom: Spacing.xs,
     },
+    wordInfoLeft: {
+      flex: 1,
+    },
+    wordbookTags: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.xs,
+      marginBottom: Spacing.sm,
+    },
+    wordbookTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: `${theme.primary}15`,
+    },
+    wordbookTagText: {
+      fontSize: 11,
+    },
     addToBookButton: {
       padding: Spacing.xs,
     },

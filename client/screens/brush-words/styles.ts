@@ -146,5 +146,66 @@ export const createStyles = (theme: Theme) => {
     navButtonDisabled: {
       opacity: 0.5,
     },
+    // Modal 样式
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: theme.backgroundRoot,
+      borderTopLeftRadius: BorderRadius['4xl'],
+      borderTopRightRadius: BorderRadius['4xl'],
+      maxHeight: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: Spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
+    },
+    modalBody: {
+      padding: Spacing.lg,
+      maxHeight: 300,
+    },
+    modalFooter: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      padding: Spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderLight,
+    },
+    inputGroup: {
+      marginBottom: Spacing.lg,
+    },
+    inputLabel: {
+      marginBottom: Spacing.sm,
+    },
+    input: {
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    textArea: {
+      height: 80,
+      textAlignVertical: 'top',
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+    },
+    cancelButton: {
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    submitButton: {
+      borderWidth: 1,
+      borderColor: theme.primary,
+    },
   });
 };
