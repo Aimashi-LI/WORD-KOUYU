@@ -6,14 +6,14 @@ export const createStyles = (theme: Theme) => {
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.xl,
-      paddingBottom: Spacing['5xl'],
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.lg,
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: Spacing.xl,
+      marginBottom: Spacing.md,
     },
     backButton: {
       width: 40,
@@ -30,8 +30,8 @@ export const createStyles = (theme: Theme) => {
     inputContainer: {
       backgroundColor: theme.backgroundTertiary,
       borderRadius: BorderRadius.lg,
-      padding: Spacing.lg,
-      marginBottom: Spacing.lg,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
     },
     labelRow: {
       flexDirection: 'row',
@@ -40,7 +40,7 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.sm,
     },
     label: {
-      marginBottom: Spacing.sm,
+      marginBottom: Spacing.xs,
       fontWeight: '500',
     },
     input: {
@@ -53,7 +53,7 @@ export const createStyles = (theme: Theme) => {
       borderColor: theme.border,
     },
     textArea: {
-      minHeight: 80,
+      minHeight: 60,
       textAlignVertical: 'top',
     },
     posScroll: {
@@ -162,17 +162,17 @@ export const createStyles = (theme: Theme) => {
     },
     saveButton: {
       backgroundColor: theme.primary,
-      paddingVertical: Spacing.lg,
+      paddingVertical: Spacing.md,
       paddingHorizontal: Spacing['2xl'],
       borderRadius: BorderRadius.lg,
       alignItems: 'center',
-      marginTop: Spacing.lg,
+      marginTop: Spacing.sm,
     },
     saveButtonDisabled: {
       opacity: 0.6,
     },
     hint: {
-      marginTop: Spacing.md,
+      marginTop: Spacing.xs,
       textAlign: 'center',
     },
     modalOverlay: {

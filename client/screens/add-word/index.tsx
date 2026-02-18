@@ -464,7 +464,7 @@ export default function AddWordScreen() {
             value={definition}
             onChangeText={setDefinition}
             multiline
-            numberOfLines={3}
+            numberOfLines={2}
           />
         </ThemedView>
 
@@ -570,7 +570,7 @@ export default function AddWordScreen() {
             value={sentence}
             onChangeText={setSentence}
             multiline
-            numberOfLines={2}
+            numberOfLines={1}
           />
         </ThemedView>
 
