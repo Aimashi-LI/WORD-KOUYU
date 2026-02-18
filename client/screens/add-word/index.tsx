@@ -185,7 +185,6 @@ export default function AddWordScreen() {
       newSplitItems.splice(splitIndex, 1, left, right);
       setSplitItems(newSplitItems);
       setActiveCodeIndex(-1);
-      Alert.alert('成功', '拆分成功');
     }
   };
 
@@ -200,7 +199,6 @@ export default function AddWordScreen() {
     setSplitItems(lastHistory);
     setSplitHistory(prev => prev.slice(0, -1));
     setActiveCodeIndex(-1);
-    Alert.alert('成功', '已撤销');
   };
 
   // 添加新的拆分项

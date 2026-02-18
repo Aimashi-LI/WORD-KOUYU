@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -9,6 +10,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getAllWords, getWordStats } from '@/database/wordDao';
 import { initDatabase } from '@/database';
+import { useCallback } from 'react';
 
 export default function WordbookScreen() {
   const { theme, isDark } = useTheme();
@@ -19,26 +21,28 @@ export default function WordbookScreen() {
   const [words, setWords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const loadData = async () => {
+        try {
+          await initDatabase();
+          const [wordStats, wordList] = await Promise.all([
+            getWordStats(),
+            getAllWords()
+          ]);
+          setStats(wordStats);
+          setWords(wordList);
+        } catch (error) {
+          console.error('加载失败:', error);
+          Alert.alert('错误', '加载数据失败');
+        } finally {
+          setLoading(false);
+        }
+      };
 
-  const loadData = async () => {
-    try {
-      await initDatabase();
-      const [wordStats, wordList] = await Promise.all([
-        getWordStats(),
-        getAllWords()
-      ]);
-      setStats(wordStats);
-      setWords(wordList);
-    } catch (error) {
-      console.error('加载失败:', error);
-      Alert.alert('错误', '加载数据失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+      loadData();
+    }, [])
+  );
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
