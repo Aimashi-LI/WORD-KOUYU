@@ -7,6 +7,14 @@ export const createStyles = (theme: Theme) => {
       flex: 1,
       padding: Spacing.lg,
     },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      marginBottom: Spacing.md,
+    },
+    backButton: {
+      padding: Spacing.sm,
+    },
     progressContainer: {
       marginBottom: Spacing.xl,
     },

@@ -1,13 +1,16 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getReviewWords, addReviewLog, updateWord } from '@/database/wordDao';
 import { getRecentReviewLogs } from '@/database/wordDao';
+import { getWordsInWordbook } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
 import { Word, ReviewSession } from '@/database/types';
 import { 
@@ -19,12 +22,15 @@ import {
   calculateMasteryRate,
   getRating
 } from '@/algorithm/fsrs';
+import { useCallback } from 'react';
 
 type ReviewState = 'idle' | 'reviewing' | 'completed';
 
 export default function ReviewScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
+  const { projectId } = useSafeSearchParams<{ projectId?: string }>();
   
   const [state, setState] = useState<ReviewState>('idle');
   const [queue, setQueue] = useState<Word[]>([]);
@@ -36,15 +42,34 @@ export default function ReviewScreen() {
   
   const startTimeRef = useRef<number>(0);
 
-  useEffect(() => {
-    loadReviewQueue();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadReviewQueue();
+    }, [projectId])
+  );
 
   const loadReviewQueue = async () => {
     setLoading(true);
     try {
       await initDatabase();
-      const words = await getReviewWords(20);
+      
+      let words: Word[];
+      
+      if (projectId) {
+        // 从指定词库加载单词
+        const allWords = await getWordsInWordbook(parseInt(projectId));
+        const now = new Date();
+        
+        // 只加载需要复习的单词
+        words = allWords.filter(w => {
+          if (!w.next_review) return true;
+          return new Date(w.next_review) <= now;
+        }).slice(0, 20);
+      } else {
+        // 从所有单词加载需要复习的单词
+        words = await getReviewWords(20);
+      }
+      
       setQueue(words);
       if (words.length > 0) {
         startReview(words[0]);
@@ -133,6 +158,16 @@ export default function ReviewScreen() {
 
     return (
       <View style={styles.reviewContainer}>
+        {/* 顶部栏 */}
+        <View style={styles.topBar}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <FontAwesome6 name="arrow-left" size={24} color={theme.textPrimary} />
+          </TouchableOpacity>
+        </View>
+
         {/* 进度指示 */}
         <View style={styles.progressContainer}>
           <ThemedText variant="caption" color={theme.textMuted}>
@@ -206,6 +241,16 @@ export default function ReviewScreen() {
 
     return (
       <View style={styles.completedContainer}>
+        {/* 顶部栏 */}
+        <View style={styles.topBar}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <FontAwesome6 name="arrow-left" size={24} color={theme.textPrimary} />
+          </TouchableOpacity>
+        </View>
+
         <FontAwesome6 name="trophy" size={80} color={theme.primary} />
         <ThemedText variant="h2" color={theme.textPrimary} style={styles.completedTitle}>
           复习完成！
