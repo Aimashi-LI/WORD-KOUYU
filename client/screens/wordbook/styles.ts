@@ -5,7 +5,9 @@ export const createStyles = (theme: Theme) => {
   return StyleSheet.create({
     scrollContent: {
       flexGrow: 1,
-      padding: Spacing.lg,
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.xl,
+      paddingBottom: Spacing['5xl'],
     },
     // 词库切换栏
     wordbookBar: {
