@@ -45,7 +45,7 @@ export default function BrushWordsScreen() {
 
   // 手势相关
   const translateY = useSharedValue(0);
-  const swipeThreshold = 150; // 滑动阈值，类似短视频效果
+  const swipeThreshold = 100;
 
   // 卡片引用，用于截图分享
   const cardRef = useRef<View>(null);
@@ -229,7 +229,6 @@ export default function BrushWordsScreen() {
   // 手势处理函数
   const onGestureEvent = (event: any) => {
     if (event.nativeEvent.state === State.ACTIVE) {
-      // 只保留位移效果，类似短视频滑动
       translateY.value = event.nativeEvent.translationY;
     }
   };
@@ -246,19 +245,13 @@ export default function BrushWordsScreen() {
         runOnJS(handleSwipeRight)();
       }
 
-      // 回弹到原位
-      translateY.value = withSpring(0, {
-        damping: 15,
-        stiffness: 150,
-      });
+      translateY.value = withSpring(0);
     }
   };
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [
-        { translateY: translateY.value }
-      ],
+      transform: [{ translateY: translateY.value }],
     };
   });
 
@@ -294,11 +287,7 @@ export default function BrushWordsScreen() {
 
   if (loading) {
     return (
-      <Screen 
-        backgroundColor={theme.backgroundRoot} 
-        statusBarStyle={isDark ? 'light' : 'dark'}
-        safeAreaEdges={['top', 'bottom']} // 去掉左右安全区，让卡片占满设备宽度
-      >
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
           <ThemedText variant="body" color={theme.textMuted} style={styles.loadingText}>
@@ -311,11 +300,7 @@ export default function BrushWordsScreen() {
 
   if (words.length === 0) {
     return (
-      <Screen 
-        backgroundColor={theme.backgroundRoot} 
-        statusBarStyle={isDark ? 'light' : 'dark'}
-        safeAreaEdges={['top', 'bottom']} // 去掉左右安全区，让卡片占满设备宽度
-      >
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
         <View style={styles.emptyContainer}>
           <FontAwesome6 name="book-open" size={64} color={theme.textMuted} />
           <ThemedText variant="h3" color={theme.textPrimary} style={styles.emptyTitle}>
@@ -330,11 +315,7 @@ export default function BrushWordsScreen() {
   }
 
   return (
-    <Screen 
-      backgroundColor={theme.backgroundRoot} 
-      statusBarStyle={isDark ? 'light' : 'dark'}
-      safeAreaEdges={['top', 'bottom']} // 去掉左右安全区，让卡片占满设备宽度
-    >
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <GestureHandlerRootView style={styles.container}>
         <View style={styles.container}>
           {/* 顶部栏 */}

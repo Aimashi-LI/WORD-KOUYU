@@ -32,8 +32,7 @@ export const createStyles = (theme: Theme) => {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: Spacing.lg, // 添加水平 padding，保持视觉效果
-      paddingVertical: Spacing.sm,
+      padding: Spacing.lg,
     },
     backButton: {
       width: 40,
@@ -60,28 +59,23 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.full,
     },
     cardContainer: {
-      height: 580, // 固定卡片容器高度
+      flex: 1,
+      padding: Spacing.lg,
       justifyContent: 'center',
-      alignItems: 'center',
-      padding: 0, // 完全移除 padding
     },
     wordCard: {
-      width: '100%', // 设备宽度的 100%
-      height: 520, // 固定单词卡片高度
-      paddingHorizontal: Spacing.xl, // 内容边距，避免贴边
-      paddingVertical: Spacing.xl, // 垂直 padding
-      borderRadius: 5, // 占满整个宽度，移除圆角
+      padding: Spacing.xl,
+      borderRadius: BorderRadius.xl,
       shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.15,
       shadowRadius: 12,
       elevation: 8,
-      gap: Spacing.md,
+      gap: Spacing.lg,
     },
     wordSection: {
       alignItems: 'center',
-      gap: Spacing.xs,
-      marginBottom: Spacing.sm,
+      gap: Spacing.sm,
     },
     wordText: {
       textAlign: 'center',
@@ -93,9 +87,8 @@ export const createStyles = (theme: Theme) => {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.sm,
-      padding: Spacing.sm,
+      padding: Spacing.md,
       borderRadius: BorderRadius.md,
-      marginBottom: Spacing.xs,
     },
     splitText: {
       flex: 1,
@@ -105,9 +98,8 @@ export const createStyles = (theme: Theme) => {
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: Spacing.sm,
-      padding: Spacing.sm,
+      padding: Spacing.md,
       borderRadius: BorderRadius.md,
-      marginBottom: Spacing.xs,
     },
     mnemonicText: {
       flex: 1,
@@ -117,18 +109,16 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.xs,
     },
     definitionSection: {
-      gap: Spacing.sm,
-      marginTop: Spacing.xs,
+      gap: Spacing.md,
     },
     sentence: {
-      marginTop: Spacing.xs,
+      marginTop: Spacing.sm,
       fontStyle: 'italic',
       color: theme.textMuted,
     },
     hintContainer: {
       alignItems: 'center',
       paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.lg, // 添加水平 padding
     },
     shareButton: {
       flexDirection: 'row',
