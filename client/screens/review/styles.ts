@@ -5,6 +5,9 @@ export const createStyles = (theme: Theme) => {
   return StyleSheet.create({
     reviewContainer: {
       flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
       padding: Spacing.lg,
     },
     topBar: {
@@ -29,58 +32,94 @@ export const createStyles = (theme: Theme) => {
       height: '100%',
       borderRadius: 3,
     },
-    wordDisplay: {
+    reviewModeContainer: {
+      gap: Spacing.lg,
+    },
+    modeHint: {
+      textAlign: 'center',
+    },
+    reviewCard: {
       padding: Spacing.xl,
       borderRadius: BorderRadius.lg,
-      alignItems: 'center',
-      marginBottom: Spacing.xl,
       shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
       shadowRadius: 8,
       elevation: 4,
     },
-    mnemonicDisplay: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.sm,
-      padding: Spacing.lg,
-      borderRadius: BorderRadius.lg,
-      marginBottom: Spacing.lg,
+    cardNormal: {},
+    cardCorrect: {
+      backgroundColor: `${theme.success}20`,
+      borderWidth: 2,
+      borderColor: theme.success,
     },
-    definitionDisplay: {
-      padding: Spacing.lg,
-      borderRadius: BorderRadius.lg,
-      marginBottom: Spacing.xl,
+    cardWrong: {
+      backgroundColor: `${theme.error}20`,
+      borderWidth: 2,
+      borderColor: theme.error,
     },
-    partOfSpeech: {
-      marginBottom: Spacing.xs,
+    cardPink: {
+      backgroundColor: '#FF69B433',
+      borderWidth: 2,
+      borderColor: '#FF69B4',
     },
-    sentence: {
-      marginTop: Spacing.sm,
-      fontStyle: 'italic',
-      lineHeight: 18,
-    },
-    scoreButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+    cardContent: {
       gap: Spacing.md,
-      marginBottom: Spacing.md,
     },
-    scoreButton: {
-      flex: 1,
-      aspectRatio: 1,
-      borderRadius: BorderRadius.lg,
+    cardText: {
+      textAlign: 'center',
+    },
+    input: {
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      fontSize: 16,
+    },
+    textArea: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+    confirmButton: {
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    feedbackContainer: {
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+    },
+    quickScoreButtons: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      marginTop: Spacing.md,
+    },
+    quickScoreButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 2,
     },
-    scoreHint: {
-      textAlign: 'center',
+    quickScoreButtonActive: {
+      opacity: 0.5,
     },
     loadingContainer: {
       flex: 1,
