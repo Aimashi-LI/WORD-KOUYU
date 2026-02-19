@@ -45,7 +45,9 @@ export default function BrushWordsScreen() {
 
   // 手势相关
   const translateY = useSharedValue(0);
-  const swipeThreshold = 100;
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+  const swipeThreshold = 180; // 增大滑动阈值，增强滑动效果
 
   // 卡片引用，用于截图分享
   const cardRef = useRef<View>(null);
@@ -230,6 +232,13 @@ export default function BrushWordsScreen() {
   const onGestureEvent = (event: any) => {
     if (event.nativeEvent.state === State.ACTIVE) {
       translateY.value = event.nativeEvent.translationY;
+      
+      // 计算滑动比例（0-1之间）
+      const swipeProgress = Math.min(Math.abs(event.nativeEvent.translationY) / swipeThreshold, 1);
+      
+      // 根据滑动距离调整缩放和透明度，增强视觉效果
+      scale.value = withTiming(1 - swipeProgress * 0.15, { duration: 0 });
+      opacity.value = withTiming(1 - swipeProgress * 0.3, { duration: 0 });
     }
   };
 
@@ -245,13 +254,29 @@ export default function BrushWordsScreen() {
         runOnJS(handleSwipeRight)();
       }
 
-      translateY.value = withSpring(0);
+      // 使用更明显的弹性动画效果
+      translateY.value = withSpring(0, {
+        damping: 15,
+        stiffness: 150,
+      });
+      scale.value = withSpring(1, {
+        damping: 15,
+        stiffness: 150,
+      });
+      opacity.value = withSpring(1, {
+        damping: 15,
+        stiffness: 150,
+      });
     }
   };
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ translateY: translateY.value }],
+      transform: [
+        { translateY: translateY.value },
+        { scale: scale.value }
+      ],
+      opacity: opacity.value,
     };
   });
 

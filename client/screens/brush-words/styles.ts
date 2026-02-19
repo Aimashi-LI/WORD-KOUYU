@@ -59,11 +59,14 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.full,
     },
     cardContainer: {
-      flex: 1,
-      padding: Spacing.lg,
+      height: 580, // 固定卡片容器高度
       justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.lg,
     },
     wordCard: {
+      width: '100%',
+      height: 520, // 固定单词卡片高度
       padding: Spacing.xl,
       borderRadius: BorderRadius.xl,
       shadowColor: theme.primary,
@@ -71,11 +74,12 @@ export const createStyles = (theme: Theme) => {
       shadowOpacity: 0.15,
       shadowRadius: 12,
       elevation: 8,
-      gap: Spacing.lg,
+      gap: Spacing.md,
     },
     wordSection: {
       alignItems: 'center',
-      gap: Spacing.sm,
+      gap: Spacing.xs,
+      marginBottom: Spacing.xs,
     },
     wordText: {
       textAlign: 'center',
@@ -87,7 +91,7 @@ export const createStyles = (theme: Theme) => {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.sm,
-      padding: Spacing.md,
+      padding: Spacing.sm,
       borderRadius: BorderRadius.md,
     },
     splitText: {
@@ -98,7 +102,7 @@ export const createStyles = (theme: Theme) => {
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: Spacing.sm,
-      padding: Spacing.md,
+      padding: Spacing.sm,
       borderRadius: BorderRadius.md,
     },
     mnemonicText: {
@@ -109,7 +113,8 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.xs,
     },
     definitionSection: {
-      gap: Spacing.md,
+      gap: Spacing.sm,
+      marginTop: Spacing.xs,
     },
     sentence: {
       marginTop: Spacing.sm,
