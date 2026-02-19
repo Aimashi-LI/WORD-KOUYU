@@ -62,14 +62,14 @@ export const createStyles = (theme: Theme) => {
       height: 580, // 固定卡片容器高度
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 0, // 完全移除 padding，让卡片完全占满
+      padding: 0, // 完全移除 padding
     },
     wordCard: {
-      width: '100%', // 全宽显示
+      width: '100%', // 设备宽度的 100%
       height: 520, // 固定单词卡片高度
-      paddingHorizontal: Spacing.lg, // 只保留水平 padding
+      paddingHorizontal: Spacing.xl, // 内容边距，避免贴边
       paddingVertical: Spacing.xl, // 垂直 padding
-      borderRadius: BorderRadius.xl,
+      borderRadius: 0, // 占满整个宽度，移除圆角
       shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.15,
