@@ -49,20 +49,23 @@ export default function ReviewScreen() {
   const [currentWord, setCurrentWord] = useState<Word | null>(null);
   const [totalScore, setTotalScore] = useState(0);
   const [loading, setLoading] = useState(false);
-
-  // 新增：跟踪已掌握的单词
   const [masteredWords, setMasteredWords] = useState<Word[]>([]);
-
-  // 复习方式状态
-  const [reviewMode, setReviewMode] = useState<ReviewMode>('type1'); // 当前是方式一还是方式二
-  const [type1Answer, setType1Answer] = useState(''); // 方式一答案（填空单词）
-  const [type2Answer, setType2Answer] = useState(''); // 方式二答案（填空释义）
-  const [type1Status, setType1Status] = useState<AnswerStatus>('none'); // 方式一答案状态
-  const [type2Status, setType2Status] = useState<AnswerStatus>('none'); // 方式二答案状态
-  const [quickScore, setQuickScore] = useState<number | null>(null); // 快速评分（0或2）
-  const [isEditing, setIsEditing] = useState(false); // 是否正在编辑答案
-
+  
+  // 新增：记录每个单词的得分
+  const [wordScores, setWordScores] = useState<{ wordId: number; word: string; score: number; isQuick: boolean }[]>([]);
+  
+  // 复习状态相关
+  const [reviewMode, setReviewMode] = useState<ReviewMode>('type1');
+  const [type1Answer, setType1Answer] = useState('');
+  const [type2Answer, setType2Answer] = useState('');
+  const [type1Status, setType1Status] = useState<AnswerStatus>('none');
+  const [type2Status, setType2Status] = useState<AnswerStatus>('none');
+  const [quickScore, setQuickScore] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // 新增：记录开始时间
   const startTimeRef = useRef<number>(0);
+  const reviewStartTimeRef = useRef<number>(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -132,6 +135,11 @@ export default function ReviewScreen() {
     setIsEditing(false);
     setState('reviewing');
     startTimeRef.current = Date.now();
+    
+    // 记录复习开始时间（用于统计总耗时）
+    if (currentIndex === 0) {
+      reviewStartTimeRef.current = Date.now();
+    }
   };
 
   // 方式一：根据词性、释义、拆分填写单词
@@ -240,6 +248,7 @@ export default function ReviewScreen() {
 
     const finalScore = calculateFinalScore();
     const responseTime = (Date.now() - startTimeRef.current) / 1000;
+    const isQuick = quickScore !== null;
 
     try {
       // 更新数据库
@@ -272,6 +281,17 @@ export default function ReviewScreen() {
         response_time: responseTime,
         reviewed_at: new Date().toISOString()
       });
+
+      // 记录单词得分
+      setWordScores(prev => [
+        ...prev,
+        {
+          wordId: currentWord.id,
+          word: currentWord.word,
+          score: finalScore,
+          isQuick
+        }
+      ]);
 
       // 如果单词已掌握，添加到已掌握列表
       if (isMastered && !currentWord.is_mastered) {
@@ -554,6 +574,25 @@ export default function ReviewScreen() {
   const renderCompleted = () => {
     const masteryRate = calculateMasteryRate(totalScore, queue.length);
     const rating = getRating(masteryRate);
+    
+    // 计算详细统计
+    const perfectCount = wordScores.filter(w => w.score === 6).length; // 完全正确（6分）
+    const partialCount = wordScores.filter(w => w.score === 4).length; // 部分正确（4分）
+    const wrongCount = wordScores.filter(w => w.score === 0 && !w.isQuick).length; // 完全错误（0分，非快速评分）
+    const quickNoImpression = wordScores.filter(w => w.score === 0 && w.isQuick).length; // 快速评分：没印象
+    const quickSomeImpression = wordScores.filter(w => w.score === 2).length; // 快速评分：有印象
+    
+    const averageScore = queue.length > 0 ? (totalScore / queue.length).toFixed(1) : 0;
+    const totalTime = reviewStartTimeRef.current > 0 ? Math.round((Date.now() - reviewStartTimeRef.current) / 1000) : 0;
+    const avgTimePerWord = queue.length > 0 ? Math.round(totalTime / queue.length) : 0;
+    
+    // 格式化时间
+    const formatTime = (seconds: number) => {
+      if (seconds < 60) return `${seconds}秒`;
+      const minutes = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${minutes}分${secs}秒`;
+    };
 
     return (
       <View style={styles.completedContainer}>
@@ -567,72 +606,154 @@ export default function ReviewScreen() {
           </TouchableOpacity>
         </View>
 
-        <FontAwesome6 name="trophy" size={80} color={theme.primary} />
-        <ThemedText variant="h2" color={theme.textPrimary} style={styles.completedTitle}>
-          复习完成！
-        </ThemedText>
-        <ThemedText variant="h3" color={theme.primary} style={styles.rating}>
-          {rating}
-        </ThemedText>
-        
-        {/* 基础统计 */}
-        <View style={styles.statsRow}>
-          <ThemedText variant="body" color={theme.textSecondary}>
-            复习 {queue.length} 个单词
+        <ScrollView contentContainerStyle={styles.completedScrollContent}>
+          {/* 奖杯图标 */}
+          <View style={styles.trophyContainer}>
+            <FontAwesome6 name="trophy" size={80} color={theme.primary} />
+          </View>
+          
+          {/* 标题 */}
+          <ThemedText variant="h2" color={theme.textPrimary} style={styles.completedTitle}>
+            复习完成！
           </ThemedText>
-          <ThemedText variant="body" color={theme.textSecondary}>
-            掌握率 {masteryRate}%
+          <ThemedText variant="h3" color={theme.primary} style={styles.rating}>
+            {rating}
           </ThemedText>
-        </View>
+          
+          {/* 总体统计卡片 */}
+          <ThemedView level="default" style={styles.statsCard}>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <ThemedText variant="h2" color={theme.primary}>{queue.length}</ThemedText>
+                <ThemedText variant="caption" color={theme.textMuted}>复习单词</ThemedText>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <ThemedText variant="h2" color={theme.success}>{masteryRate}%</ThemedText>
+                <ThemedText variant="caption" color={theme.textMuted}>掌握率</ThemedText>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <ThemedText variant="h2" color={theme.accent}>{averageScore}</ThemedText>
+                <ThemedText variant="caption" color={theme.textMuted}>平均分</ThemedText>
+              </View>
+            </View>
+          </ThemedView>
 
-        {/* 已掌握单词提示 */}
-        {masteredWords.length > 0 && (
-          <ThemedView level="tertiary" style={styles.masteredBanner}>
-            <FontAwesome6 name="star" size={20} color={theme.success} />
-            <View style={styles.masteredBannerContent}>
-              <ThemedText variant="h3" color={theme.success} style={styles.masteredTitle}>
-                🎉 恭喜！有 {masteredWords.length} 个单词已掌握
+          {/* 时间统计 */}
+          <ThemedView level="default" style={styles.timeStatsCard}>
+            <View style={styles.timeStatsRow}>
+              <FontAwesome6 name="clock" size={20} color={theme.textSecondary} />
+              <ThemedText variant="body" color={theme.textSecondary}>
+                总用时 {formatTime(totalTime)}
               </ThemedText>
-              <ThemedText variant="caption" color={theme.textSecondary}>
-                这些单词将不再出现在复习队列中
+            </View>
+            <View style={styles.timeStatsRow}>
+              <FontAwesome6 name="stopwatch" size={20} color={theme.textSecondary} />
+              <ThemedText variant="body" color={theme.textSecondary}>
+                平均每个单词 {avgTimePerWord}秒
               </ThemedText>
             </View>
           </ThemedView>
-        )}
 
-        {/* 已掌握单词列表 */}
-        {masteredWords.length > 0 && (
-          <ScrollView style={styles.masteredWordsList}>
-            <ThemedText variant="body" color={theme.textMuted} style={styles.masteredListHeader}>
-              已掌握的单词：
+          {/* 分数分布 */}
+          <ThemedView level="default" style={styles.scoreDistributionCard}>
+            <ThemedText variant="h3" color={theme.textPrimary} style={styles.cardTitle}>
+              分数分布
             </ThemedText>
-            {masteredWords.map(word => (
-              <ThemedView key={word.id} level="tertiary" style={styles.masteredWordItem}>
-                <View style={styles.masteredWordInfo}>
-                  <ThemedText variant="body" color={theme.textPrimary}>
-                    {word.word}
-                  </ThemedText>
-                  <ThemedText variant="caption" color={theme.textMuted}>
-                    稳定性：{Math.round(word.stability)} 天
-                  </ThemedText>
-                </View>
-                <FontAwesome6 name="circle-check" size={20} color={theme.success} />
-              </ThemedView>
-            ))}
-          </ScrollView>
-        )}
+            
+            <View style={styles.scoreBar}>
+              <View style={[styles.scoreBarSegment, { flex: perfectCount, backgroundColor: theme.success }]}>
+                <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.scoreBarLabel}>
+                  完全正确 {perfectCount}
+                </ThemedText>
+              </View>
+              <View style={[styles.scoreBarSegment, { flex: partialCount, backgroundColor: theme.primary }]}>
+                <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.scoreBarLabel}>
+                  部分正确 {partialCount}
+                </ThemedText>
+              </View>
+              <View style={[styles.scoreBarSegment, { flex: wrongCount, backgroundColor: theme.error }]}>
+                <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.scoreBarLabel}>
+                  完全错误 {wrongCount}
+                </ThemedText>
+              </View>
+              <View style={[styles.scoreBarSegment, { flex: quickSomeImpression, backgroundColor: '#FF69B4' }]}>
+                <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.scoreBarLabel}>
+                  有印象 {quickSomeImpression}
+                </ThemedText>
+              </View>
+              <View style={[styles.scoreBarSegment, { flex: quickNoImpression, backgroundColor: theme.border }]}>
+                <ThemedText variant="caption" color={theme.textMuted} style={styles.scoreBarLabel}>
+                  没印象 {quickNoImpression}
+                </ThemedText>
+              </View>
+            </View>
+          </ThemedView>
 
-        <TouchableOpacity 
-          style={styles.completeButton}
-          onPress={() => {
-            setCurrentIndex(0);
-            setTotalScore(0);
-            setMasteredWords([]);
-            loadReviewQueue();
-          }}
-        >
-          <ThemedText variant="h3" color={theme.buttonPrimaryText}>再来一轮</ThemedText>
-        </TouchableOpacity>
+          {/* 已掌握单词提示 */}
+          {masteredWords.length > 0 && (
+            <ThemedView level="tertiary" style={styles.masteredBanner}>
+              <FontAwesome6 name="star" size={20} color={theme.success} />
+              <View style={styles.masteredBannerContent}>
+                <ThemedText variant="h3" color={theme.success} style={styles.masteredTitle}>
+                  🎉 恭喜！有 {masteredWords.length} 个单词已掌握
+                </ThemedText>
+                <ThemedText variant="caption" color={theme.textSecondary}>
+                  这些单词将不再出现在复习队列中
+                </ThemedText>
+              </View>
+            </ThemedView>
+          )}
+
+          {/* 已掌握单词列表 */}
+          {masteredWords.length > 0 && (
+            <View style={styles.masteredWordsList}>
+              <ThemedText variant="body" color={theme.textMuted} style={styles.masteredListHeader}>
+                已掌握的单词：
+              </ThemedText>
+              {masteredWords.map(word => (
+                <ThemedView key={word.id} level="tertiary" style={styles.masteredWordItem}>
+                  <View style={styles.masteredWordInfo}>
+                    <ThemedText variant="body" color={theme.textPrimary}>
+                      {word.word}
+                    </ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted}>
+                      稳定性：{Math.round(word.stability)} 天
+                    </ThemedText>
+                  </View>
+                  <FontAwesome6 name="circle-check" size={20} color={theme.success} />
+                </ThemedView>
+              ))}
+            </View>
+          )}
+
+          {/* 按钮组 */}
+          <View style={styles.buttonGroup}>
+            <TouchableOpacity 
+              style={[styles.completeButton, { backgroundColor: theme.primary }]}
+              onPress={() => {
+                setCurrentIndex(0);
+                setTotalScore(0);
+                setMasteredWords([]);
+                setWordScores([]);
+                reviewStartTimeRef.current = 0;
+                loadReviewQueue();
+              }}
+            >
+              <FontAwesome6 name="rotate-right" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
+              <ThemedText variant="h3" color={theme.buttonPrimaryText}>再来一轮</ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.secondaryButton, { backgroundColor: theme.backgroundTertiary, borderColor: theme.border }]}
+              onPress={() => router.back()}
+            >
+              <FontAwesome6 name="house" size={20} color={theme.textPrimary} style={styles.buttonIcon} />
+              <ThemedText variant="h3" color={theme.textPrimary}>返回首页</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
     );
   };
