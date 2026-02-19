@@ -65,7 +65,8 @@ export const createStyles = (theme: Theme) => {
       paddingHorizontal: Spacing.lg,
     },
     wordCard: {
-      width: '100%',
+      width: '90%', // 恢复之前的宽度，从 100% 改为 90%
+      maxWidth: 500, // 限制最大宽度
       height: 520, // 固定单词卡片高度
       padding: Spacing.xl,
       borderRadius: BorderRadius.xl,
@@ -79,7 +80,7 @@ export const createStyles = (theme: Theme) => {
     wordSection: {
       alignItems: 'center',
       gap: Spacing.xs,
-      marginBottom: Spacing.xs,
+      marginBottom: Spacing.sm,
     },
     wordText: {
       textAlign: 'center',
@@ -93,6 +94,7 @@ export const createStyles = (theme: Theme) => {
       gap: Spacing.sm,
       padding: Spacing.sm,
       borderRadius: BorderRadius.md,
+      marginBottom: Spacing.xs,
     },
     splitText: {
       flex: 1,
@@ -104,6 +106,7 @@ export const createStyles = (theme: Theme) => {
       gap: Spacing.sm,
       padding: Spacing.sm,
       borderRadius: BorderRadius.md,
+      marginBottom: Spacing.xs,
     },
     mnemonicText: {
       flex: 1,
@@ -117,7 +120,7 @@ export const createStyles = (theme: Theme) => {
       marginTop: Spacing.xs,
     },
     sentence: {
-      marginTop: Spacing.sm,
+      marginTop: Spacing.xs,
       fontStyle: 'italic',
       color: theme.textMuted,
     },
