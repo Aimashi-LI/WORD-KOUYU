@@ -94,11 +94,11 @@ export default function ReviewHomeScreen() {
   const handleStartReview = (projectId: number) => {
     console.log('[ReviewHome] ========== 点击开始复习 ==========');
     console.log('[ReviewHome] projectId:', projectId);
-    console.log('[ReviewHome] 路由路径:', '/review');
+    console.log('[ReviewHome] 路由路径:', '/review-detail');
     console.log('[ReviewHome] 路由参数:', { projectId: projectId.toString() });
-    
+
     try {
-      router.push('/review', { projectId: projectId.toString() });
+      router.push('/review-detail', { projectId: projectId.toString() });
       console.log('[ReviewHome] router.push 调用成功');
     } catch (error) {
       console.error('[ReviewHome] router.push 调用失败:', error);

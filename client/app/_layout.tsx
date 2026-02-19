@@ -63,12 +63,12 @@ export default function RootLayout() {
                 presentation: 'card'
               }} 
             />
-            <Stack.Screen 
-              name="review" 
-              options={{ 
+            <Stack.Screen
+              name="review-detail"
+              options={{
                 title: "单词复习",
                 presentation: 'card'
-              }} 
+              }}
             />
             <Stack.Screen 
               name="brush-words" 
