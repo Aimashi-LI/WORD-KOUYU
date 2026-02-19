@@ -62,12 +62,13 @@ export const createStyles = (theme: Theme) => {
       height: 580, // 固定卡片容器高度
       justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: Spacing.lg,
+      padding: 0, // 完全移除 padding，让卡片完全占满
     },
     wordCard: {
       width: '100%', // 全宽显示
       height: 520, // 固定单词卡片高度
-      padding: Spacing.xl,
+      paddingHorizontal: Spacing.lg, // 只保留水平 padding
+      paddingVertical: Spacing.xl, // 垂直 padding
       borderRadius: BorderRadius.xl,
       shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
