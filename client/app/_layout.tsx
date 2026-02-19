@@ -64,6 +64,13 @@ export default function RootLayout() {
               }} 
             />
             <Stack.Screen 
+              name="review" 
+              options={{ 
+                title: "单词复习",
+                presentation: 'card'
+              }} 
+            />
+            <Stack.Screen 
               name="brush-words" 
               options={{ 
                 title: "刷单词",
