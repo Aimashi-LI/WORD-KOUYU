@@ -65,8 +65,7 @@ export const createStyles = (theme: Theme) => {
       paddingHorizontal: Spacing.lg,
     },
     wordCard: {
-      width: '90%', // 恢复之前的宽度，从 100% 改为 90%
-      maxWidth: 500, // 限制最大宽度
+      width: '100%', // 全宽显示
       height: 520, // 固定单词卡片高度
       padding: Spacing.xl,
       borderRadius: BorderRadius.xl,
