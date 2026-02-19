@@ -32,7 +32,8 @@ export const createStyles = (theme: Theme) => {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: Spacing.lg,
+      paddingHorizontal: Spacing.lg, // 添加水平 padding，保持视觉效果
+      paddingVertical: Spacing.sm,
     },
     backButton: {
       width: 40,
@@ -69,7 +70,7 @@ export const createStyles = (theme: Theme) => {
       height: 520, // 固定单词卡片高度
       paddingHorizontal: Spacing.xl, // 内容边距，避免贴边
       paddingVertical: Spacing.xl, // 垂直 padding
-      borderRadius: 0, // 占满整个宽度，移除圆角
+      borderRadius: 5, // 占满整个宽度，移除圆角
       shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.15,
@@ -127,6 +128,7 @@ export const createStyles = (theme: Theme) => {
     hintContainer: {
       alignItems: 'center',
       paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg, // 添加水平 padding
     },
     shareButton: {
       flexDirection: 'row',

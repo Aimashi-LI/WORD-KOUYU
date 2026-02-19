@@ -294,7 +294,11 @@ export default function BrushWordsScreen() {
 
   if (loading) {
     return (
-      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <Screen 
+        backgroundColor={theme.backgroundRoot} 
+        statusBarStyle={isDark ? 'light' : 'dark'}
+        safeAreaEdges={['top', 'bottom']} // 去掉左右安全区，让卡片占满设备宽度
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
           <ThemedText variant="body" color={theme.textMuted} style={styles.loadingText}>
@@ -307,7 +311,11 @@ export default function BrushWordsScreen() {
 
   if (words.length === 0) {
     return (
-      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <Screen 
+        backgroundColor={theme.backgroundRoot} 
+        statusBarStyle={isDark ? 'light' : 'dark'}
+        safeAreaEdges={['top', 'bottom']} // 去掉左右安全区，让卡片占满设备宽度
+      >
         <View style={styles.emptyContainer}>
           <FontAwesome6 name="book-open" size={64} color={theme.textMuted} />
           <ThemedText variant="h3" color={theme.textPrimary} style={styles.emptyTitle}>
@@ -322,7 +330,11 @@ export default function BrushWordsScreen() {
   }
 
   return (
-    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+    <Screen 
+      backgroundColor={theme.backgroundRoot} 
+      statusBarStyle={isDark ? 'light' : 'dark'}
+      safeAreaEdges={['top', 'bottom']} // 去掉左右安全区，让卡片占满设备宽度
+    >
       <GestureHandlerRootView style={styles.container}>
         <View style={styles.container}>
           {/* 顶部栏 */}
