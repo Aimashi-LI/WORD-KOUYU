@@ -32,6 +32,8 @@ type ReviewMode = 'type1' | 'type2'; // type1: 填空单词, type2: 填空释义
 type AnswerStatus = 'none' | 'correct' | 'wrong';
 
 export default function ReviewScreen() {
+  console.log('[Review] ========== ReviewScreen 组件开始渲染 ==========');
+  
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
@@ -39,6 +41,7 @@ export default function ReviewScreen() {
 
   // 添加调试日志
   console.log('[Review] 页面加载，projectId:', projectId);
+  console.log('[Review] 当前路由:', router);
 
   const [state, setState] = useState<ReviewState>('idle');
   const [queue, setQueue] = useState<Word[]>([]);
@@ -68,6 +71,7 @@ export default function ReviewScreen() {
   );
 
   const loadReviewQueue = async () => {
+    console.log('[Review] ========== loadReviewQueue 开始 ==========');
     console.log('[Review] 加载复习队列，projectId:', projectId);
     setLoading(true);
     try {
@@ -77,8 +81,10 @@ export default function ReviewScreen() {
       let words: Word[];
 
       if (projectId) {
+        console.log('[Review] 从指定词库加载单词，projectId:', projectId);
         // 从指定词库加载单词
         const allWords = await getWordsInWordbook(parseInt(projectId));
+        console.log('[Review] 词库中的单词总数:', allWords.length);
 
         // 只加载需要复习且未掌握的单词
         words = allWords.filter(w => {
@@ -90,17 +96,19 @@ export default function ReviewScreen() {
           if (!w.next_review) return true;
           return new Date(w.next_review) <= now;
         }).slice(0, 20);
+        console.log('[Review] 过滤后的待复习单词数:', words.length);
       } else {
+        console.log('[Review] 从所有单词加载需要复习的单词');
         // 从所有单词加载需要复习的单词
         words = await getReviewWords(20);
       }
 
-      console.log('[Review] 加载了', words.length, '个单词');
+      console.log('[Review] 最终加载了', words.length, '个单词');
       setQueue(words);
       setCurrentIndex(0);
       setState('idle');
     } catch (error) {
-      console.error('加载复习队列失败:', error);
+      console.error('[Review] 加载复习队列失败:', error);
       Alert.alert('错误', '加载复习队列失败');
     } finally {
       setLoading(false);
