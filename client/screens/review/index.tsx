@@ -37,6 +37,9 @@ export default function ReviewScreen() {
   const router = useSafeRouter();
   const { projectId } = useSafeSearchParams<{ projectId?: string }>();
 
+  // 添加调试日志
+  console.log('[Review] 页面加载，projectId:', projectId);
+
   const [state, setState] = useState<ReviewState>('idle');
   const [queue, setQueue] = useState<Word[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -65,9 +68,11 @@ export default function ReviewScreen() {
   );
 
   const loadReviewQueue = async () => {
+    console.log('[Review] 加载复习队列，projectId:', projectId);
     setLoading(true);
     try {
       await initDatabase();
+      console.log('[Review] 数据库初始化完成');
 
       let words: Word[];
 
@@ -90,6 +95,7 @@ export default function ReviewScreen() {
         words = await getReviewWords(20);
       }
 
+      console.log('[Review] 加载了', words.length, '个单词');
       setQueue(words);
       setCurrentIndex(0);
       setState('idle');

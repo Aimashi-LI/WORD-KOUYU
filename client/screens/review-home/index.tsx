@@ -92,77 +92,84 @@ export default function ReviewHomeScreen() {
   };
 
   const handleStartReview = (projectId: number) => {
+    console.log('[ReviewHome] 点击开始复习，projectId:', projectId);
     router.push('/review', { projectId: projectId.toString() });
   };
 
   const renderProjectCard = (project: ReviewProject) => (
     <ThemedView key={project.id} level="default" style={styles.projectCard}>
-      <TouchableOpacity 
-        style={styles.projectContent}
+      <TouchableOpacity
+        activeOpacity={0.7}
         onPress={() => handleStartReview(project.id)}
       >
-        <View style={styles.projectHeader}>
-          <View style={styles.projectTitleContainer}>
-            <FontAwesome6 
-              name="folder" 
-              size={24} 
-              color={theme.primary} 
-              style={styles.projectIcon} 
-            />
-            <View>
-              <ThemedText variant="h3" color={theme.textPrimary}>
-                {project.name}
-              </ThemedText>
-              {project.description && (
-                <ThemedText variant="caption" color={theme.textMuted}>
-                  {project.description}
+        <View style={styles.projectContent}>
+          <View style={styles.projectHeader}>
+            <View style={styles.projectTitleContainer}>
+              <FontAwesome6
+                name="folder"
+                size={24}
+                color={theme.primary}
+                style={styles.projectIcon}
+              />
+              <View>
+                <ThemedText variant="h3" color={theme.textPrimary}>
+                  {project.name}
                 </ThemedText>
-              )}
+                {project.description && (
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {project.description}
+                  </ThemedText>
+                )}
+              </View>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.deleteButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleDeleteProject(project);
+              }}
+            >
+              <FontAwesome6 name="trash" size={18} color={theme.error} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <ThemedText variant="h3" color={theme.textPrimary}>
+                {project.word_count}
+              </ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>总单词</ThemedText>
+            </View>
+
+            <View style={styles.statDivider} />
+
+            <View style={styles.statItem}>
+              <ThemedText variant="h3" color={theme.warning}>
+                {project.pendingReview}
+              </ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>待复习</ThemedText>
+            </View>
+
+            <View style={styles.statDivider} />
+
+            <View style={styles.statItem}>
+              <ThemedText variant="h3" color={theme.success}>
+                {project.masteredCount}
+              </ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>已掌握</ThemedText>
             </View>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.deleteButton}
-            onPress={() => handleDeleteProject(project)}
-          >
-            <FontAwesome6 name="trash" size={18} color={theme.error} />
-          </TouchableOpacity>
-        </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <ThemedText variant="h3" color={theme.textPrimary}>
-              {project.word_count}
-            </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted}>总单词</ThemedText>
-          </View>
-          
-          <View style={styles.statDivider} />
-          
-          <View style={styles.statItem}>
-            <ThemedText variant="h3" color={theme.warning}>
-              {project.pendingReview}
-            </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted}>待复习</ThemedText>
-          </View>
-          
-          <View style={styles.statDivider} />
-          
-          <View style={styles.statItem}>
-            <ThemedText variant="h3" color={theme.success}>
-              {project.masteredCount}
-            </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted}>已掌握</ThemedText>
-          </View>
+          {project.pendingReview > 0 && (
+            <View style={styles.reviewButtonContainer}>
+              <ThemedText variant="caption" color={theme.buttonPrimaryText}>
+                {project.pendingReview} 个单词待复习，点击开始
+              </ThemedText>
+            </View>
+          )}
         </View>
-
-        {project.pendingReview > 0 && (
-          <View style={styles.reviewButtonContainer}>
-            <ThemedText variant="caption" color={theme.buttonPrimaryText}>
-              {project.pendingReview} 个单词待复习，点击开始
-            </ThemedText>
-          </View>
-        )}
       </TouchableOpacity>
     </ThemedView>
   );
