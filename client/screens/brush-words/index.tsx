@@ -479,9 +479,9 @@ export default function BrushWordsScreen() {
                   {currentWord.split && (
                     <ThemedView level="tertiary" style={styles.splitSection}>
                       <FontAwesome6 name="scissors" size={16} color={theme.accent} />
-                      <View style={styles.splitTextContainer}>
-                        <ThemedText variant="body" color={theme.textMuted}>拆分：</ThemedText>
-                        <ThemedText variant="body" color={theme.textSecondary} style={styles.splitContent}>
+                      <View style={styles.splitRow}>
+                        <ThemedText variant="body" color={theme.textMuted} style={styles.splitLabel}>拆分：</ThemedText>
+                        <ThemedText variant="body" color={theme.textSecondary} style={styles.splitValue}>
                           {formatSplitStringForDisplay(currentWord.split)}
                         </ThemedText>
                       </View>
