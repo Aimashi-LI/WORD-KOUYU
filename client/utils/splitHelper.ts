@@ -203,6 +203,43 @@ export function convertSplitItemsToString(splitItems: SplitItem[]): string {
 }
 
 /**
+ * 格式化拆分字符串用于展示
+ * 将存储格式（code1,content1。code2,content2）转换为展示格式（code1-content1,code2-content2）
+ * @param splitStr 存储格式的拆分字符串
+ * @returns 展示格式的拆分字符串
+ */
+export function formatSplitStringForDisplay(splitStr: string): string {
+  if (!splitStr || !splitStr.trim()) {
+    return '';
+  }
+
+  try {
+    // 使用 '。' 分割每一组
+    const groups = splitStr.split('。').filter(g => g.trim());
+    
+    // 对每一组，使用 ',' 分割英文和中文，然后用 '-' 连接
+    const formattedGroups = groups.map(group => {
+      const parts = group.split(',');
+      if (parts.length >= 2) {
+        const code = parts[0].trim();
+        const content = parts.slice(1).join(',').trim();
+        return `${code}-${content}`;
+      } else if (parts.length === 1) {
+        // 如果只有一部分，直接返回（容错处理）
+        return parts[0].trim();
+      }
+      return '';
+    });
+
+    // 使用 ',' 连接所有组
+    return formattedGroups.filter(g => g).join(',');
+  } catch (error) {
+    console.error('格式化拆分字符串失败:', error);
+    return splitStr; // 格式化失败时返回原字符串
+  }
+}
+
+/**
  * 解析拆分字符串为拆分项数组
  */
 export function parseSplitString(splitStr: string): SplitItem[] {

@@ -19,6 +19,7 @@ import {
   getRating
 } from '@/algorithm/fsrs';
 import { useCallback } from 'react';
+import { formatSplitStringForDisplay } from '@/utils/splitHelper';
 
 // 掌握标准配置
 const MASTERY_CONFIG = {
@@ -416,20 +417,20 @@ export default function ReviewScreen() {
               <ThemedView level="default" style={[styles.reviewCard, getCardBackgroundColor()]}>
                 <View style={styles.cardContent}>
                   {currentWord.partOfSpeech && (
-                    <ThemedText variant="h3" color={theme.textPrimary} style={styles.cardText}>
-                      <ThemedText variant="h3" color={theme.textMuted}>词性：</ThemedText>
-                      {currentWord.partOfSpeech}.
-                    </ThemedText>
+                    <View style={styles.cardItemRow}>
+                      <ThemedText variant="h3" color={theme.textMuted} style={styles.cardLabel}>词性：</ThemedText>
+                      <ThemedText variant="h3" color={theme.textPrimary} style={styles.cardValue}>{currentWord.partOfSpeech}.</ThemedText>
+                    </View>
                   )}
-                  <ThemedText variant="h2" color={theme.textPrimary} style={styles.cardText}>
-                    <ThemedText variant="h2" color={theme.textMuted}>释义：</ThemedText>
-                    {currentWord.definition}
-                  </ThemedText>
+                  <View style={styles.cardItemRow}>
+                    <ThemedText variant="h2" color={theme.textMuted} style={styles.cardLabel}>释义：</ThemedText>
+                    <ThemedText variant="h2" color={theme.textPrimary} style={styles.cardValue}>{currentWord.definition}</ThemedText>
+                  </View>
                   {currentWord.split && (
-                    <ThemedText variant="body" color={theme.textSecondary} style={styles.cardText}>
-                      <ThemedText variant="body" color={theme.textMuted}>拆分：</ThemedText>
-                      {currentWord.split}
-                    </ThemedText>
+                    <View style={styles.cardItemRow}>
+                      <ThemedText variant="body" color={theme.textMuted} style={styles.cardLabel}>拆分：</ThemedText>
+                      <ThemedText variant="body" color={theme.textSecondary} style={styles.cardValue}>{formatSplitStringForDisplay(currentWord.split)}</ThemedText>
+                    </View>
                   )}
                 </View>
               </ThemedView>
@@ -491,16 +492,16 @@ export default function ReviewScreen() {
                     </ThemedText>
                   )}
                   {currentWord.mnemonic && (
-                    <ThemedText variant="body" color={theme.textSecondary} style={styles.cardText}>
-                      <ThemedText variant="body" color={theme.textMuted}>助记：</ThemedText>
-                      {currentWord.mnemonic}
-                    </ThemedText>
+                    <View style={styles.cardItemRow}>
+                      <ThemedText variant="body" color={theme.textMuted} style={styles.cardLabel}>助记：</ThemedText>
+                      <ThemedText variant="body" color={theme.textSecondary} style={styles.cardValue}>{currentWord.mnemonic}</ThemedText>
+                    </View>
                   )}
                   {currentWord.sentence && (
-                    <ThemedText variant="body" color={theme.textSecondary} style={styles.cardText}>
-                      <ThemedText variant="body" color={theme.textMuted}>例句：</ThemedText>
-                      {currentWord.sentence}
-                    </ThemedText>
+                    <View style={styles.cardItemRow}>
+                      <ThemedText variant="body" color={theme.textMuted} style={styles.cardLabel}>例句：</ThemedText>
+                      <ThemedText variant="body" color={theme.textSecondary} style={styles.cardValue}>{currentWord.sentence}</ThemedText>
+                    </View>
                   )}
                 </View>
               </ThemedView>

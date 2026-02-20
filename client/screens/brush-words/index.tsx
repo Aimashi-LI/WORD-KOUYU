@@ -23,6 +23,7 @@ import { getWordsInWordbook, createWordbook, addWordToWordbook, getAllWordbooks 
 import { initDatabase, getDatabase } from '@/database';
 import { Word, Wordbook } from '@/database/types';
 import { useCallback } from 'react';
+import { formatSplitStringForDisplay } from '@/utils/splitHelper';
 
 export default function BrushWordsScreen() {
   const { theme, isDark } = useTheme();
@@ -480,7 +481,7 @@ export default function BrushWordsScreen() {
                       <FontAwesome6 name="scissors" size={16} color={theme.accent} />
                       <ThemedText variant="body" color={theme.textSecondary} style={styles.splitText}>
                         <ThemedText variant="body" color={theme.textMuted}>拆分：</ThemedText>
-                        {currentWord.split}
+                        {formatSplitStringForDisplay(currentWord.split)}
                       </ThemedText>
                     </ThemedView>
                   )}
