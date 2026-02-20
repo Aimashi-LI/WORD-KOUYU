@@ -68,15 +68,15 @@ export const createStyles = (theme: Theme) => {
     },
     cardText: {
       textAlign: 'center',
-      flex: 1,
+      paddingLeft: 60, // 左边距等于标签宽度，确保信息文字居中时不会被标签遮挡
     },
     cardItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'flex-start',
     },
     infoLabel: {
-      width: 60, // 固定标签宽度，确保所有标签左对齐
+      position: 'absolute',
+      left: 10, // 标签距离左边10
     },
     input: {
       padding: Spacing.md,
