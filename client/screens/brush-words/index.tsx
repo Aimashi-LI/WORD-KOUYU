@@ -80,6 +80,9 @@ export default function BrushWordsScreen() {
       // 调试日志：打印第一个单词的所有字段
       if (wordList.length > 0) {
         console.log('[BrushWords] 第一个单词完整数据:', JSON.stringify(wordList[0], null, 2));
+        console.log('[BrushWords] partOfSpeech 值:', wordList[0].partOfSpeech);
+        console.log('[BrushWords] sentence 值:', wordList[0].sentence);
+        console.log('[BrushWords] mnemonic 值:', wordList[0].mnemonic);
       }
     } catch (error) {
       console.error('加载单词失败:', error);
@@ -231,6 +234,15 @@ export default function BrushWordsScreen() {
 
   const currentWord = words[currentIndex];
 
+  // 调试日志：在渲染时打印词性和助记句
+  React.useEffect(() => {
+    if (currentWord) {
+      console.log('[BrushWords Render] partOfSpeech:', currentWord.partOfSpeech);
+      console.log('[BrushWords Render] mnemonic:', currentWord.mnemonic);
+      console.log('[BrushWords Render] sentence:', currentWord.sentence);
+    }
+  }, [currentWord]);
+
   // 手势处理函数
   const onGestureEvent = (event: any) => {
     if (event.nativeEvent.state === State.ACTIVE) {
@@ -380,13 +392,22 @@ export default function BrushWordsScreen() {
                   )}
 
                   {/* 助记符 */}
-                  {currentWord.mnemonic && (
+                  {currentWord.mnemonic ? (
                     <ThemedView level="tertiary" style={styles.mnemonicSection}>
                       <FontAwesome6 name="lightbulb" size={16} color={theme.accent} />
                       <ThemedText variant="body" color={theme.textSecondary} style={styles.mnemonicText}>
-                        {currentWord.mnemonic}
+                        助记句：{currentWord.mnemonic}
                       </ThemedText>
                     </ThemedView>
+                  ) : (
+                    <TouchableOpacity onPress={() => router.push('/word-detail', { id: String(currentWord.id) })}>
+                      <ThemedView level="tertiary" style={styles.mnemonicSection}>
+                        <FontAwesome6 name="lightbulb" size={16} color={theme.primary} />
+                        <ThemedText variant="body" color={theme.primary} style={styles.mnemonicText}>
+                          + 添加助记句
+                        </ThemedText>
+                      </ThemedView>
+                    </TouchableOpacity>
                   )}
 
                   {/* 词性和释义 - 始终显示 */}

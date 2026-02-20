@@ -263,7 +263,7 @@ export default function AddWordScreen() {
         definition: definition.trim(),
         partOfSpeech: partOfSpeech,
         split: splitText || undefined,
-        sentence: sentence.trim() || undefined,
+        mnemonic: sentence.trim() || undefined, // 助记句子
       };
       
       const wordId = await createWord(newWord);
@@ -561,11 +561,11 @@ export default function AddWordScreen() {
         {/* 短句输入 */}
         <ThemedView level="tertiary" style={styles.inputContainer}>
           <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
-            短句（可选）
+            助记句子（可选）
           </ThemedText>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="输入例句"
+            placeholder="输入助记句子，帮助记忆单词"
             placeholderTextColor={theme.textMuted}
             value={sentence}
             onChangeText={setSentence}

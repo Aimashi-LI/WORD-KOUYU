@@ -153,6 +153,19 @@ async function migrateDatabase(): Promise<void> {
           }
         }
       }
+
+      // 数据迁移：将旧数据中的 sentence（助记句）迁移到 mnemonic 字段
+      // 如果 mnemonic 为空且 sentence 有值，则将 sentence 的值复制到 mnemonic
+      try {
+        await db.execAsync(`
+          UPDATE words 
+          SET mnemonic = sentence 
+          WHERE mnemonic IS NULL AND sentence IS NOT NULL AND sentence != ''
+        `);
+        console.log('Migrated sentence to mnemonic for words without mnemonic');
+      } catch (error) {
+        console.error('Failed to migrate sentence to mnemonic:', error);
+      }
     }
 
     // 更新版本号
