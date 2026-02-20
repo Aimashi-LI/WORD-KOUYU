@@ -51,7 +51,7 @@ async function initDefaultPhonetics(): Promise<void> {
       for (const item of DEFAULT_PHONETICS) {
         try {
           await db.runAsync(
-            'INSERT OR IGNORE INTO phonetics (word, phonetic, created_at) VALUES (?, ?, datetime("now"))',
+            'INSERT OR IGNORE INTO phonetics (word, phonetic, created_at) VALUES (?, ?, datetime(\'now\'))',
             [item.word, item.phonetic]
           );
         } catch (error) {
