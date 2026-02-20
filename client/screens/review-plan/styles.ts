@@ -14,7 +14,11 @@ export const createStyles = (theme: Theme) => {
       padding: Spacing.lg,
       borderRadius: BorderRadius.lg,
       marginBottom: Spacing.md,
-      boxShadow: `0px 4px 12px rgba(0, 0, 0, 0.08)`,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
     },
     statsTitle: {
       marginBottom: Spacing.md,
@@ -71,11 +75,16 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.lg,
       backgroundColor: theme.primary,
       marginBottom: Spacing.xl,
-      boxShadow: `0px 4px 12px rgba(0, 0, 0, 0.15)`,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 6,
     },
     quickReviewButtonDisabled: {
       backgroundColor: theme.backgroundTertiary,
-      boxShadow: 'none',
+      shadowOpacity: 0,
+      elevation: 0,
     },
     // 选中日期卡片
     selectedDateCard: {
