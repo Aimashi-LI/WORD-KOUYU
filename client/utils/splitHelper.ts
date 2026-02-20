@@ -204,7 +204,7 @@ export function convertSplitItemsToString(splitItems: SplitItem[]): string {
 
 /**
  * 格式化拆分字符串用于展示
- * 将存储格式（code1,content1。code2,content2）转换为展示格式（code1-content1,code2-content2）
+ * 将存储格式（code1,content1。code2,content2）转换为展示格式（每个拆分组独占一行）
  * @param splitStr 存储格式的拆分字符串
  * @returns 展示格式的拆分字符串
  */
@@ -231,8 +231,8 @@ export function formatSplitStringForDisplay(splitStr: string): string {
       return '';
     });
 
-    // 使用 ',' 连接所有组
-    return formattedGroups.filter(g => g).join(',');
+    // 使用换行符连接所有组，实现分排展示
+    return formattedGroups.filter(g => g).join('\n');
   } catch (error) {
     console.error('格式化拆分字符串失败:', error);
     return splitStr; // 格式化失败时返回原字符串
