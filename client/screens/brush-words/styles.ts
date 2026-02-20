@@ -64,12 +64,12 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
     },
     scrollContainer: {
-      paddingHorizontal: Spacing.lg,
+      paddingHorizontal: 20, // 固定 20px padding，与 CARD_WIDTH 计算（SCREEN_WIDTH - 40）对应
       paddingVertical: Spacing.lg,
       flexGrow: 1,
     },
     cardWrapper: {
-      marginRight: Spacing.lg,
+      marginRight: 20, // 固定 20px，与 CARD_SPACING 对应
     },
     wordCard: {
       padding: Spacing.xl,

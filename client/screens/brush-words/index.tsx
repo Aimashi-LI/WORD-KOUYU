@@ -181,6 +181,15 @@ export default function BrushWordsScreen() {
   const CARD_WIDTH = SCREEN_WIDTH - 40; // 20 * 2 padding
   const CARD_SPACING = 20;
 
+  // 计算精确的吸附偏移量
+  const snapOffsets = useMemo(() => {
+    const offsets: number[] = [];
+    for (let i = 0; i < 100; i++) { // 假设最多100个单词
+      offsets.push(i * (CARD_WIDTH + CARD_SPACING));
+    }
+    return offsets;
+  }, [CARD_WIDTH, CARD_SPACING]);
+
   // 卡片引用，用于截图分享
   const cardRef = useRef<View>(null);
 
@@ -556,13 +565,13 @@ export default function BrushWordsScreen() {
         <Animated.ScrollView
           ref={scrollViewRef}
           horizontal
-          pagingEnabled
           showsHorizontalScrollIndicator={false}
           onScroll={scrollHandler}
           onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={16}
-          decelerationRate="fast"
-          snapToInterval={CARD_WIDTH + CARD_SPACING}
+          decelerationRate={0.9}
+          snapToOffsets={snapOffsets}
+          snapToAlignment="start"
           contentContainerStyle={styles.scrollContainer}
         >
           {words.map((word, index) => (
@@ -580,6 +589,8 @@ export default function BrushWordsScreen() {
               isCurrent={index === currentIndex}
             />
           ))}
+          {/* 添加一个占位符，确保最后一个卡片可以完整显示 */}
+          <View style={{ width: 20 }} />
         </Animated.ScrollView>
 
         {/* 分享按钮 */}
