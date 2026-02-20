@@ -111,6 +111,71 @@ export const createStyles = (theme: Theme) => {
       shadowRadius: 4,
       elevation: 2,
     },
+    // 单词列表头部
+    wordListHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    batchModeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: BorderRadius.md,
+      backgroundColor: theme.backgroundTertiary,
+    },
+    batchModeButtonText: {
+      fontSize: 12,
+    },
+    // 批量操作按钮栏
+    batchActionBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      backgroundColor: `${theme.primary}10`,
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.md,
+      gap: Spacing.md,
+    },
+    batchActionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    selectedCount: {
+      marginLeft: 'auto',
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.md,
+      backgroundColor: theme.primary,
+    },
+    // 单词卡片批量选择样式
+    wordCardInSelectionMode: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+    },
+    wordCardSelected: {
+      borderWidth: 2,
+      borderColor: theme.primary,
+      backgroundColor: `${theme.primary}05`,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: theme.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkboxChecked: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
     sectionTitle: {
       marginBottom: Spacing.md,
     },
@@ -194,6 +259,41 @@ export const createStyles = (theme: Theme) => {
       borderTopLeftRadius: BorderRadius['4xl'],
       borderTopRightRadius: BorderRadius['4xl'],
       maxHeight: '80%',
+    },
+    batchActionModal: {
+      marginHorizontal: Spacing.xl,
+      marginBottom: Spacing.xl,
+      borderRadius: BorderRadius.lg,
+    },
+    batchActionItems: {
+      paddingVertical: Spacing.md,
+    },
+    batchActionOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+      paddingVertical: Spacing.lg,
+      paddingHorizontal: Spacing.xl,
+    },
+    batchActionDivider: {
+      height: 1,
+      backgroundColor: theme.borderLight,
+      marginVertical: Spacing.xs,
+    },
+    wordbookList: {
+      gap: Spacing.sm,
+    },
+    wordbookListItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+    },
+    wordbookListItemContent: {
+      flex: 1,
     },
     modalHeader: {
       flexDirection: 'row',

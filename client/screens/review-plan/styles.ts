@@ -92,9 +92,23 @@ export const createStyles = (theme: Theme) => {
     dateItem: {
       marginBottom: Spacing.sm,
     },
+    dateHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+      paddingHorizontal: Spacing.xs,
+      paddingVertical: Spacing.xs,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.sm,
+    },
     dateLabel: {
-      marginBottom: Spacing.xs,
-      fontSize: 13,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    timeLabel: {
+      fontSize: 12,
+      fontWeight: '500',
     },
     wordItem: {
       flexDirection: 'row',

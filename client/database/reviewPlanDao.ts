@@ -4,6 +4,8 @@ import { Word } from './types';
 export interface ReviewPlanItem {
   date: string;  // ISO 格式的日期
   dateLabel: string;  // 显示的日期标签，如 "今天"、"明天"、"2024-01-15"
+  timeLabel: string;  // 显示的时间标签，如 "10:30"
+  fullDateTime: string;  // 完整的日期时间显示，如 "今天 10:30"
   words: Word[];  // 当天需要复习的单词
   count: number;  // 单词数量
 }
@@ -65,12 +67,18 @@ export async function getReviewPlan(daysAhead: number = 7): Promise<ReviewPlanIt
   
   // 转换为数组并排序
   const plan: ReviewPlanItem[] = Array.from(planMap.entries())
-    .map(([date, words]) => ({
-      date,
-      dateLabel: getDateLabel(date, now),
-      words,
-      count: words.length
-    }))
+    .map(([date, words]) => {
+      const dateObj = new Date(date + 'T09:00:00');  // 默认上午 9 点
+      const { dateLabel, timeLabel, fullDateTime } = getDateTimeLabel(dateObj, now);
+      return {
+        date,
+        dateLabel,
+        timeLabel,
+        fullDateTime,
+        words,
+        count: words.length
+      };
+    })
     .sort((a, b) => a.date.localeCompare(b.date));
   
   console.log('[getReviewPlan] 复习计划分组数:', plan.length);
@@ -239,13 +247,13 @@ function getDateLabel(dateStr: string, now: Date): string {
   const date = new Date(dateStr);
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
-  
+
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+
   const dateDate = new Date(date);
   dateDate.setHours(0, 0, 0, 0);
-  
+
   if (dateDate.getTime() === today.getTime()) {
     return '今天';
   } else if (dateDate.getTime() === tomorrow.getTime()) {
@@ -258,6 +266,30 @@ function getDateLabel(dateStr: string, now: Date): string {
     const weekDay = weekDays[date.getDay()];
     return `${month}月${day}日 ${weekDay}`;
   }
+}
+
+/**
+ * 获取日期时间标签（带具体时间）
+ * @param date 日期对象
+ * @param now 当前日期
+ * @returns 日期时间标签信息
+ */
+function getDateTimeLabel(date: Date, now: Date): {
+  dateLabel: string;
+  timeLabel: string;
+  fullDateTime: string;
+} {
+  const dateLabel = getDateLabel(date.toISOString().split('T')[0], now);
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const timeLabel = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  const fullDateTime = `${dateLabel} ${timeLabel}`;
+  
+  return {
+    dateLabel,
+    timeLabel,
+    fullDateTime
+  };
 }
 
 /**

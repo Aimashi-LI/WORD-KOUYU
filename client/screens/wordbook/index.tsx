@@ -8,7 +8,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
-import { getAllWords, getWordStats } from '@/database/wordDao';
+import { getAllWords, getWordStats, deleteWord } from '@/database/wordDao';
 import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordbook, getWordsInWordbook, getWordbookStats, getWordbookNamesByWordId } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
@@ -29,6 +29,12 @@ export default function WordbookScreen() {
   const [showWordbookModal, setShowWordbookModal] = useState(false);
   const [newWordbookName, setNewWordbookName] = useState('');
   const [newWordbookDesc, setNewWordbookDesc] = useState('');
+  
+  // 批量选择相关状态
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
+  const [showBatchActionModal, setShowBatchActionModal] = useState(false);
+  const [showMoveToBookModal, setShowMoveToBookModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,6 +147,114 @@ export default function WordbookScreen() {
     }
   };
 
+  // 批量选择相关函数
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    setSelectedWordIds(new Set());
+  };
+
+  const toggleWordSelection = (wordId: number) => {
+    const newSelection = new Set(selectedWordIds);
+    if (newSelection.has(wordId)) {
+      newSelection.delete(wordId);
+    } else {
+      newSelection.add(wordId);
+    }
+    setSelectedWordIds(newSelection);
+  };
+
+  const selectAllWords = () => {
+    if (selectedWordIds.size === words.length) {
+      // 如果已经全部选中，则取消全选
+      setSelectedWordIds(new Set());
+    } else {
+      // 全选
+      setSelectedWordIds(new Set(words.map(w => w.id)));
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedWordIds.size === 0) {
+      Alert.alert('提示', '请先选择要删除的单词');
+      return;
+    }
+
+    Alert.alert(
+      '确认删除',
+      `确定要删除选中的 ${selectedWordIds.size} 个单词吗？`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              for (const wordId of selectedWordIds) {
+                await deleteWord(wordId);
+              }
+              
+              setSelectedWordIds(new Set());
+              setIsSelectionMode(false);
+              await loadData();
+              Alert.alert('成功', `已删除 ${selectedWordIds.size} 个单词`);
+            } catch (error) {
+              console.error('批量删除失败:', error);
+              Alert.alert('错误', '批量删除失败');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleBatchMarkMastered = async (mastered: boolean) => {
+    if (selectedWordIds.size === 0) {
+      Alert.alert('提示', '请先选择要操作的单词');
+      return;
+    }
+
+    try {
+      const db = (await import('@/database')).getDatabase();
+      
+      for (const wordId of selectedWordIds) {
+        await db.runAsync(
+          'UPDATE words SET is_mastered = ? WHERE id = ?',
+          [mastered ? 1 : 0, wordId]
+        );
+      }
+      
+      setSelectedWordIds(new Set());
+      setIsSelectionMode(false);
+      await loadData();
+      Alert.alert('成功', `${mastered ? '标记为已掌握' : '取消掌握'} ${selectedWordIds.size} 个单词`);
+    } catch (error) {
+      console.error('批量操作失败:', error);
+      Alert.alert('错误', '批量操作失败');
+    }
+  };
+
+  const handleBatchMoveToBook = async (targetWordbookId: number) => {
+    if (selectedWordIds.size === 0) {
+      Alert.alert('提示', '请先选择要移动的单词');
+      return;
+    }
+
+    try {
+      for (const wordId of selectedWordIds) {
+        await addWordToWordbook(targetWordbookId, wordId);
+      }
+      
+      setSelectedWordIds(new Set());
+      setIsSelectionMode(false);
+      setShowMoveToBookModal(false);
+      await loadData();
+      Alert.alert('成功', `已移动 ${selectedWordIds.size} 个单词到词库`);
+    } catch (error) {
+      console.error('批量移动失败:', error);
+      Alert.alert('错误', '批量移动失败');
+    }
+  };
+
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -246,7 +360,45 @@ export default function WordbookScreen() {
         </TouchableOpacity>
 
         {/* 单词列表 */}
-        <ThemedText variant="h3" color={theme.textPrimary} style={styles.sectionTitle}>单词列表</ThemedText>
+        <View style={styles.wordListHeader}>
+          <ThemedText variant="h3" color={theme.textPrimary}>单词列表</ThemedText>
+          <TouchableOpacity 
+            style={styles.batchModeButton}
+            onPress={toggleSelectionMode}
+          >
+            <FontAwesome6 
+              name={isSelectionMode ? "xmark" : "list-check"} 
+              size={18} 
+              color={isSelectionMode ? theme.error : theme.primary} 
+            />
+            <ThemedText 
+              variant="caption" 
+              color={isSelectionMode ? theme.error : theme.primary}
+              style={styles.batchModeButtonText}
+            >
+              {isSelectionMode ? '退出选择' : '批量选择'}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+        
+        {/* 批量操作按钮栏 */}
+        {isSelectionMode && selectedWordIds.size > 0 && (
+          <View style={styles.batchActionBar}>
+            <TouchableOpacity style={styles.batchActionItem} onPress={selectAllWords}>
+              <FontAwesome6 name="check-double" size={20} color={theme.primary} />
+              <ThemedText variant="caption" color={theme.textSecondary}>全选</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.batchActionItem} onPress={() => setShowBatchActionModal(true)}>
+              <FontAwesome6 name="ellipsis" size={20} color={theme.primary} />
+              <ThemedText variant="caption" color={theme.textSecondary}>更多操作</ThemedText>
+            </TouchableOpacity>
+            <View style={styles.selectedCount}>
+              <ThemedText variant="caption" color={theme.buttonPrimaryText}>
+                已选 {selectedWordIds.size} 个
+              </ThemedText>
+            </View>
+          </View>
+        )}
         
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -264,9 +416,33 @@ export default function WordbookScreen() {
           words.map((word) => (
             <TouchableOpacity 
               key={word.id} 
-              style={styles.wordCard}
-              onPress={() => router.push('/word-detail', { id: word.id.toString() })}
+              style={[
+                styles.wordCard,
+                isSelectionMode && styles.wordCardInSelectionMode,
+                selectedWordIds.has(word.id) && styles.wordCardSelected
+              ]}
+              onPress={() => {
+                if (isSelectionMode) {
+                  toggleWordSelection(word.id);
+                } else {
+                  router.push('/word-detail', { id: word.id.toString() });
+                }
+              }}
+              onLongPress={() => {
+                if (!isSelectionMode) {
+                  setIsSelectionMode(true);
+                  setSelectedWordIds(new Set([word.id]));
+                }
+              }}
             >
+              {/* 选择框 */}
+              {isSelectionMode && (
+                <View style={[styles.checkbox, selectedWordIds.has(word.id) && styles.checkboxChecked]}>
+                  {selectedWordIds.has(word.id) && (
+                    <FontAwesome6 name="check" size={14} color={theme.buttonPrimaryText} />
+                  )}
+                </View>
+              )}
               <View style={styles.wordHeader}>
                 <View style={styles.wordInfoLeft}>
                   <ThemedText variant="h3" color={theme.textPrimary}>{word.word}</ThemedText>
@@ -314,6 +490,125 @@ export default function WordbookScreen() {
           ))
         )}
       </ScrollView>
+
+      {/* 批量操作 Modal */}
+      <Modal
+        visible={showBatchActionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBatchActionModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowBatchActionModal(false)}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            style={[styles.modalContent, styles.batchActionModal]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.batchActionItems}>
+              <TouchableOpacity 
+                style={styles.batchActionOption}
+                onPress={() => {
+                  setShowBatchActionModal(false);
+                  setShowMoveToBookModal(true);
+                }}
+              >
+                <FontAwesome6 name="folder-open" size={24} color={theme.primary} />
+                <ThemedText variant="body" color={theme.textPrimary}>移动到词库</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.batchActionOption}
+                onPress={() => {
+                  setShowBatchActionModal(false);
+                  handleBatchMarkMastered(true);
+                }}
+              >
+                <FontAwesome6 name="circle-check" size={24} color={theme.success} />
+                <ThemedText variant="body" color={theme.textPrimary}>标记为已掌握</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.batchActionOption}
+                onPress={() => {
+                  setShowBatchActionModal(false);
+                  handleBatchMarkMastered(false);
+                }}
+              >
+                <FontAwesome6 name="circle-xmark" size={24} color={theme.warning} />
+                <ThemedText variant="body" color={theme.textPrimary}>取消掌握</ThemedText>
+              </TouchableOpacity>
+              
+              <View style={styles.batchActionDivider} />
+              
+              <TouchableOpacity 
+                style={styles.batchActionOption}
+                onPress={() => {
+                  setShowBatchActionModal(false);
+                  handleBatchDelete();
+                }}
+              >
+                <FontAwesome6 name="trash" size={24} color={theme.error} />
+                <ThemedText variant="body" color={theme.error}>删除</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 移动到词库 Modal */}
+      <Modal
+        visible={showMoveToBookModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMoveToBookModal(false)}
+      >
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <TouchableOpacity 
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowMoveToBookModal(false)}
+          >
+            <TouchableOpacity 
+              activeOpacity={1}
+              style={styles.modalContent}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalHeader}>
+                <ThemedText variant="h3" color={theme.textPrimary}>选择目标词库</ThemedText>
+                <TouchableOpacity onPress={() => setShowMoveToBookModal(false)}>
+                  <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalBody}>
+                <View style={styles.wordbookList}>
+                  {wordbooks.filter(book => book.id !== currentWordbookId).map((book) => (
+                    <TouchableOpacity
+                      key={book.id}
+                      style={styles.wordbookListItem}
+                      onPress={() => handleBatchMoveToBook(book.id)}
+                    >
+                      <FontAwesome6 name="folder" size={20} color={theme.primary} />
+                      <View style={styles.wordbookListItemContent}>
+                        <ThemedText variant="body" color={theme.textPrimary}>{book.name}</ThemedText>
+                        <ThemedText variant="caption" color={theme.textMuted}>{book.word_count} 个单词</ThemedText>
+                      </View>
+                      <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* 创建词库 Modal */}
       <Modal

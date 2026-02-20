@@ -210,9 +210,14 @@ export default function ReviewPlanScreen() {
               
               {group.items.map((item) => (
                 <View key={item.date} style={styles.dateItem}>
-                  <ThemedText variant="body" color={theme.textSecondary} style={styles.dateLabel}>
-                    {item.dateLabel}
-                  </ThemedText>
+                  <View style={styles.dateHeader}>
+                    <ThemedText variant="body" color={theme.textSecondary} style={styles.dateLabel}>
+                      {item.dateLabel}
+                    </ThemedText>
+                    <ThemedText variant="caption" color={theme.primary} style={styles.timeLabel}>
+                      {item.timeLabel}
+                    </ThemedText>
+                  </View>
                   
                   {item.words.map((word) => (
                     <TouchableOpacity 
