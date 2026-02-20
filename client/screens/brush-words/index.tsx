@@ -91,6 +91,14 @@ export default function BrushWordsScreen() {
         wordList = await getAllWords();
       }
       
+      // 新增：在接收 getAllWords 返回值后立即打印
+      if (wordList.length > 0) {
+        console.log('[BrushWords] getAllWords 返回后立即 - 第一个单词的所有字段:', Object.keys(wordList[0]));
+        console.log('[BrushWords] getAllWords 返回后立即 - partOfSpeech:', wordList[0].partOfSpeech);
+        console.log('[BrushWords] getAllWords 返回后立即 - sentence:', wordList[0].sentence);
+        console.log('[BrushWords] getAllWords 返回后立即 - 完整数据:', JSON.stringify(wordList[0], null, 2));
+      }
+      
       // 新增：在 setWords 之前再次打印，确认数据没有在传递中丢失
       if (wordList.length > 0) {
         console.log('[BrushWords] setWords 之前的第一个单词:', JSON.stringify(wordList[0], null, 2));

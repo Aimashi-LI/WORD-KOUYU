@@ -21,6 +21,13 @@ export async function getAllWords(): Promise<Word[]> {
     console.log('[getAllWords] 映射后 partOfSpeech 值:', mappedWords[0].partOfSpeech);
   }
   
+  // 最后检查：返回前的数据状态
+  if (mappedWords.length > 0) {
+    console.log('[getAllWords] 返回前 - 第一个单词的所有字段:', Object.keys(mappedWords[0]));
+    console.log('[getAllWords] 返回前 - partOfSpeech:', mappedWords[0].partOfSpeech);
+    console.log('[getAllWords] 返回前 - sentence:', mappedWords[0].sentence);
+  }
+  
   return mappedWords;
 }
 
