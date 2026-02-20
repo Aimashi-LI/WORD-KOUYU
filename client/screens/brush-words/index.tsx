@@ -43,9 +43,6 @@ const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme,
   router: any;
   isCurrent: boolean;
 }) => {
-  // 添加调试日志
-  console.log(`[WordCard] 渲染单词: ${word.word}, is_mastered: ${word.is_mastered} (${typeof word.is_mastered})`);
-
   const offset = index * (cardWidth + cardSpacing);
 
   const animatedStyle = useAnimatedStyle(() => {

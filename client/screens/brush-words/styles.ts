@@ -93,7 +93,6 @@ export const createStyles = (theme: Theme) => {
       paddingHorizontal: Spacing.sm,
       paddingVertical: 4,
       borderRadius: BorderRadius.full,
-      zIndex: 10, // 确保徽章显示在最上层
     },
     masteredBadgeText: {
       fontWeight: '600',
