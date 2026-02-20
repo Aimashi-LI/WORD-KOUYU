@@ -469,6 +469,7 @@ export default function BrushWordsScreen() {
                   {/* 释义 */}
                   <View style={styles.definitionSection}>
                     <ThemedText variant="body" color={theme.textPrimary}>
+                      <ThemedText variant="body" color={theme.textMuted}>释义：</ThemedText>
                       {currentWord.definition}
                     </ThemedText>
                   </View>
@@ -478,6 +479,7 @@ export default function BrushWordsScreen() {
                     <ThemedView level="tertiary" style={styles.splitSection}>
                       <FontAwesome6 name="scissors" size={16} color={theme.accent} />
                       <ThemedText variant="body" color={theme.textSecondary} style={styles.splitText}>
+                        <ThemedText variant="body" color={theme.textMuted}>拆分：</ThemedText>
                         {currentWord.split}
                       </ThemedText>
                     </ThemedView>
@@ -488,6 +490,7 @@ export default function BrushWordsScreen() {
                     <ThemedView level="tertiary" style={styles.mnemonicSection}>
                       <FontAwesome6 name="lightbulb" size={16} color={theme.accent} />
                       <ThemedText variant="body" color={theme.textSecondary} style={styles.mnemonicText}>
+                        <ThemedText variant="body" color={theme.textMuted}>助记：</ThemedText>
                         {currentWord.mnemonic}
                       </ThemedText>
                     </ThemedView>

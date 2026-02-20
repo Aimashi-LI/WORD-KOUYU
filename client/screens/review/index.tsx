@@ -417,14 +417,17 @@ export default function ReviewScreen() {
                 <View style={styles.cardContent}>
                   {currentWord.partOfSpeech && (
                     <ThemedText variant="h3" color={theme.textPrimary} style={styles.cardText}>
+                      <ThemedText variant="h3" color={theme.textMuted}>词性：</ThemedText>
                       {currentWord.partOfSpeech}.
                     </ThemedText>
                   )}
                   <ThemedText variant="h2" color={theme.textPrimary} style={styles.cardText}>
+                    <ThemedText variant="h2" color={theme.textMuted}>释义：</ThemedText>
                     {currentWord.definition}
                   </ThemedText>
                   {currentWord.split && (
                     <ThemedText variant="body" color={theme.textSecondary} style={styles.cardText}>
+                      <ThemedText variant="body" color={theme.textMuted}>拆分：</ThemedText>
                       {currentWord.split}
                     </ThemedText>
                   )}
@@ -487,9 +490,16 @@ export default function ReviewScreen() {
                       {currentWord.phonetic}
                     </ThemedText>
                   )}
+                  {currentWord.mnemonic && (
+                    <ThemedText variant="body" color={theme.textSecondary} style={styles.cardText}>
+                      <ThemedText variant="body" color={theme.textMuted}>助记：</ThemedText>
+                      {currentWord.mnemonic}
+                    </ThemedText>
+                  )}
                   {currentWord.sentence && (
                     <ThemedText variant="body" color={theme.textSecondary} style={styles.cardText}>
-                      例句：{currentWord.sentence}
+                      <ThemedText variant="body" color={theme.textMuted}>例句：</ThemedText>
+                      {currentWord.sentence}
                     </ThemedText>
                   )}
                 </View>
