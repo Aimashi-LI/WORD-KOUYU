@@ -4,6 +4,17 @@ const connect = require('connect');
 
 const config = getDefaultConfig(__dirname);
 
+// 配置 WASM 文件的支持
+config.resolver.sourceExts = [
+  ...config.resolver.sourceExts,
+  'wasm',
+];
+
+config.resolver.assetExts = [
+  ...config.resolver.assetExts,
+  'wasm',
+];
+
 // 安全地获取 Expo 的默认排除列表
 const existingBlockList = [].concat(config.resolver.blockList || []);
 

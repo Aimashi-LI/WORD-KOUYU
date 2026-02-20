@@ -8,7 +8,7 @@
     "postinstall": "npm run install-missing",
     "install-missing": "node ./scripts/install-missing-deps.js",
     "lint": "expo lint",
-    "start": "expo start --web --clear",
+    "start": "expo start --clear",
     "test": "jest --watchAll"
   },
   "jest": {
