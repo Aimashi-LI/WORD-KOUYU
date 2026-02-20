@@ -85,6 +85,16 @@ export const createStyles = (theme: Theme) => {
       borderColor: theme.borderLight,
       fontSize: 16,
     },
+    // 方式一输入框（填写单词）- 浅蓝色背景
+    inputType1: {
+      backgroundColor: '#3B82F615', // 浅蓝色（Primary 的浅色版本）
+      borderColor: '#3B82F640', // 浅蓝色边框
+    },
+    // 方式二输入框（填写释义）- 浅红色背景
+    inputType2: {
+      backgroundColor: '#EF444415', // 浅红色（Error 的浅色版本）
+      borderColor: '#EF444440', // 浅红色边框
+    },
     textArea: {
       minHeight: 80,
       textAlignVertical: 'top',

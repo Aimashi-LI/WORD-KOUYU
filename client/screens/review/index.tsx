@@ -715,7 +715,7 @@ export default function ReviewScreen() {
               {/* 输入框 */}
               {!isCompleted && (
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.backgroundTertiary, color: theme.textPrimary }]}
+                  style={[styles.input, styles.inputType1, { color: theme.textPrimary }]}
                   placeholder="请输入单词"
                   placeholderTextColor={theme.textMuted}
                   value={type1Answer}
@@ -786,7 +786,7 @@ export default function ReviewScreen() {
               {/* 输入框 */}
               {!isCompleted && (
                 <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: theme.backgroundTertiary, color: theme.textPrimary }]}
+                  style={[styles.input, styles.textArea, styles.inputType2, { color: theme.textPrimary }]}
                   placeholder="请输入释义"
                   placeholderTextColor={theme.textMuted}
                   value={type2Answer}
