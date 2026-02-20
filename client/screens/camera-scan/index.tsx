@@ -80,7 +80,7 @@ export default function CameraScanScreen() {
           {/* 提示 */}
           <ThemedView level="tertiary" style={styles.hintContainer}>
             <ThemedText variant="body" color="#fff">
-              将英文单词放入框内
+              将单个英文单词放入框内，确保清晰可见
             </ThemedText>
           </ThemedView>
 
