@@ -191,9 +191,9 @@ export default function BrushWordsScreen() {
   // 滑动相关
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<Animated.ScrollView>(null);
-  const CARD_WIDTH = SCREEN_WIDTH - 40; // 20 * 2 padding
+  const CARD_WIDTH = SCREEN_WIDTH - 80; // 40 * 2 padding，留出更多空间
   const CARD_SPACING = 20;
-  const HORIZONTAL_PADDING = (SCREEN_WIDTH - CARD_WIDTH) / 2; // 计算水平 padding 以确保居中
+  const FIRST_CARD_PADDING = (SCREEN_WIDTH - CARD_WIDTH) / 2; // 第一个卡片左侧的 padding
 
   // 卡片引用，用于截图分享
   const cardRef = useRef<View>(null);
@@ -579,7 +579,7 @@ export default function BrushWordsScreen() {
           snapToInterval={CARD_WIDTH + CARD_SPACING}
           contentContainerStyle={[
             styles.scrollContainer,
-            { paddingHorizontal: HORIZONTAL_PADDING }
+            { paddingLeft: FIRST_CARD_PADDING, paddingRight: FIRST_CARD_PADDING }
           ]}
         >
           {words.map((word, index) => (
