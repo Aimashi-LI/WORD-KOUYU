@@ -101,79 +101,163 @@ export const isWordIncomplete = (word: Word): boolean => {
 /**
  * 根据单词获取美式音标
  * 使用免费 Dictionary API: https://api.dictionaryapi.dev/api/v2/entries/en/{word}
+ * 
  * @param wordText 单词
  * @returns 美式音标字符串，如果获取失败返回 null
  */
 export const fetchPhoneticByWord = async (wordText: string): Promise<string | null> => {
-  try {
-    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${wordText}`);
-    
-    if (!response.ok) {
-      console.log(`获取音标失败: ${wordText}, HTTP ${response.status}`);
-      return null;
-    }
-
-    const data = await response.json();
-    
-    // API 返回的数据结构可能是数组
-    if (!Array.isArray(data) || data.length === 0) {
-      console.log(`获取音标失败: ${wordText}, 无数据返回`);
-      return null;
-    }
-
-    const entry = data[0];
-    
-    // 查找美式音标 (phonetic 文本或 phonetics 数组中的美式音标)
-    // 优先级: phonetic.text > phonetics 数组中标记为美式的 > 第一个 phonetic
-    let americanPhonetic: string | null = null;
-
-    // 方式1: 直接的 phonetic 字段
-    if (entry.phonetic && typeof entry.phonetic === 'string' && !entry.phonetic.startsWith('US:')) {
-      americanPhonetic = entry.phonetic;
-    }
-
-    // 方式2: 从 phonetics 数组中查找美式音标
-    if (!americanPhonetic && entry.phonetics && Array.isArray(entry.phonetics)) {
-      for (const phoneticItem of entry.phonetics) {
-        // 查找标记为美式的音标
-        if (phoneticItem.text && (
-          phoneticItem.text.includes('US') ||
-          (phoneticItem.flags && phoneticItem.flags.includes('US')) ||
-          (phoneticItem.region && phoneticItem.region === 'US')
-        )) {
-          // 提取音标部分（去掉 "US: " 前缀）
-          const cleaned = phoneticItem.text.replace(/^US:\s*/, '');
-          americanPhonetic = cleaned;
-          break;
-        }
-      }
-
-      // 如果没有找到美式音标，使用第一个音标
-      if (!americanPhonetic && entry.phonetics.length > 0 && entry.phonetics[0].text) {
-        const cleaned = entry.phonetics[0].text.replace(/^UK:\s*/, '');
-        americanPhonetic = cleaned;
-      }
-    }
-
-    // 方式3: 从 meanings 中查找音标
-    if (!americanPhonetic && entry.meanings && Array.isArray(entry.meanings)) {
-      for (const meaning of entry.meanings) {
-        if (meaning.phonetic) {
-          americanPhonetic = meaning.phonetic;
-          break;
-        }
-      }
-    }
-
-    if (americanPhonetic) {
-      console.log(`获取音标成功: ${wordText} -> ${americanPhonetic}`);
-      return americanPhonetic;
-    }
-
-    console.log(`获取音标失败: ${wordText}, 未找到音标`);
-    return null;
-  } catch (error) {
-    console.error(`获取音标异常: ${wordText}`, error);
+  if (!wordText || wordText.trim().length === 0) {
+    console.log('获取音标失败: 单词为空');
     return null;
   }
+
+  const cleanedWord = wordText.trim().toLowerCase();
+  const API_URL = `https://api.dictionaryapi.dev/api/v2/entries/en/${cleanedWord}`;
+  
+  // 带超时的 fetch
+  const fetchWithTimeout = async (url: string, timeout = 8000): Promise<Response> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      const response = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  };
+
+  // 尝试获取音标（带重试）
+  const attemptFetch = async (retryCount = 2): Promise<string | null> => {
+    for (let attempt = 0; attempt <= retryCount; attempt++) {
+      try {
+        console.log(`[音标获取] 尝试 ${attempt + 1}/${retryCount + 1}: ${cleanedWord}`);
+        
+        const response = await fetchWithTimeout(API_URL, 8000);
+        
+        if (!response.ok) {
+          console.log(`[音标获取] HTTP 错误: ${cleanedWord}, 状态码 ${response.status}`);
+          
+          // 404 表示单词不存在，不需要重试
+          if (response.status === 404) {
+            console.log(`[音标获取] 单词不存在于词库: ${cleanedWord}`);
+            return null;
+          }
+          
+          // 其他错误，等待后重试
+          if (attempt < retryCount) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            continue;
+          }
+          return null;
+        }
+
+        const data = await response.json();
+        
+        // 验证数据格式
+        if (!Array.isArray(data) || data.length === 0) {
+          console.log(`[音标获取] 无效数据格式: ${cleanedWord}`);
+          return null;
+        }
+
+        const entry = data[0];
+        let phoneticText: string | null = null;
+
+        // 策略1: 从 phonetic 数组中查找美式音标
+        if (entry.phonetics && Array.isArray(entry.phonetics)) {
+          for (const phonetic of entry.phonetics) {
+            // 检查是否有美式标记
+            const isAmerican = 
+              (phonetic.region && phonetic.region === 'US') ||
+              (phonetic.flags && Array.isArray(phonetic.flags) && phonetic.flags.includes('US')) ||
+              (phonetic.text && phonetic.text.toLowerCase().includes('us'));
+            
+            if (isAmerican && phonetic.text) {
+              // 清理音标文本，去除前缀（如 "US: ", "UK: " 等）
+              phoneticText = phonetic.text
+                .replace(/^(US|UK|GA|US-GB|RP):\s*/i, '')
+                .replace(/^\//, '')
+                .replace(/\/$/, '')
+                .trim();
+              console.log(`[音标获取] 从美式标记获取: ${cleanedWord} -> ${phoneticText}`);
+              break;
+            }
+          }
+          
+          // 如果没找到美式音标，使用第一个可用的音标
+          if (!phoneticText && entry.phonetics.length > 0 && entry.phonetics[0].text) {
+            phoneticText = entry.phonetics[0].text
+              .replace(/^(US|UK|GA|US-GB|RP):\s*/i, '')
+              .replace(/^\//, '')
+              .replace(/\/$/, '')
+              .trim();
+            console.log(`[音标获取] 使用第一个音标: ${cleanedWord} -> ${phoneticText}`);
+          }
+        }
+
+        // 策略2: 直接使用 phonetic 字段
+        if (!phoneticText && entry.phonetic) {
+          phoneticText = entry.phonetic
+            .replace(/^(US|UK|GA|US-GB|RP):\s*/i, '')
+            .replace(/^\//, '')
+            .replace(/\/$/, '')
+            .trim();
+          console.log(`[音标获取] 从 phonetic 字段获取: ${cleanedWord} -> ${phoneticText}`);
+        }
+
+        // 策略3: 从 meanings 中查找
+        if (!phoneticText && entry.meanings && Array.isArray(entry.meanings)) {
+          for (const meaning of entry.meanings) {
+            if (meaning.phonetic) {
+              phoneticText = meaning.phonetic
+                .replace(/^(US|UK|GA|US-GB|RP):\s*/i, '')
+                .replace(/^\//, '')
+                .replace(/\/$/, '')
+                .trim();
+              console.log(`[音标获取] 从 meanings 获取: ${cleanedWord} -> ${phoneticText}`);
+              break;
+            }
+          }
+        }
+
+        if (phoneticText && phoneticText.length > 0) {
+          console.log(`[音标获取] 成功: ${cleanedWord} -> ${phoneticText}`);
+          return phoneticText;
+        }
+
+        console.log(`[音标获取] 未找到音标: ${cleanedWord}`);
+        return null;
+
+      } catch (error) {
+        console.error(`[音标获取] 异常 (尝试 ${attempt + 1}): ${cleanedWord}`, error);
+        
+        // 如果是 AbortError（超时），重试
+        if (error instanceof Error && error.name === 'AbortError') {
+          if (attempt < retryCount) {
+            console.log(`[音标获取] 超时，准备重试...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            continue;
+          }
+        }
+        
+        // 最后一次尝试失败，返回 null
+        if (attempt === retryCount) {
+          return null;
+        }
+        
+        // 等待后重试
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
+    return null;
+  };
+
+  return attemptFetch(2);
 }
