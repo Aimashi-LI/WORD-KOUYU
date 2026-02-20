@@ -75,16 +75,6 @@ const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme,
     >
       <View ref={isCurrent ? cardRef : null} collapsable={false}>
         <ThemedView level="default" style={styles.wordCard}>
-          {/* 已掌握徽章 */}
-          {word.is_mastered === 1 && (
-            <View style={styles.masteredBadge}>
-              <FontAwesome6 name="circle-check" size={14} color={theme.buttonPrimaryText} />
-              <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.masteredBadgeText}>
-                已掌握
-              </ThemedText>
-            </View>
-          )}
-
           {/* 单词和词性 - 同排显示 */}
           <View style={styles.wordPartOfSpeechRow}>
             <ThemedText variant="h1" color={theme.textPrimary} style={styles.wordText}>
