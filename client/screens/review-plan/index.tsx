@@ -8,8 +8,9 @@ import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
-import { getReviewStats, getReviewPlanGrouped, ReviewStats, ReviewGroup, getWordsByDateRange } from '@/database/reviewPlanDao';
+import { getReviewStats, getReviewPlanGrouped, ReviewStats, ReviewGroup, getWordsByDateRange, getReviewPlan } from '@/database/reviewPlanDao';
 import { initDatabase } from '@/database';
+import { CalendarView } from '@/components/CalendarView';
 
 export default function ReviewPlanScreen() {
   const { theme, isDark } = useTheme();
@@ -29,6 +30,11 @@ export default function ReviewPlanScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
+  // 日历相关状态
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [markedDates, setMarkedDates] = useState<string[]>([]);
+  const [selectedDateWords, setSelectedDateWords] = useState<any[]>([]);
+  
   // 判断今天是否有待复习的单词
   const hasTodayWords = useMemo(() => {
     if (reviewGroups.length === 0) return false;
@@ -40,13 +46,18 @@ export default function ReviewPlanScreen() {
     try {
       await initDatabase();
       
-      const [reviewStats, groups] = await Promise.all([
+      const [reviewStats, groups, plan] = await Promise.all([
         getReviewStats(),
-        getReviewPlanGrouped()
+        getReviewPlanGrouped(),
+        getReviewPlan(60)  // 获取 60 天的复习计划用于日历标记
       ]);
       
       setStats(reviewStats);
       setReviewGroups(groups);
+      
+      // 提取有复习计划的日期
+      const dates = plan.map(item => item.date);
+      setMarkedDates(dates);
     } catch (error) {
       console.error('加载复习计划失败:', error);
     } finally {
@@ -92,6 +103,26 @@ export default function ReviewPlanScreen() {
     tomorrow.setDate(tomorrow.getDate() + 1);
     
     await handleStartReview(today, tomorrow);
+  };
+  
+  // 日期选择处理
+  const handleDateSelect = async (date: Date) => {
+    setSelectedDate(date);
+    
+    try {
+      // 获取选中日期的复习单词
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+      
+      const words = await getWordsByDateRange(startDate, endDate);
+      setSelectedDateWords(words);
+    } catch (error) {
+      console.error('获取选中日期复习单词失败:', error);
+      setSelectedDateWords([]);
+    }
   };
   
   const formatStability = (stability: number): string => {
@@ -168,6 +199,65 @@ export default function ReviewPlanScreen() {
             </View>
           </View>
         </ThemedView>
+        
+        {/* 日历视图 */}
+        <CalendarView
+          selectedDate={selectedDate}
+          onDateSelect={handleDateSelect}
+          markedDates={markedDates}
+        />
+        
+        {/* 选中日期的复习单词 */}
+        {selectedDate && selectedDateWords.length > 0 && (
+          <ThemedView level="default" style={styles.selectedDateCard}>
+            <View style={styles.selectedDateHeader}>
+              <ThemedText variant="h4" color={theme.textPrimary}>
+                {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日 复习计划
+              </ThemedText>
+              <TouchableOpacity onPress={() => setSelectedDate(undefined)}>
+                <FontAwesome6 name="xmark" size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+            
+            {selectedDateWords.map((word) => (
+              <TouchableOpacity 
+                key={word.id}
+                style={styles.selectedDateWordItem}
+                onPress={() => router.push('/word-detail', { id: word.id.toString() })}
+              >
+                <View style={styles.wordInfo}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    {word.word}
+                  </ThemedText>
+                  {word.partOfSpeech && (
+                    <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
+                      {word.partOfSpeech}
+                    </ThemedText>
+                  )}
+                  <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
+                    {word.definition}
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
+            ))}
+            
+            <TouchableOpacity
+              style={styles.startReviewButton}
+              onPress={() => {
+                const startDate = new Date(selectedDate);
+                startDate.setHours(0, 0, 0, 0);
+                const endDate = new Date(selectedDate);
+                endDate.setHours(23, 59, 59, 999);
+                handleStartReview(startDate, endDate);
+              }}
+            >
+              <FontAwesome6 name="play" size={16} color={theme.buttonPrimaryText} />
+              <ThemedText variant="caption" color={theme.buttonPrimaryText}>
+                开始复习 ({selectedDateWords.length} 个单词)
+              </ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        )}
         
         {/* 快捷操作 */}
         <TouchableOpacity 
