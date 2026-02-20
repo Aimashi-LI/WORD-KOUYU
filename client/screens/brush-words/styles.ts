@@ -66,11 +66,8 @@ export const createStyles = (theme: Theme) => {
     wordCard: {
       padding: Spacing.xl,
       borderRadius: BorderRadius.xl,
-      shadowColor: theme.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 8,
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      elevation: 8, // Android 阴影
       gap: Spacing.md,
     },
     wordPartOfSpeechRow: {
