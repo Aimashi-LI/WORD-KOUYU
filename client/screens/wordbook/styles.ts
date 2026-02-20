@@ -54,11 +54,11 @@ export const createStyles = (theme: Theme) => {
       flex: 1,
     },
     wordbookScrollContent: {
-      gap: Spacing.sm,
+      gap: Spacing.xs,  // 从 Spacing.sm 改为 Spacing.xs，减少间距
       paddingHorizontal: Spacing.xs,
     },
     wordbookChip: {
-      paddingHorizontal: Spacing.md,
+      paddingHorizontal: Spacing.xs,  // 从 Spacing.md 改为 Spacing.xs，减少左右内边距
       paddingVertical: Spacing.xs,
       borderRadius: BorderRadius.md,
       backgroundColor: theme.backgroundTertiary,
@@ -70,7 +70,7 @@ export const createStyles = (theme: Theme) => {
       borderColor: theme.primary,
     },
     addWordbookButton: {
-      padding: Spacing.sm,
+      padding: Spacing.xs,
     },
     actionButtons: {
       flexDirection: 'row',
