@@ -71,14 +71,37 @@ export const createStyles = (theme: Theme) => {
       shadowOpacity: 0.15,
       shadowRadius: 12,
       elevation: 8,
-      gap: Spacing.lg,
+      gap: Spacing.md,
+    },
+    wordPartOfSpeechRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      flexWrap: 'wrap',
+    },
+    wordText: {
+      textAlign: 'center',
+    },
+    inlinePartOfSpeech: {
+      fontSize: 14,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      backgroundColor: `${theme.primary}15`,
+      borderRadius: 8,
+    },
+    addPartOfSpeechButton: {
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      backgroundColor: `${theme.backgroundTertiary}`,
+      borderRadius: 8,
+    },
+    addPartOfSpeechText: {
+      fontSize: 14,
     },
     wordSection: {
       alignItems: 'center',
       gap: Spacing.sm,
-    },
-    wordText: {
-      textAlign: 'center',
     },
     phonetic: {
       textAlign: 'center',

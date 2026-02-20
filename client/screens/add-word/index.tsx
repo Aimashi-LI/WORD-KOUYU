@@ -266,7 +266,12 @@ export default function AddWordScreen() {
         mnemonic: sentence.trim() || undefined, // 助记句子
       };
       
+      console.log('[AddWord] 准备保存的单词数据:', JSON.stringify(newWord, null, 2));
+      console.log('[AddWord] partOfSpeech 值:', partOfSpeech);
+      console.log('[AddWord] partOfSpeech 类型:', typeof partOfSpeech);
+      
       const wordId = await createWord(newWord);
+      console.log('[AddWord] 单词保存成功，ID:', wordId);
       
       // 如果有词库ID，将单词添加到词库
       if (wordbookId) {

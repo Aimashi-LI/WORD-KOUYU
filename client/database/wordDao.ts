@@ -186,7 +186,7 @@ export async function getWordStats(): Promise<{
 
 // 辅助函数：映射数据库行到 Word 对象
 function mapToWord(row: any): Word {
-  return {
+  const word = {
     id: row.id,
     word: row.word,
     phonetic: row.phonetic,
@@ -203,6 +203,13 @@ function mapToWord(row: any): Word {
     is_mastered: row.is_mastered || 0,
     created_at: row.created_at
   };
+  
+  // 调试日志
+  console.log('[mapToWord] partOfSpeech 原始值:', row.partOfSpeech);
+  console.log('[mapToWord] partOfSpeech 类型:', typeof row.partOfSpeech);
+  console.log('[mapToWord] partOfSpeech 映射后:', word.partOfSpeech);
+  
+  return word;
 }
 
 // 辅助函数：映射数据库行到 ReviewLog 对象

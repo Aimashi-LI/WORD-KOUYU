@@ -369,19 +369,42 @@ export default function BrushWordsScreen() {
             <Animated.View style={[styles.cardContainer, animatedStyle]}>
               <View ref={cardRef} collapsable={false}>
                 <ThemedView level="default" style={styles.wordCard}>
-                  {/* 单词 */}
-                  <View style={styles.wordSection}>
+                  {/* 单词和词性 - 同排显示 */}
+                  <View style={styles.wordPartOfSpeechRow}>
                     <ThemedText variant="h1" color={theme.textPrimary} style={styles.wordText}>
                       {currentWord.word}
                     </ThemedText>
-                    {currentWord.phonetic && (
-                      <ThemedText variant="body" color={theme.textSecondary} style={styles.phonetic}>
-                        {currentWord.phonetic}
+                    {currentWord.partOfSpeech ? (
+                      <ThemedText variant="smallMedium" color={theme.primary} style={styles.inlinePartOfSpeech}>
+                        {currentWord.partOfSpeech}
                       </ThemedText>
+                    ) : (
+                      <TouchableOpacity 
+                        onPress={() => router.push('/word-detail', { id: String(currentWord.id) })}
+                        style={styles.addPartOfSpeechButton}
+                      >
+                        <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.addPartOfSpeechText}>
+                          + 词性
+                        </ThemedText>
+                      </TouchableOpacity>
                     )}
                   </View>
 
-                  {/* 分割 */}
+                  {/* 音标 */}
+                  {currentWord.phonetic && (
+                    <ThemedText variant="body" color={theme.textSecondary} style={styles.phonetic}>
+                      {currentWord.phonetic}
+                    </ThemedText>
+                  )}
+
+                  {/* 释义 */}
+                  <View style={styles.definitionSection}>
+                    <ThemedText variant="body" color={theme.textPrimary}>
+                      {currentWord.definition}
+                    </ThemedText>
+                  </View>
+
+                  {/* 拆分 */}
                   {currentWord.split && (
                     <ThemedView level="tertiary" style={styles.splitSection}>
                       <FontAwesome6 name="scissors" size={16} color={theme.accent} />
@@ -391,12 +414,12 @@ export default function BrushWordsScreen() {
                     </ThemedView>
                   )}
 
-                  {/* 助记符 */}
+                  {/* 助记句（短句） */}
                   {currentWord.mnemonic ? (
                     <ThemedView level="tertiary" style={styles.mnemonicSection}>
                       <FontAwesome6 name="lightbulb" size={16} color={theme.accent} />
                       <ThemedText variant="body" color={theme.textSecondary} style={styles.mnemonicText}>
-                        助记句：{currentWord.mnemonic}
+                        {currentWord.mnemonic}
                       </ThemedText>
                     </ThemedView>
                   ) : (
@@ -404,40 +427,18 @@ export default function BrushWordsScreen() {
                       <ThemedView level="tertiary" style={styles.mnemonicSection}>
                         <FontAwesome6 name="lightbulb" size={16} color={theme.primary} />
                         <ThemedText variant="body" color={theme.primary} style={styles.mnemonicText}>
-                          + 添加助记句
+                          + 助记句
                         </ThemedText>
                       </ThemedView>
                     </TouchableOpacity>
                   )}
 
-                  {/* 词性和释义 - 始终显示 */}
-                  <View style={styles.definitionSection}>
-                    {currentWord.partOfSpeech ? (
-                      <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.partOfSpeech}>
-                        {currentWord.partOfSpeech}.
-                      </ThemedText>
-                    ) : (
-                      <TouchableOpacity onPress={() => router.push('/word-detail', { id: String(currentWord.id) })}>
-                        <ThemedText variant="smallMedium" color={theme.primary} style={styles.missingField}>
-                          + 添加词性
-                        </ThemedText>
-                      </TouchableOpacity>
-                    )}
-                    <ThemedText variant="body" color={theme.textPrimary}>
-                      {currentWord.definition}
+                  {/* 例句 */}
+                  {currentWord.sentence && (
+                    <ThemedText variant="caption" color={theme.textSecondary} style={styles.sentence}>
+                      例句：{currentWord.sentence}
                     </ThemedText>
-                    {currentWord.sentence ? (
-                      <ThemedText variant="caption" color={theme.textSecondary} style={styles.sentence}>
-                        例句：{currentWord.sentence}
-                      </ThemedText>
-                    ) : (
-                      <TouchableOpacity onPress={() => router.push('/word-detail', { id: String(currentWord.id) })}>
-                        <ThemedText variant="caption" color={theme.primary} style={styles.missingField}>
-                          + 添加例句
-                        </ThemedText>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  )}
                 </ThemedView>
               </View>
             </Animated.View>
