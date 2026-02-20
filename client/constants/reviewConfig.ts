@@ -5,7 +5,9 @@
 // 掌握标准配置
 export const MASTERY_CONFIG = {
   // 稳定性阈值（天）- 超过此天数的单词很难遗忘
-  stabilityThreshold: 14,
+  // 降低阈值：对于频繁复习的单词，不需要等待 14 天的稳定性
+  // 0.5 天 = 约 12 小时，如果单词在 12 小时内能保持记忆，说明已掌握
+  stabilityThreshold: 0.5,
 
   // 连续高分次数 - 需要连续多少次高分才能标记为已掌握
   consecutiveHighScores: 2,

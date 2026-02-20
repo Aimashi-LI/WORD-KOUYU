@@ -377,12 +377,33 @@ export default function ReviewScreen() {
         nextReviewDate
       } = await updateWithTimeWeight(word, finalScore, responseTime);
 
-      // 检查是否掌握
+      // 先添加复习日志（确保日志包含当前分数）
+      await addReviewLog({
+        word_id: word.id,
+        score: finalScore,
+        response_time: responseTime,
+        reviewed_at: new Date().toISOString()
+      });
+
+      // 检查是否掌握（使用更新后的稳定性）
       const recentLogs = await getRecentReviewLogs(word.id, MASTERY_CONFIG.consecutiveHighScores);
       const recentScores = recentLogs.map(log => log.score);
-      recentScores.push(finalScore);
 
-      const isMastered = checkMasteryWithConfig(word, recentScores);
+      // 使用更新后的单词数据进行判断
+      const updatedWord = {
+        ...word,
+        difficulty: newDifficulty,
+        stability: newStability,
+        avg_response_time: newAvgResponseTime,
+        last_review: new Date().toISOString(),
+        next_review: nextReviewDate.toISOString(),
+      };
+
+      const isMastered = checkMasteryWithConfig(updatedWord, recentScores);
+
+      console.log(`[Review] 提交单词 ${word.word} 的分数: ${finalScore}`);
+      console.log(`[Review]   新稳定性: ${newStability.toFixed(2)} 天`);
+      console.log(`[Review]   是否已掌握: ${isMastered}`);
 
       await updateWord(word.id, {
         difficulty: newDifficulty,
@@ -391,13 +412,6 @@ export default function ReviewScreen() {
         last_review: new Date().toISOString(),
         next_review: nextReviewDate.toISOString(),
         is_mastered: isMastered ? 1 : 0
-      });
-
-      await addReviewLog({
-        word_id: word.id,
-        score: finalScore,
-        response_time: responseTime,
-        reviewed_at: new Date().toISOString()
       });
 
       // 记录单词得分
@@ -413,13 +427,12 @@ export default function ReviewScreen() {
 
       // 如果单词已掌握，添加到已掌握列表
       if (isMastered && !word.is_mastered) {
+        console.log(`[Review] 单词 ${word.word} 已掌握，添加到已掌握列表`);
         setMasteredWords(prev => [...prev, word]);
       }
 
       // 累加总分
       setTotalScore(prev => prev + finalScore);
-
-      console.log(`[Review] 提交单词 ${word.word} 的分数: ${finalScore}`);
     } catch (error) {
       console.error('提交分数失败:', error);
       Alert.alert('错误', '提交失败，请重试');
@@ -521,6 +534,14 @@ export default function ReviewScreen() {
     // 条件2：最近N次得分都≥高分标准
     const condition2 = recentScores.length >= MASTERY_CONFIG.consecutiveHighScores &&
       recentScores.slice(0, MASTERY_CONFIG.consecutiveHighScores).every(s => s >= MASTERY_CONFIG.highScoreThreshold);
+
+    // 调试日志
+    console.log(`[checkMasteryWithConfig] 单词: ${word.word}`);
+    console.log(`[checkMasteryWithConfig]   稳定性: ${word.stability.toFixed(2)} 天 (阈值: ${MASTERY_CONFIG.stabilityThreshold} 天)`);
+    console.log(`[checkMasteryWithConfig]   最近得分: [${recentScores.join(', ')}] (需要: ${MASTERY_CONFIG.consecutiveHighScores}次 ≥ ${MASTERY_CONFIG.highScoreThreshold}分)`);
+    console.log(`[checkMasteryWithConfig]   条件1 (稳定性≥阈值): ${condition1}`);
+    console.log(`[checkMasteryWithConfig]   条件2 (连续高分): ${condition2}`);
+    console.log(`[checkMasteryWithConfig]   是否已掌握: ${condition1 && condition2}`);
 
     return condition1 && condition2;
   };
