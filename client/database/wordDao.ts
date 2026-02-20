@@ -13,7 +13,15 @@ export async function getAllWords(): Promise<Word[]> {
     console.log('[getAllWords] 第一行 partOfSpeech 值:', rows[0].partOfSpeech);
   }
   
-  return rows.map(mapToWord);
+  const mappedWords = rows.map(mapToWord);
+  
+  // 新增：打印映射后的第一个单词
+  if (mappedWords.length > 0) {
+    console.log('[getAllWords] 映射后的第一个单词:', JSON.stringify(mappedWords[0], null, 2));
+    console.log('[getAllWords] 映射后 partOfSpeech 值:', mappedWords[0].partOfSpeech);
+  }
+  
+  return mappedWords;
 }
 
 // 根据 ID 获取单词
@@ -204,6 +212,7 @@ export async function getWordStats(): Promise<{
 
 // 辅助函数：映射数据库行到 Word 对象
 function mapToWord(row: any): Word {
+  // 确保所有字段都被正确映射，使用 || 确保即使值为 undefined 也会创建属性
   const word = {
     id: row.id,
     word: row.word,
@@ -220,12 +229,15 @@ function mapToWord(row: any): Word {
     avg_response_time: row.avg_response_time || 0,
     is_mastered: row.is_mastered || 0,
     created_at: row.created_at
-  };
+  } as Word; // 强制类型断言
   
   // 调试日志
   console.log('[mapToWord] partOfSpeech 原始值:', row.partOfSpeech);
   console.log('[mapToWord] partOfSpeech 类型:', typeof row.partOfSpeech);
   console.log('[mapToWord] partOfSpeech 映射后:', word.partOfSpeech);
+  console.log('[mapToWord] sentence 原始值:', row.sentence);
+  console.log('[mapToWord] sentence 映射后:', word.sentence);
+  console.log('[mapToWord] 返回对象的所有字段:', Object.keys(word));
   
   return word;
 }

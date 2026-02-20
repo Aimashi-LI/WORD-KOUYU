@@ -91,6 +91,12 @@ export default function BrushWordsScreen() {
         wordList = await getAllWords();
       }
       
+      // 新增：在 setWords 之前再次打印，确认数据没有在传递中丢失
+      if (wordList.length > 0) {
+        console.log('[BrushWords] setWords 之前的第一个单词:', JSON.stringify(wordList[0], null, 2));
+        console.log('[BrushWords] setWords 之前 partOfSpeech 值:', wordList[0].partOfSpeech);
+      }
+      
       setWords(wordList);
       setCurrentIndex(0);
       setShowDefinition(false);
