@@ -70,7 +70,9 @@ export const createStyles = (theme: Theme) => {
       textAlign: 'center',
     },
     cardItem: {
-      gap: Spacing.xs,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
     },
     input: {
       padding: Spacing.md,

@@ -418,13 +418,13 @@ export default function ReviewScreen() {
                 <View style={styles.cardContent}>
                   {currentWord.partOfSpeech && (
                     <View style={styles.cardItem}>
-                      <ThemedText variant="h3" color={theme.textMuted}>词性：</ThemedText>
-                      <ThemedText variant="h3" color={theme.textPrimary} style={styles.cardText}>{currentWord.partOfSpeech}.</ThemedText>
+                      <ThemedText variant="body" color={theme.textMuted}>词性：</ThemedText>
+                      <ThemedText variant="body" color={theme.textPrimary} style={styles.cardText}>{currentWord.partOfSpeech}.</ThemedText>
                     </View>
                   )}
                   <View style={styles.cardItem}>
-                    <ThemedText variant="h2" color={theme.textMuted}>释义：</ThemedText>
-                    <ThemedText variant="h2" color={theme.textPrimary} style={styles.cardText}>{currentWord.definition}</ThemedText>
+                    <ThemedText variant="body" color={theme.textMuted}>释义：</ThemedText>
+                    <ThemedText variant="body" color={theme.textPrimary} style={styles.cardText}>{currentWord.definition}</ThemedText>
                   </View>
                   {currentWord.split && (
                     <View style={styles.cardItem}>
