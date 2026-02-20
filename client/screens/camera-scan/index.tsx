@@ -333,7 +333,7 @@ export default function CameraScanScreen() {
         <View style={styles.resultsOverlay}>
           <View style={styles.resultsContainer}>
             <View style={styles.resultsHeader}>
-              <ThemedText variant="h3" color="#fff" style={styles.resultsTitle}>
+              <ThemedText variant="h3" color="#000" style={styles.resultsTitle}>
                 识别结果 ({recognizedWords.length} 个单词)
               </ThemedText>
               <TouchableOpacity

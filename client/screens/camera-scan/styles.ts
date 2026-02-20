@@ -196,7 +196,7 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'space-between',
       alignItems: 'center',
       padding: Spacing.lg,
-      backgroundColor: '#f5f5f5',
+      backgroundColor: '#fff',
       borderBottomWidth: 1,
       borderBottomColor: '#e0e0e0',
     },
@@ -204,6 +204,7 @@ export const createStyles = (theme: Theme) => {
       flex: 1,
       fontSize: 18,
       fontWeight: 'bold',
+      color: '#000',
     },
     closeButton: {
       width: 36,
@@ -240,6 +241,10 @@ export const createStyles = (theme: Theme) => {
       paddingVertical: Spacing.sm,
       paddingHorizontal: Spacing.md,
       backgroundColor: '#333',
+      width: '20%',
+      alignSelf: 'center',
+      marginTop: Spacing.sm,
+      marginBottom: Spacing.md,
     },
   });
 };

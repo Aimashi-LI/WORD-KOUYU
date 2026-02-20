@@ -148,10 +148,32 @@ export default function AddWordScreen() {
           setDefinition(initialDefinition.trim());
         }
 
-        // 自动填充拆分
-        loadCodes().then(() => {
-          autoFillMeaning(wordText, codes);
-        });
+        // 自动填充拆分（使用异步函数确保编码库已加载）
+        const performAutoSplit = async () => {
+          try {
+            await initDatabase();
+            const allCodes = await getAllCodes();
+            console.log('[自动拆分] 编码库已加载，共', allCodes.length, '条编码');
+
+            // 使用 autoSplitByCodeLib 进行自动拆分
+            const splitResult = autoSplitByCodeLib(wordText, allCodes);
+            if (splitResult && splitResult.length > 0) {
+              console.log('[自动拆分] 拆分成功:', splitResult);
+              setSplitItems(splitResult);
+            } else {
+              // 如果无法拆分，使用单个项
+              const meaning = autoFillMeaning(wordText, allCodes);
+              console.log('[自动拆分] 无法拆分，使用单个项:', meaning);
+              setSplitItems([{ code: wordText, content: meaning }]);
+            }
+          } catch (error) {
+            console.error('[自动拆分] 失败:', error);
+            // 出错时使用单个项
+            setSplitItems([{ code: wordText, content: '' }]);
+          }
+        };
+
+        performAutoSplit();
       }
     }
   }, [initialWord, initialPhonetic, initialPartOfSpeech, initialDefinition]);
