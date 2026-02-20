@@ -87,8 +87,43 @@ export default function BrushWordsScreen() {
         // 从指定词库加载单词
         wordList = await getWordsInWordbook(parseInt(projectId));
       } else {
-        // 加载所有单词
-        wordList = await getAllWords();
+        // 直接查询数据库，绕过 getAllWords 函数
+        const db = getDatabase();
+        const rows = await db.getAllAsync<any>('SELECT * FROM words ORDER BY created_at DESC');
+
+        console.log('[loadWords] 直接查询返回的行数:', rows.length);
+        if (rows.length > 0) {
+          console.log('[loadWords] 直接查询 - 第一行的所有字段:', Object.keys(rows[0]));
+          console.log('[loadWords] 直接查询 - 第一行完整数据:', JSON.stringify(rows[0], null, 2));
+          console.log('[loadWords] 直接查询 - 第一行 partOfSpeech 值:', rows[0].partOfSpeech);
+          console.log('[loadWords] 直接查询 - 第一行 sentence 值:', rows[0].sentence);
+        }
+
+        // 手动映射
+        wordList = rows.map(row => ({
+          id: row.id,
+          word: row.word,
+          phonetic: row.phonetic,
+          definition: row.definition,
+          partOfSpeech: row.partOfSpeech,
+          split: row.split,
+          mnemonic: row.mnemonic,
+          sentence: row.sentence,
+          difficulty: row.difficulty || 0,
+          stability: row.stability || 0,
+          last_review: row.last_review,
+          next_review: row.next_review,
+          avg_response_time: row.avg_response_time || 0,
+          is_mastered: row.is_mastered || 0,
+          created_at: row.created_at
+        }));
+
+        if (wordList.length > 0) {
+          console.log('[loadWords] 手动映射后的第一个单词的所有字段:', Object.keys(wordList[0]));
+          console.log('[loadWords] 手动映射后的第一个单词完整数据:', JSON.stringify(wordList[0], null, 2));
+          console.log('[loadWords] 手动映射后 partOfSpeech 值:', wordList[0].partOfSpeech);
+          console.log('[loadWords] 手动映射后 sentence 值:', wordList[0].sentence);
+        }
       }
       
       // 新增：在接收 getAllWords 返回值后立即打印

@@ -219,8 +219,26 @@ export async function getWordStats(): Promise<{
 
 // 辅助函数：映射数据库行到 Word 对象
 function mapToWord(row: any): Word {
-  // 确保所有字段都被正确映射，使用 || 确保即使值为 undefined 也会创建属性
-  const word = {
+  // 调试日志
+  console.log('[mapToWord] sentence 原始值:', row.sentence);
+  console.log('[mapToWord] sentence 映射后:', row.sentence);
+  console.log('[mapToWord] 返回对象的所有字段:', Object.keys({
+    id: row.id,
+    word: row.word,
+    phonetic: row.phonetic,
+    definition: row.definition,
+    partOfSpeech: row.partOfSpeech,
+    split: row.split,
+    mnemonic: row.mnemonic,
+    sentence: row.sentence,
+  }));
+  
+  console.log('[mapToWord] partOfSpeech 原始值:', row.partOfSpeech);
+  console.log('[mapToWord] partOfSpeech 类型:', typeof row.partOfSpeech);
+  console.log('[mapToWord] partOfSpeech 映射后:', row.partOfSpeech);
+  
+  // 不使用类型断言，直接返回新对象
+  return {
     id: row.id,
     word: row.word,
     phonetic: row.phonetic,
@@ -236,17 +254,7 @@ function mapToWord(row: any): Word {
     avg_response_time: row.avg_response_time || 0,
     is_mastered: row.is_mastered || 0,
     created_at: row.created_at
-  } as Word; // 强制类型断言
-  
-  // 调试日志
-  console.log('[mapToWord] partOfSpeech 原始值:', row.partOfSpeech);
-  console.log('[mapToWord] partOfSpeech 类型:', typeof row.partOfSpeech);
-  console.log('[mapToWord] partOfSpeech 映射后:', word.partOfSpeech);
-  console.log('[mapToWord] sentence 原始值:', row.sentence);
-  console.log('[mapToWord] sentence 映射后:', word.sentence);
-  console.log('[mapToWord] 返回对象的所有字段:', Object.keys(word));
-  
-  return word;
+  };
 }
 
 // 辅助函数：映射数据库行到 ReviewLog 对象
