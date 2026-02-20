@@ -28,6 +28,27 @@ export async function getAllWords(): Promise<Word[]> {
     console.log('[getAllWords] 返回前 - sentence:', mappedWords[0].sentence);
   }
   
+  // 测试：在返回前创建一个硬编码的对象来测试
+  if (mappedWords.length > 0) {
+    console.log('[getAllWords] 测试：硬编码对象的字段:', Object.keys({
+      id: 1,
+      word: 'test',
+      phonetic: null,
+      definition: '测试',
+      partOfSpeech: 'n.测试',
+      split: null,
+      mnemonic: null,
+      sentence: null,
+      difficulty: 0,
+      stability: 0,
+      last_review: null,
+      next_review: null,
+      avg_response_time: 0,
+      is_mastered: 0,
+      created_at: '2024-01-01'
+    }));
+  }
+  
   return mappedWords;
 }
 
