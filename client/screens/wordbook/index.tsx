@@ -112,8 +112,11 @@ export default function WordbookScreen() {
       Alert.alert('提示', '请输入词库名称');
       return;
     }
-    
+
     try {
+      // 确保数据库已初始化
+      await initDatabase();
+      
       await createWordbook(newWordbookName.trim(), newWordbookDesc.trim());
       setNewWordbookName('');
       setNewWordbookDesc('');
