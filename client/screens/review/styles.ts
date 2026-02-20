@@ -49,15 +49,15 @@ export const createStyles = (theme: Theme) => {
     },
     // 方式一卡片（显示词性、释义、拆分）- 浅蓝色背景
     cardType1: {
-      backgroundColor: '#3B82F610', // 浅蓝色背景
+      backgroundColor: '#3B82F615', // 浅蓝色背景（加深一点）
       borderWidth: 2,
-      borderColor: '#3B82F630', // 浅蓝色边框
+      borderColor: '#3B82F660', // 加深边框颜色，让边界更清晰
     },
     // 方式二卡片（显示单词、音标、助记、例句）- 浅红色背景
     cardType2: {
-      backgroundColor: '#EF444410', // 浅红色背景
+      backgroundColor: '#EF444415', // 浅红色背景（加深一点）
       borderWidth: 2,
-      borderColor: '#EF444430', // 浅红色边框
+      borderColor: '#EF444460', // 加深边框颜色，让边界更清晰
     },
     cardNormal: {},
     cardCorrect: {
@@ -100,12 +100,12 @@ export const createStyles = (theme: Theme) => {
     // 方式一输入框（填写单词）- 浅蓝色背景
     inputType1: {
       backgroundColor: '#3B82F615', // 浅蓝色（Primary 的浅色版本）
-      borderColor: '#3B82F640', // 浅蓝色边框
+      borderColor: '#3B82F660', // 浅蓝色边框，与卡片边框一致
     },
     // 方式二输入框（填写释义）- 浅红色背景
     inputType2: {
       backgroundColor: '#EF444415', // 浅红色（Error 的浅色版本）
-      borderColor: '#EF444440', // 浅红色边框
+      borderColor: '#EF444460', // 浅红色边框，与卡片边框一致
     },
     textArea: {
       minHeight: 80,

@@ -697,17 +697,17 @@ export default function ReviewScreen() {
                 <View style={styles.cardContent}>
                   {currentWord.partOfSpeech && (
                     <View style={styles.cardItem}>
-                      <ThemedText variant="body" color={theme.textMuted} style={styles.infoLabel}>词性：</ThemedText>
+                      <ThemedText variant="body" color="#3B82F6" style={styles.infoLabel}>词性：</ThemedText>
                       <ThemedText variant="body" color={theme.textPrimary} style={styles.cardText}>{currentWord.partOfSpeech}.</ThemedText>
                     </View>
                   )}
                   <View style={styles.cardItem}>
-                    <ThemedText variant="body" color={theme.textMuted} style={styles.infoLabel}>释义：</ThemedText>
+                    <ThemedText variant="body" color="#3B82F6" style={styles.infoLabel}>释义：</ThemedText>
                     <ThemedText variant="body" color={theme.textPrimary} style={styles.cardText}>{currentWord.definition}</ThemedText>
                   </View>
                   {currentWord.split && (
                     <View style={styles.cardItem}>
-                      <ThemedText variant="body" color={theme.textMuted} style={styles.infoLabel}>拆分：</ThemedText>
+                      <ThemedText variant="body" color="#3B82F6" style={styles.infoLabel}>拆分：</ThemedText>
                       <ThemedText variant="body" color={theme.textSecondary} style={styles.cardText}>{formatSplitStringForDisplay(currentWord.split)}</ThemedText>
                     </View>
                   )}
@@ -719,7 +719,7 @@ export default function ReviewScreen() {
                 <TextInput
                   style={[styles.input, styles.inputType1, { color: theme.textPrimary }]}
                   placeholder="请输入单词"
-                  placeholderTextColor={theme.textMuted}
+                  placeholderTextColor="#3B82F6"
                   value={type1Answer}
                   onChangeText={setType1Answer}
                   onFocus={() => setIsEditing(true)}
@@ -772,13 +772,13 @@ export default function ReviewScreen() {
                   )}
                   {currentWord.mnemonic && (
                     <View style={styles.cardItem}>
-                      <ThemedText variant="body" color={theme.textMuted} style={styles.infoLabel}>助记：</ThemedText>
+                      <ThemedText variant="body" color="#EF4444" style={styles.infoLabel}>助记：</ThemedText>
                       <ThemedText variant="body" color={theme.textSecondary} style={styles.cardText}>{currentWord.mnemonic}</ThemedText>
                     </View>
                   )}
                   {currentWord.sentence && (
                     <View style={styles.cardItem}>
-                      <ThemedText variant="body" color={theme.textMuted} style={styles.infoLabel}>例句：</ThemedText>
+                      <ThemedText variant="body" color="#EF4444" style={styles.infoLabel}>例句：</ThemedText>
                       <ThemedText variant="body" color={theme.textSecondary} style={styles.cardText}>{currentWord.sentence}</ThemedText>
                     </View>
                   )}
@@ -790,7 +790,7 @@ export default function ReviewScreen() {
                 <TextInput
                   style={[styles.input, styles.textArea, styles.inputType2, { color: theme.textPrimary }]}
                   placeholder="请输入释义"
-                  placeholderTextColor={theme.textMuted}
+                  placeholderTextColor="#EF4444"
                   value={type2Answer}
                   onChangeText={setType2Answer}
                   onFocus={() => setIsEditing(true)}
