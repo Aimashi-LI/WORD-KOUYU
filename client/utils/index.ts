@@ -97,3 +97,83 @@ export const isWordIncomplete = (word: Word): boolean => {
 
   return missingFields.length > 0;
 }
+
+/**
+ * 根据单词获取美式音标
+ * 使用免费 Dictionary API: https://api.dictionaryapi.dev/api/v2/entries/en/{word}
+ * @param wordText 单词
+ * @returns 美式音标字符串，如果获取失败返回 null
+ */
+export const fetchPhoneticByWord = async (wordText: string): Promise<string | null> => {
+  try {
+    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${wordText}`);
+    
+    if (!response.ok) {
+      console.log(`获取音标失败: ${wordText}, HTTP ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    // API 返回的数据结构可能是数组
+    if (!Array.isArray(data) || data.length === 0) {
+      console.log(`获取音标失败: ${wordText}, 无数据返回`);
+      return null;
+    }
+
+    const entry = data[0];
+    
+    // 查找美式音标 (phonetic 文本或 phonetics 数组中的美式音标)
+    // 优先级: phonetic.text > phonetics 数组中标记为美式的 > 第一个 phonetic
+    let americanPhonetic: string | null = null;
+
+    // 方式1: 直接的 phonetic 字段
+    if (entry.phonetic && typeof entry.phonetic === 'string' && !entry.phonetic.startsWith('US:')) {
+      americanPhonetic = entry.phonetic;
+    }
+
+    // 方式2: 从 phonetics 数组中查找美式音标
+    if (!americanPhonetic && entry.phonetics && Array.isArray(entry.phonetics)) {
+      for (const phoneticItem of entry.phonetics) {
+        // 查找标记为美式的音标
+        if (phoneticItem.text && (
+          phoneticItem.text.includes('US') ||
+          (phoneticItem.flags && phoneticItem.flags.includes('US')) ||
+          (phoneticItem.region && phoneticItem.region === 'US')
+        )) {
+          // 提取音标部分（去掉 "US: " 前缀）
+          const cleaned = phoneticItem.text.replace(/^US:\s*/, '');
+          americanPhonetic = cleaned;
+          break;
+        }
+      }
+
+      // 如果没有找到美式音标，使用第一个音标
+      if (!americanPhonetic && entry.phonetics.length > 0 && entry.phonetics[0].text) {
+        const cleaned = entry.phonetics[0].text.replace(/^UK:\s*/, '');
+        americanPhonetic = cleaned;
+      }
+    }
+
+    // 方式3: 从 meanings 中查找音标
+    if (!americanPhonetic && entry.meanings && Array.isArray(entry.meanings)) {
+      for (const meaning of entry.meanings) {
+        if (meaning.phonetic) {
+          americanPhonetic = meaning.phonetic;
+          break;
+        }
+      }
+    }
+
+    if (americanPhonetic) {
+      console.log(`获取音标成功: ${wordText} -> ${americanPhonetic}`);
+      return americanPhonetic;
+    }
+
+    console.log(`获取音标失败: ${wordText}, 未找到音标`);
+    return null;
+  } catch (error) {
+    console.error(`获取音标异常: ${wordText}`, error);
+    return null;
+  }
+}

@@ -11,6 +11,7 @@ import { createStyles } from './styles';
 import { createWords } from '@/database/wordDao';
 import { initDatabase } from '@/database';
 import { NewWord, ImportWord } from '@/database/types';
+import { fetchPhoneticByWord } from '@/utils';
 
 export default function ImportWordsScreen() {
   const { theme, isDark } = useTheme();
@@ -92,15 +93,29 @@ export default function ImportWordsScreen() {
       // 导入数据库
       await initDatabase();
       
-      const newWords: NewWord[] = importWords.map(w => ({
-        word: w.word,
-        phonetic: w.phonetic,
-        definition: w.definition,
-        partOfSpeech: w.partOfSpeech || undefined, // 新增词性字段映射
-        split: w.split,
-        mnemonic: w.mnemonic || '待补充',
-        sentence: w.example || undefined, // 将 example 映射到 sentence
-      }));
+      // 为没有音标的单词自动获取音标
+      const wordsWithPhonetics = await Promise.all(
+        importWords.map(async (w) => {
+          // 如果没有音标，尝试自动获取
+          let phonetic = w.phonetic;
+          if (!phonetic || phonetic.trim() === '') {
+            const fetchedPhonetic = await fetchPhoneticByWord(w.word);
+            phonetic = fetchedPhonetic || undefined;
+          }
+          
+          return {
+            word: w.word,
+            phonetic: phonetic || undefined,
+            definition: w.definition,
+            partOfSpeech: w.partOfSpeech || undefined,
+            split: w.split,
+            mnemonic: w.mnemonic || '待补充',
+            sentence: w.example || undefined,
+          };
+        })
+      );
+      
+      const newWords: NewWord[] = wordsWithPhonetics;
 
       await createWords(newWords);
       setImportCount(newWords.length);

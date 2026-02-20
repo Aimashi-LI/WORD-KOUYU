@@ -32,6 +32,7 @@ import {
   getCodeSuggestion,
   CodeSuggestion
 } from '@/utils/splitHelper';
+import { fetchPhoneticByWord } from '@/utils';
 
 // 词性列表
 const PART_OF_SPEECH_LIST = [
@@ -43,7 +44,7 @@ export default function AddWordScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  const { wordbookId } = useSafeSearchParams<{ wordbookId?: string }>();
+  const { wordbookId, word: initialWord } = useSafeSearchParams<{ wordbookId?: string; word?: string }>();
   
   // 基础字段
   const [word, setWord] = useState('');
@@ -51,6 +52,28 @@ export default function AddWordScreen() {
   const [definition, setDefinition] = useState('');
   const [partOfSpeech, setPartOfSpeech] = useState('');
   const [sentence, setSentence] = useState('');
+  
+  // 初始化：如果从拍照识别页面传入单词，自动填充
+  useEffect(() => {
+    if (initialWord && initialWord.trim()) {
+      const wordText = initialWord.trim().replace(/[^a-z]/gi, '');
+      if (wordText) {
+        setWord(wordText);
+        
+        // 自动获取音标
+        fetchPhoneticByWord(wordText).then(phoneticText => {
+          if (phoneticText) {
+            setPhonetic(phoneticText);
+          }
+        });
+        
+        // 自动填充拆分
+        loadCodes().then(() => {
+          autoFillMeaning(wordText, codes);
+        });
+      }
+    }
+  }, [initialWord]);
   
   // 拆分相关
   const [splitItems, setSplitItems] = useState<SplitItem[]>([{ code: '', content: '' }]);
@@ -82,7 +105,7 @@ export default function AddWordScreen() {
   };
 
   // 处理单词输入
-  const handleWordChange = (text: string) => {
+  const handleWordChange = async (text: string) => {
     // 只允许字母
     const filteredText = text.replace(/[^a-z]/gi, '');
     if (text !== filteredText) {
@@ -93,9 +116,16 @@ export default function AddWordScreen() {
     // 自动填充拆分
     if (filteredText.length > 0) {
       setSplitItems([{ code: filteredText, content: autoFillMeaning(filteredText, codes) }]);
+      
+      // 自动获取音标
+      const phoneticText = await fetchPhoneticByWord(filteredText);
+      if (phoneticText) {
+        setPhonetic(phoneticText);
+      }
     } else {
       setSplitItems([{ code: '', content: '' }]);
       setSplitHistory([]);
+      setPhonetic('');
     }
   };
 
