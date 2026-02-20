@@ -65,6 +65,7 @@ export const createStyles = (theme: Theme) => {
     },
     cardContent: {
       gap: Spacing.md,
+      alignItems: 'center',
     },
     cardText: {
       textAlign: 'center',
