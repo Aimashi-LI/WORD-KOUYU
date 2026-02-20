@@ -219,26 +219,13 @@ export async function getWordStats(): Promise<{
 
 // 辅助函数：映射数据库行到 Word 对象
 function mapToWord(row: any): Word {
-  // 调试日志
-  console.log('[mapToWord] sentence 原始值:', row.sentence);
-  console.log('[mapToWord] sentence 映射后:', row.sentence);
-  console.log('[mapToWord] 返回对象的所有字段:', Object.keys({
-    id: row.id,
-    word: row.word,
-    phonetic: row.phonetic,
-    definition: row.definition,
-    partOfSpeech: row.partOfSpeech,
-    split: row.split,
-    mnemonic: row.mnemonic,
-    sentence: row.sentence,
-  }));
-  
+  // 调试日志 - 只打印关键字段
   console.log('[mapToWord] partOfSpeech 原始值:', row.partOfSpeech);
   console.log('[mapToWord] partOfSpeech 类型:', typeof row.partOfSpeech);
-  console.log('[mapToWord] partOfSpeech 映射后:', row.partOfSpeech);
+  console.log('[mapToWord] sentence 原始值:', row.sentence);
   
   // 不使用类型断言，直接返回新对象
-  return {
+  const result = {
     id: row.id,
     word: row.word,
     phonetic: row.phonetic,
@@ -255,6 +242,13 @@ function mapToWord(row: any): Word {
     is_mastered: row.is_mastered || 0,
     created_at: row.created_at
   };
+  
+  // 打印返回对象的所有字段
+  console.log('[mapToWord] 返回对象的所有字段:', Object.keys(result));
+  console.log('[mapToWord] 返回对象的 partOfSpeech:', result.partOfSpeech);
+  console.log('[mapToWord] 返回对象的 sentence:', result.sentence);
+  
+  return result;
 }
 
 // 辅助函数：映射数据库行到 ReviewLog 对象
