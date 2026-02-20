@@ -358,10 +358,24 @@ export default function CameraScanScreen() {
 
   // 处理选择单词
   const handleSelectWord = (wordData: RecognizedWord) => {
-    router.push('/add-word', {
-      word: wordData.word,
-      phonetic: wordData.phonetic,
-      partOfSpeech: wordData.partOfSpeech,
-      definition: wordData.definition
-    });
+    const resultText = `单词：${wordData.word}\n${wordData.phonetic ? `音标：${wordData.phonetic}\n` : ''}${wordData.partOfSpeech ? `词性：${wordData.partOfSpeech}\n` : ''}${wordData.definition ? `释义：${wordData.definition}` : ''}`;
+
+    Alert.alert(
+      '确认添加',
+      resultText + '\n\n确定要添加这个单词吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '确定',
+          onPress: () => {
+            router.push('/add-word', {
+              word: wordData.word,
+              phonetic: wordData.phonetic,
+              partOfSpeech: wordData.partOfSpeech,
+              definition: wordData.definition
+            });
+          }
+        }
+      ]
+    );
   };}
