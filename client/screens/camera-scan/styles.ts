@@ -137,5 +137,64 @@ export const createStyles = (theme: Theme) => {
     scanningText: {
       marginTop: Spacing.lg,
     },
+    resultsOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.9)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    resultsContainer: {
+      width: '100%',
+      maxHeight: '80%',
+      backgroundColor: '#fff',
+      borderRadius: BorderRadius.xl,
+      overflow: 'hidden',
+    },
+    resultsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: Spacing.lg,
+      backgroundColor: '#f5f5f5',
+      borderBottomWidth: 1,
+      borderBottomColor: '#e0e0e0',
+    },
+    resultsTitle: {
+      flex: 1,
+    },
+    closeButton: {
+      padding: Spacing.sm,
+    },
+    resultsList: {
+      maxHeight: '70%',
+      padding: Spacing.md,
+    },
+    wordItem: {
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+      backgroundColor: '#f9f9f9',
+      borderRadius: BorderRadius.lg,
+      borderWidth: 1,
+      borderColor: '#e0e0e0',
+    },
+    wordItemHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+    },
+    rescanButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.xl,
+      backgroundColor: '#333',
+    },
   });
 };

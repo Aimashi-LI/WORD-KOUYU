@@ -48,14 +48,14 @@ router.post('/recognize', upload.single('file'), async (req: Request, res: Respo
     const messages = [
       {
         role: 'system' as const,
-        content: '你是一个专业的 OCR 识别助手，专门用于识别英语单词学习卡片。\n\n识别规则：\n1. 仔细识别图片中的单词卡片信息\n2. 提取以下字段：\n   - word: 单词本身（只返回小写字母）\n   - phonetic: 音标（如果有）\n   - partOfSpeech: 词性（如 n.名词、v.动词、adj.形容词等）\n   - definition: 释义\n3. 以 JSON 格式返回结果，格式如下：\n   {\n     "word": "单词",\n     "phonetic": "音标",\n     "partOfSpeech": "词性",\n     "definition": "释义"\n   }\n4. 如果某个字段没有识别到，返回空字符串\n5. 只返回 JSON 对象，不要包含任何其他文字'
+        content: '你是一个专业的 OCR 识别助手，专门用于识别英语单词学习卡片或单词列表。\n\n识别规则：\n1. 仔细识别图片中扫描框内的所有单词\n2. 提取每个单词的以下字段：\n   - word: 单词本身（只返回小写字母）\n   - phonetic: 音标（如果有）\n   - partOfSpeech: 词性（如 n.名词、v.动词、adj.形容词等）\n   - definition: 释义\n3. 如果有多个单词，返回一个数组；如果只有一个单词，也返回数组格式\n4. 以 JSON 数组格式返回结果，格式如下：\n   [\n     {\n       "word": "单词1",\n       "phonetic": "音标1",\n       "partOfSpeech": "词性1",\n       "definition": "释义1"\n     },\n     {\n       "word": "单词2",\n       "phonetic": "音标2",\n       "partOfSpeech": "词性2",\n       "definition": "释义2"\n     }\n   ]\n5. 如果某个字段没有识别到，返回空字符串\n6. 只返回 JSON 数组，不要包含任何其他文字'
       },
       {
         role: 'user' as const,
         content: [
           {
             type: 'text' as const,
-            text: '请识别这张英语单词卡片，提取单词、音标、词性和释义信息。'
+            text: '请识别这张图片中扫描框内的所有英语单词卡片，提取每个单词的单词、音标、词性和释义信息。'
           },
           {
             type: 'image_url' as const,
@@ -79,21 +79,42 @@ router.post('/recognize', upload.single('file'), async (req: Request, res: Respo
 
     console.log('[OCR] 原始识别结果:', content);
 
-    // 尝试提取 JSON
-    let jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      // 如果没有找到 JSON，尝试创建一个基本的响应
+    // 尝试提取 JSON 数组
+    let arrayMatch = content.match(/\[[\s\S]*\]/);
+    if (!arrayMatch) {
+      // 尝试提取 JSON 对象（单个单词的情况）
+      let objectMatch = content.match(/\{[\s\S]*\}/);
+      if (objectMatch) {
+        // 如果是单个对象，包装成数组
+        const jsonString = objectMatch[0];
+        try {
+          const singleWord = JSON.parse(jsonString);
+          // 验证是否有效
+          if (singleWord.word && singleWord.word.length >= 2) {
+            const result = [cleanWordData(singleWord)];
+            console.log('[OCR] 解析后的结果:', result);
+
+            return res.json({
+              success: true,
+              words: result
+            });
+          }
+        } catch (error) {
+          console.error('[OCR] JSON 解析失败:', error);
+        }
+      }
+
       return res.json({
         success: false,
-        error: '无法解析识别结果，请确保图片清晰且包含完整的单词卡片信息'
+        error: '无法解析识别结果，请确保图片清晰且包含单词卡片信息'
       });
     }
 
-    const jsonString = jsonMatch[0];
-    let result: any;
+    const jsonString = arrayMatch[0];
+    let rawData: any[];
 
     try {
-      result = JSON.parse(jsonString);
+      rawData = JSON.parse(jsonString);
     } catch (error) {
       console.error('[OCR] JSON 解析失败:', error);
       return res.json({
@@ -102,16 +123,20 @@ router.post('/recognize', upload.single('file'), async (req: Request, res: Respo
       });
     }
 
-    // 清理和验证字段
-    const word = result.word?.replace(/[^a-z]/g, '') || '';
-    const phonetic = result.phonetic?.trim() || '';
-    const partOfSpeech = result.partOfSpeech?.trim() || '';
-    const definition = result.definition?.trim() || '';
+    // 确保是数组格式
+    if (!Array.isArray(rawData)) {
+      rawData = [rawData];
+    }
 
-    console.log('[OCR] 解析后的结果:', { word, phonetic, partOfSpeech, definition });
+    // 清理和验证每个单词的数据
+    const words = rawData
+      .map(cleanWordData)
+      .filter(word => word.word && word.word.length >= 2);
 
-    // 验证单词是否存在
-    if (!word || word.length < 2) {
+    console.log('[OCR] 解析后的结果:', words);
+
+    // 验证是否有有效的单词
+    if (words.length === 0) {
       return res.json({
         success: false,
         error: '未能识别到有效的英文单词。请确保图片清晰且包含单词卡片。'
@@ -120,10 +145,7 @@ router.post('/recognize', upload.single('file'), async (req: Request, res: Respo
 
     return res.json({
       success: true,
-      word,
-      phonetic,
-      partOfSpeech,
-      definition
+      words
     });
 
   } catch (error: any) {
@@ -134,5 +156,20 @@ router.post('/recognize', upload.single('file'), async (req: Request, res: Respo
     });
   }
 });
+
+// 清理单词数据的辅助函数
+function cleanWordData(data: any) {
+  const word = data.word?.replace(/[^a-z]/g, '') || '';
+  const phonetic = data.phonetic?.trim() || '';
+  const partOfSpeech = data.partOfSpeech?.trim() || '';
+  const definition = data.definition?.trim() || '';
+
+  return {
+    word,
+    phonetic,
+    partOfSpeech,
+    definition
+  };
+}
 
 export default router;

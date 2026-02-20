@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { View, TouchableOpacity, Alert, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, TouchableOpacity, Alert, ActivityIndicator, useWindowDimensions, ScrollView } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -10,6 +10,13 @@ import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { createStyles } from './styles';
 import { createFormDataFile } from '@/utils';
+
+interface RecognizedWord {
+  word: string;
+  phonetic: string;
+  partOfSpeech: string;
+  definition: string;
+}
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
 
@@ -22,6 +29,8 @@ export default function CameraScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [scanning, setScanning] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [recognizedWords, setRecognizedWords] = useState<RecognizedWord[]>([]);
   const cameraRef = useRef<any>(null);
   const scanBoxRef = useRef<View>(null);
   const [scanBoxLayout, setScanBoxLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -129,6 +138,69 @@ export default function CameraScanScreen() {
           </View>
         )}
       </View>
+
+      {/* 识别结果列表 */}
+      {showResults && (
+        <View style={styles.resultsOverlay}>
+          <View style={styles.resultsContainer}>
+            <View style={styles.resultsHeader}>
+              <ThemedText variant="h3" color="#fff" style={styles.resultsTitle}>
+                识别结果 ({recognizedWords.length} 个单词)
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => setShowResults(false)}
+                style={styles.closeButton}
+              >
+                <FontAwesome6 name="xmark" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.resultsList}>
+              {recognizedWords.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.wordItem}
+                  onPress={() => handleSelectWord(item)}
+                >
+                  <View style={styles.wordItemHeader}>
+                    <ThemedText variant="h4" color={theme.textPrimary}>
+                      {item.word}
+                    </ThemedText>
+                    <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
+                  </View>
+                  {item.phonetic && (
+                    <ThemedText variant="body" color={theme.textSecondary}>
+                      {item.phonetic}
+                    </ThemedText>
+                  )}
+                  {item.partOfSpeech && (
+                    <ThemedText variant="caption" color={theme.textMuted}>
+                      {item.partOfSpeech}
+                    </ThemedText>
+                  )}
+                  {item.definition && (
+                    <ThemedText variant="body" color={theme.textSecondary}>
+                      {item.definition}
+                    </ThemedText>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.rescanButton}
+              onPress={() => {
+                setShowResults(false);
+              }}
+            >
+              <FontAwesome6 name="camera" size={16} color="#fff" />
+              <ThemedText variant="body" color="#fff">
+                继续拍照
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </Screen>
   );
 
@@ -251,15 +323,12 @@ export default function CameraScanScreen() {
         throw new Error(result.error || '识别失败');
       }
 
-      const recognizedWord = result.word?.trim() || '';
-      const phonetic = result.phonetic || '';
-      const partOfSpeech = result.partOfSpeech || '';
-      const definition = result.definition || '';
+      const words: RecognizedWord[] = result.words || [];
 
-      if (!recognizedWord) {
+      if (words.length === 0) {
         Alert.alert(
           '识别失败',
-          '未能识别到有效的英文单词，请确保图片清晰且包含完整的单词卡片信息',
+          '未能识别到有效的英文单词，请确保图片清晰且包含单词卡片',
           [
             { text: '重拍', onPress: () => setScanning(false) },
             { text: '取消', onPress: () => setScanning(false) }
@@ -268,27 +337,9 @@ export default function CameraScanScreen() {
         return;
       }
 
-      // 显示识别结果
-      const resultText = `单词：${recognizedWord}\n${phonetic ? `音标：${phonetic}\n` : ''}${partOfSpeech ? `词性：${partOfSpeech}\n` : ''}${definition ? `释义：${definition}` : ''}`;
-
-      Alert.alert(
-        '识别结果',
-        resultText,
-        [
-          { text: '重拍', onPress: () => setScanning(false) },
-          {
-            text: '确认',
-            onPress: () => {
-              router.push('/add-word', {
-                word: recognizedWord,
-                phonetic,
-                partOfSpeech,
-                definition
-              });
-            }
-          }
-        ]
-      );
+      console.log('[Camera] 识别到', words.length, '个单词');
+      setRecognizedWords(words);
+      setShowResults(true);
 
     } catch (error: any) {
       console.error('[Camera] 识别错误:', error);
@@ -304,4 +355,13 @@ export default function CameraScanScreen() {
       setScanning(false);
     }
   }
-}
+
+  // 处理选择单词
+  const handleSelectWord = (wordData: RecognizedWord) => {
+    router.push('/add-word', {
+      word: wordData.word,
+      phonetic: wordData.phonetic,
+      partOfSpeech: wordData.partOfSpeech,
+      definition: wordData.definition
+    });
+  };}

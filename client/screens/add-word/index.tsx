@@ -35,11 +35,55 @@ import {
 import { fetchPhoneticByWord } from '@/utils';
 import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
 
-// 词性列表
+  // 词性列表
 const PART_OF_SPEECH_LIST = [
   'n.名词', 'pron.代词', 'v.动词', 'adj.形容词', 'adv.副词',
   'prep.介词', 'conj.连词', 'int.感叹词', 'num.数词', 'art.冠词'
 ];
+
+// 词性映射：将识别到的词性格式转换为列表中的格式
+const PART_OF_SPEECH_MAP: Record<string, string> = {
+  '名词': 'n.名词',
+  'n.名词': 'n.名词',
+  'n.': 'n.名词',
+  'n': 'n.名词',
+  '代词': 'pron.代词',
+  'pron.代词': 'pron.代词',
+  'pron.': 'pron.代词',
+  'pron': 'pron.代词',
+  '动词': 'v.动词',
+  'v.动词': 'v.动词',
+  'v.': 'v.动词',
+  'v': 'v.动词',
+  '形容词': 'adj.形容词',
+  'adj.形容词': 'adj.形容词',
+  'adj.': 'adj.形容词',
+  'adj': 'adj.形容词',
+  '副词': 'adv.副词',
+  'adv.副词': 'adv.副词',
+  'adv.': 'adv.副词',
+  'adv': 'adv.副词',
+  '介词': 'prep.介词',
+  'prep.介词': 'prep.介词',
+  'prep.': 'prep.介词',
+  'prep': 'prep.介词',
+  '连词': 'conj.连词',
+  'conj.连词': 'conj.连词',
+  'conj.': 'conj.连词',
+  'conj': 'conj.连词',
+  '感叹词': 'int.感叹词',
+  'int.感叹词': 'int.感叹词',
+  'int.': 'int.感叹词',
+  'int': 'int.感叹词',
+  '数词': 'num.数词',
+  'num.数词': 'num.数词',
+  'num.': 'num.数词',
+  'num': 'num.数词',
+  '冠词': 'art.冠词',
+  'art.冠词': 'art.冠词',
+  'art.': 'art.冠词',
+  'art': 'art.冠词',
+};
 
 export default function AddWordScreen() {
   const { theme, isDark } = useTheme();
@@ -82,9 +126,21 @@ export default function AddWordScreen() {
           });
         }
 
-        // 如果识别结果中包含词性，使用识别到的词性
+        // 如果识别结果中包含词性，使用识别到的词性，并进行模糊匹配
         if (initialPartOfSpeech && initialPartOfSpeech.trim()) {
-          setPartOfSpeech(initialPartOfSpeech.trim());
+          const posInput = initialPartOfSpeech.trim();
+          // 尝试精确匹配
+          const exactMatch = PART_OF_SPEECH_LIST.find(pos => pos === posInput);
+          // 尝试模糊匹配
+          const fuzzyMatch = PART_OF_SPEECH_MAP[posInput];
+
+          const matchedPos = exactMatch || fuzzyMatch;
+          if (matchedPos) {
+            console.log('[词性自动匹配] 识别词性:', posInput, '匹配结果:', matchedPos);
+            setPartOfSpeech(matchedPos);
+          } else {
+            console.log('[词性自动匹配] 识别词性:', posInput, '未匹配到词性');
+          }
         }
 
         // 如果识别结果中包含释义，使用识别到的释义
