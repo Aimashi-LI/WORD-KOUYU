@@ -628,12 +628,14 @@ export default function ReviewScreen() {
       if (reviewMode === 'type1') {
         if (type1Status === 'correct') return styles.cardCorrect;
         if (type1Status === 'wrong') return styles.cardWrong;
+        // 方式一正常状态：浅蓝色背景
+        return styles.cardType1;
       } else {
         if (type2Status === 'correct') return styles.cardCorrect;
         if (type2Status === 'wrong') return styles.cardWrong;
+        // 方式二正常状态：浅红色背景
+        return styles.cardType2;
       }
-
-      return styles.cardNormal;
     };
 
     // 判断是否已完成所有方式

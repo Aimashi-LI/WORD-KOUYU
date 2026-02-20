@@ -47,6 +47,18 @@ export const createStyles = (theme: Theme) => {
       shadowRadius: 8,
       elevation: 4,
     },
+    // 方式一卡片（显示词性、释义、拆分）- 浅蓝色背景
+    cardType1: {
+      backgroundColor: '#3B82F610', // 浅蓝色背景
+      borderWidth: 2,
+      borderColor: '#3B82F630', // 浅蓝色边框
+    },
+    // 方式二卡片（显示单词、音标、助记、例句）- 浅红色背景
+    cardType2: {
+      backgroundColor: '#EF444410', // 浅红色背景
+      borderWidth: 2,
+      borderColor: '#EF444430', // 浅红色边框
+    },
     cardNormal: {},
     cardCorrect: {
       backgroundColor: `${theme.success}20`,
