@@ -340,7 +340,7 @@ export default function CameraScanScreen() {
                 onPress={() => setShowResults(false)}
                 style={styles.closeButton}
               >
-                <FontAwesome6 name="xmark" size={24} color="#fff" />
+                <FontAwesome6 name="xmark" size={24} color="#333" />
               </TouchableOpacity>
             </View>
 
@@ -382,8 +382,8 @@ export default function CameraScanScreen() {
                 setShowResults(false);
               }}
             >
-              <FontAwesome6 name="camera" size={16} color="#fff" />
-              <ThemedText variant="body" color="#fff">
+              <FontAwesome6 name="camera" size={14} color="#fff" />
+              <ThemedText variant="caption" color="#fff">
                 继续拍照
               </ThemedText>
             </TouchableOpacity>

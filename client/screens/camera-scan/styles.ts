@@ -202,9 +202,18 @@ export const createStyles = (theme: Theme) => {
     },
     resultsTitle: {
       flex: 1,
+      fontSize: 18,
+      fontWeight: 'bold',
     },
     closeButton: {
-      padding: Spacing.sm,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#fff',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: '#e0e0e0',
     },
     resultsList: {
       maxHeight: '70%',
@@ -228,8 +237,8 @@ export const createStyles = (theme: Theme) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.xl,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
       backgroundColor: '#333',
     },
   });
