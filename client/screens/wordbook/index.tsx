@@ -143,47 +143,6 @@ export default function WordbookScreen() {
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
-      {/* 词库切换栏 */}
-      <View style={styles.wordbookBar}>
-        <ThemedText variant="body" color={theme.textMuted}>当前词库：</ThemedText>
-        <View style={styles.wordbookScrollContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.wordbookScroll}
-            contentContainerStyle={styles.wordbookScrollContent}
-          >
-            <TouchableOpacity 
-              style={[styles.wordbookChip, currentWordbookId === null && styles.wordbookChipActive]}
-              onPress={() => { setCurrentWordbookId(null); loadData(); }}
-            >
-              <ThemedText variant="smallMedium" color={currentWordbookId === null ? theme.buttonPrimaryText : theme.textPrimary}>
-                全部单词
-              </ThemedText>
-            </TouchableOpacity>
-            
-            {wordbooks.map((book) => (
-              <TouchableOpacity 
-                key={book.id}
-                style={[styles.wordbookChip, currentWordbookId === book.id && styles.wordbookChipActive]}
-                onPress={() => handleSwitchWordbook(book.id)}
-              >
-                <ThemedText variant="smallMedium" color={currentWordbookId === book.id ? theme.buttonPrimaryText : theme.textPrimary}>
-                  {book.name} ({book.word_count})
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-        
-        <TouchableOpacity 
-          style={styles.addWordbookButton}
-          onPress={() => setShowWordbookModal(true)}
-        >
-          <FontAwesome6 name="plus" size={20} color={theme.primary} />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 顶部统计卡片 */}
         <ThemedView level="default" style={styles.statsCard}>
@@ -204,6 +163,47 @@ export default function WordbookScreen() {
             </View>
           </View>
         </ThemedView>
+
+        {/* 词库切换栏 */}
+        <View style={styles.wordbookBar}>
+          <ThemedText variant="body" color={theme.textMuted}>当前词库：</ThemedText>
+          <View style={styles.wordbookScrollContainer}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.wordbookScroll}
+              contentContainerStyle={styles.wordbookScrollContent}
+            >
+              <TouchableOpacity 
+                style={[styles.wordbookChip, currentWordbookId === null && styles.wordbookChipActive]}
+                onPress={() => { setCurrentWordbookId(null); loadData(); }}
+              >
+                <ThemedText variant="smallMedium" color={currentWordbookId === null ? theme.buttonPrimaryText : theme.textPrimary}>
+                  全部单词
+                </ThemedText>
+              </TouchableOpacity>
+              
+              {wordbooks.map((book) => (
+                <TouchableOpacity 
+                  key={book.id}
+                  style={[styles.wordbookChip, currentWordbookId === book.id && styles.wordbookChipActive]}
+                  onPress={() => handleSwitchWordbook(book.id)}
+                >
+                  <ThemedText variant="smallMedium" color={currentWordbookId === book.id ? theme.buttonPrimaryText : theme.textPrimary}>
+                    {book.name} ({book.word_count})
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.addWordbookButton}
+            onPress={() => setShowWordbookModal(true)}
+          >
+            <FontAwesome6 name="plus" size={20} color={theme.primary} />
+          </TouchableOpacity>
+        </View>
 
         {/* 添加按钮组 */}
         <View style={styles.actionButtons}>

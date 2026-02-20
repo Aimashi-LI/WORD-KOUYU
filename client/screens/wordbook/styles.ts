@@ -9,6 +9,31 @@ export const createStyles = (theme: Theme) => {
       paddingTop: Spacing.xl,
       paddingBottom: Spacing['5xl'],
     },
+    // 统计卡片
+    statsCard: {
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    statRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+    },
+    statItem: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    statDivider: {
+      width: 1,
+      height: 40,
+      backgroundColor: theme.border,
+    },
     // 词库切换栏
     wordbookBar: {
       flexDirection: 'row',
@@ -16,8 +41,10 @@ export const createStyles = (theme: Theme) => {
       paddingHorizontal: Spacing.lg,
       paddingVertical: Spacing.sm,
       backgroundColor: theme.backgroundDefault,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderRadius: BorderRadius.lg,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      marginBottom: Spacing.lg,
       gap: Spacing.sm,
     },
     wordbookScrollContainer: {
@@ -44,30 +71,6 @@ export const createStyles = (theme: Theme) => {
     },
     addWordbookButton: {
       padding: Spacing.sm,
-    },
-    statsCard: {
-      padding: Spacing.lg,
-      borderRadius: BorderRadius.lg,
-      marginBottom: Spacing.xl,
-      shadowColor: theme.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    statRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      alignItems: 'center',
-    },
-    statItem: {
-      alignItems: 'center',
-      flex: 1,
-    },
-    statDivider: {
-      width: 1,
-      height: 40,
-      backgroundColor: theme.border,
     },
     actionButtons: {
       flexDirection: 'row',
