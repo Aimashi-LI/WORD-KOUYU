@@ -78,145 +78,8 @@ export default function CameraScanScreen() {
     setFacing(current => (current === 'back' ? 'front' : 'back'));
   }
 
-  return (
-    <Screen backgroundColor="#000" statusBarStyle="light">
-      <View style={styles.container}>
-        <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
-          {/* 扫描框外的遮罩 */}
-          <View style={styles.maskContainer}>
-            {/* 上方遮罩 */}
-            <View style={[styles.mask, styles.maskTop]} />
-            {/* 下方遮罩 */}
-            <View style={[styles.mask, styles.maskBottom]} />
-            {/* 左侧遮罩 */}
-            <View style={[styles.mask, styles.maskLeft]} />
-            {/* 右侧遮罩 */}
-            <View style={[styles.mask, styles.maskRight]} />
-          </View>
-
-          {/* 扫描框 */}
-          <View
-            ref={scanBoxRef}
-            style={styles.scanBox}
-            onLayout={(event) => {
-              const { x, y, width, height } = event.nativeEvent.layout;
-              setScanBoxLayout({ x, y, width, height });
-            }}
-          >
-            <View style={styles.scanCorner} />
-            <View style={[styles.scanCorner, styles.topRight]} />
-            <View style={[styles.scanCorner, styles.bottomLeft]} />
-            <View style={[styles.scanCorner, styles.bottomRight]} />
-          </View>
-
-          {/* 提示 */}
-          <ThemedView level="tertiary" style={styles.hintContainer}>
-            <ThemedText variant="body" color="#fff">
-              请将单词卡片放在扫描框内
-            </ThemedText>
-          </ThemedView>
-
-          {/* 切换摄像头按钮 */}
-          <TouchableOpacity
-            style={styles.flipButton}
-            onPress={toggleCameraFacing}
-          >
-            <FontAwesome6 name="camera-rotate" size={24} color="#fff" />
-          </TouchableOpacity>
-
-          {/* 拍照按钮 */}
-          <TouchableOpacity
-            style={styles.captureButton}
-            onPress={handleCapture}
-          >
-            <View style={styles.captureButtonInner} />
-          </TouchableOpacity>
-
-          {/* 取消按钮 */}
-          <TouchableOpacity
-            style={styles.cancelButtonTop}
-            onPress={() => router.back()}
-          >
-            <FontAwesome6 name="xmark" size={32} color="#fff" />
-          </TouchableOpacity>
-        </CameraView>
-
-        {scanning && (
-          <View style={styles.scanningOverlay}>
-            <ActivityIndicator color={theme.primary} size="large" />
-            <ThemedText variant="body" color="#fff" style={styles.scanningText}>
-              识别中...
-            </ThemedText>
-          </View>
-        )}
-      </View>
-
-      {/* 识别结果列表 */}
-      {showResults && (
-        <View style={styles.resultsOverlay}>
-          <View style={styles.resultsContainer}>
-            <View style={styles.resultsHeader}>
-              <ThemedText variant="h3" color="#fff" style={styles.resultsTitle}>
-                识别结果 ({recognizedWords.length} 个单词)
-              </ThemedText>
-              <TouchableOpacity
-                onPress={() => setShowResults(false)}
-                style={styles.closeButton}
-              >
-                <FontAwesome6 name="xmark" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.resultsList}>
-              {recognizedWords.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.wordItem}
-                  onPress={() => handleSelectWord(item)}
-                >
-                  <View style={styles.wordItemHeader}>
-                    <ThemedText variant="h4" color={theme.textPrimary}>
-                      {item.word}
-                    </ThemedText>
-                    <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
-                  </View>
-                  {item.phonetic && (
-                    <ThemedText variant="body" color={theme.textSecondary}>
-                      {item.phonetic}
-                    </ThemedText>
-                  )}
-                  {item.partOfSpeech && (
-                    <ThemedText variant="caption" color={theme.textMuted}>
-                      {item.partOfSpeech}
-                    </ThemedText>
-                  )}
-                  {item.definition && (
-                    <ThemedText variant="body" color={theme.textSecondary}>
-                      {item.definition}
-                    </ThemedText>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.rescanButton}
-              onPress={() => {
-                setShowResults(false);
-              }}
-            >
-              <FontAwesome6 name="camera" size={16} color="#fff" />
-              <ThemedText variant="body" color="#fff">
-                继续拍照
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-    </Screen>
-  );
-
-  async function handleCapture() {
+  // 处理拍照和识别
+  const handleCapture = async () => {
     if (!cameraRef.current) {
       Alert.alert('错误', '相机未初始化');
       return;
@@ -366,7 +229,7 @@ export default function CameraScanScreen() {
     } finally {
       setScanning(false);
     }
-  }
+  };
 
   // 处理选择单词
   const handleSelectWord = (wordData: RecognizedWord) => {
@@ -390,5 +253,143 @@ export default function CameraScanScreen() {
         }
       ]
     );
-  }
+  };
+
+  return (
+    <Screen backgroundColor="#000" statusBarStyle="light">
+      <View style={styles.container}>
+        <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
+          {/* 扫描框外的遮罩 */}
+          <View style={styles.maskContainer}>
+            {/* 上方遮罩 */}
+            <View style={[styles.mask, styles.maskTop]} />
+            {/* 下方遮罩 */}
+            <View style={[styles.mask, styles.maskBottom]} />
+            {/* 左侧遮罩 */}
+            <View style={[styles.mask, styles.maskLeft]} />
+            {/* 右侧遮罩 */}
+            <View style={[styles.mask, styles.maskRight]} />
+          </View>
+
+          {/* 扫描框 */}
+          <View
+            ref={scanBoxRef}
+            style={styles.scanBox}
+            onLayout={(event) => {
+              const { x, y, width, height } = event.nativeEvent.layout;
+              setScanBoxLayout({ x, y, width, height });
+            }}
+          >
+            <View style={styles.scanCorner} />
+            <View style={[styles.scanCorner, styles.topRight]} />
+            <View style={[styles.scanCorner, styles.bottomLeft]} />
+            <View style={[styles.scanCorner, styles.bottomRight]} />
+          </View>
+
+          {/* 提示 */}
+          <ThemedView level="tertiary" style={styles.hintContainer}>
+            <ThemedText variant="body" color="#fff">
+              请将单词卡片放在扫描框内
+            </ThemedText>
+          </ThemedView>
+
+          {/* 切换摄像头按钮 */}
+          <TouchableOpacity
+            style={styles.flipButton}
+            onPress={toggleCameraFacing}
+          >
+            <FontAwesome6 name="camera-rotate" size={24} color="#fff" />
+          </TouchableOpacity>
+
+          {/* 拍照按钮 */}
+          <TouchableOpacity
+            style={styles.captureButton}
+            onPress={handleCapture}
+          >
+            <View style={styles.captureButtonInner} />
+          </TouchableOpacity>
+
+          {/* 取消按钮 */}
+          <TouchableOpacity
+            style={styles.cancelButtonTop}
+            onPress={() => router.back()}
+          >
+            <FontAwesome6 name="xmark" size={32} color="#fff" />
+          </TouchableOpacity>
+        </CameraView>
+
+        {scanning && (
+          <View style={styles.scanningOverlay}>
+            <ActivityIndicator color={theme.primary} size="large" />
+            <ThemedText variant="body" color="#fff" style={styles.scanningText}>
+              识别中...
+            </ThemedText>
+          </View>
+        )}
+      </View>
+
+      {/* 识别结果列表 */}
+      {showResults && (
+        <View style={styles.resultsOverlay}>
+          <View style={styles.resultsContainer}>
+            <View style={styles.resultsHeader}>
+              <ThemedText variant="h3" color="#fff" style={styles.resultsTitle}>
+                识别结果 ({recognizedWords.length} 个单词)
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => setShowResults(false)}
+                style={styles.closeButton}
+              >
+                <FontAwesome6 name="xmark" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.resultsList}>
+              {recognizedWords.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.wordItem}
+                  onPress={() => handleSelectWord(item)}
+                >
+                  <View style={styles.wordItemHeader}>
+                    <ThemedText variant="h4" color={theme.textPrimary}>
+                      {item.word}
+                    </ThemedText>
+                    <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
+                  </View>
+                  {item.phonetic && (
+                    <ThemedText variant="body" color={theme.textSecondary}>
+                      {item.phonetic}
+                    </ThemedText>
+                  )}
+                  {item.partOfSpeech && (
+                    <ThemedText variant="caption" color={theme.textMuted}>
+                      {item.partOfSpeech}
+                    </ThemedText>
+                  )}
+                  {item.definition && (
+                    <ThemedText variant="body" color={theme.textSecondary}>
+                      {item.definition}
+                    </ThemedText>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.rescanButton}
+              onPress={() => {
+                setShowResults(false);
+              }}
+            >
+              <FontAwesome6 name="camera" size={16} color="#fff" />
+              <ThemedText variant="body" color="#fff">
+                继续拍照
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </Screen>
+  );
 }
