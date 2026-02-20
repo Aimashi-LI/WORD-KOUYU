@@ -242,6 +242,7 @@ export const createStyles = (theme: Theme) => {
       paddingHorizontal: Spacing.md,
       backgroundColor: '#333',
       width: '20%',
+      borderRadius: 10,
       alignSelf: 'center',
       marginTop: Spacing.sm,
       marginBottom: Spacing.md,
