@@ -73,6 +73,10 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.xl,
       boxShadow: `0px 4px 12px rgba(0, 0, 0, 0.15)`,
     },
+    quickReviewButtonDisabled: {
+      backgroundColor: theme.backgroundTertiary,
+      boxShadow: 'none',
+    },
     // 分组容器
     sectionTitle: {
       marginBottom: Spacing.md,

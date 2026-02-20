@@ -29,6 +29,13 @@ export default function ReviewPlanScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
+  // 判断今天是否有待复习的单词
+  const hasTodayWords = useMemo(() => {
+    if (reviewGroups.length === 0) return false;
+    const todayGroup = reviewGroups.find(g => g.label === '今天待复习');
+    return todayGroup ? todayGroup.totalWords > 0 : false;
+  }, [reviewGroups]);
+  
   const loadData = useCallback(async () => {
     try {
       await initDatabase();
@@ -164,13 +171,23 @@ export default function ReviewPlanScreen() {
         
         {/* 快捷操作 */}
         <TouchableOpacity 
-          style={styles.quickReviewButton}
+          style={[
+            styles.quickReviewButton,
+            !hasTodayWords && styles.quickReviewButtonDisabled
+          ]}
           onPress={handleQuickReview}
-          disabled={loading || reviewGroups.length === 0}
+          disabled={loading || !hasTodayWords}
         >
-          <FontAwesome6 name="play" size={20} color={theme.buttonPrimaryText} />
-          <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>
-            开始今天复习
+          <FontAwesome6 
+            name="play" 
+            size={20} 
+            color={!hasTodayWords ? theme.textMuted : theme.buttonPrimaryText} 
+          />
+          <ThemedText 
+            variant="smallMedium" 
+            color={!hasTodayWords ? theme.textMuted : theme.buttonPrimaryText}
+          >
+            {!hasTodayWords ? '暂无今日复习' : '开始今天复习'}
           </ThemedText>
         </TouchableOpacity>
         
