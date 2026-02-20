@@ -78,7 +78,8 @@ export const convertToLocalTimeStr = (utcDateStr: string): string => {
 
 /**
  * 检查单词信息是否完整
- * 完整的单词信息需要包含：单词、词性、释义、拆分、短句（助记短句）、例句
+ * 完整的单词信息需要包含：单词、词性、释义、拆分、短句（助记短句）
+ * 注意：例句（sentence）是可选的，不参与信息完整性判断
  * @param word 单词对象
  * @returns 如果信息完整返回 false，否则返回 true
  */
@@ -88,14 +89,13 @@ export const isWordIncomplete = (word: Word): boolean => {
     return true;
   }
 
-  // 可选字段检查 - 只要有一个为空，就认为信息不完整
-  const missingFields = [];
-  if (!word.partOfSpeech) missingFields.push('词性');
-  if (!word.split) missingFields.push('拆分');
-  if (!word.mnemonic) missingFields.push('短句');
-  if (!word.sentence) missingFields.push('例句');
+  // 必选字段检查（不含例句）
+  if (!word.partOfSpeech) return true;
+  if (!word.split) return true;
+  if (!word.mnemonic) return true;
 
-  return missingFields.length > 0;
+  // 例句是可选的，不参与判断
+  return false;
 }
 
 /**
