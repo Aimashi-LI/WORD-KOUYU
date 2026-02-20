@@ -80,6 +80,22 @@ export const createStyles = (theme: Theme) => {
       shadowRadius: 12,
       elevation: 8, // Android 阴影
       gap: Spacing.md,
+      position: 'relative', // 为绝对定位的徽章提供参考
+    },
+    masteredBadge: {
+      position: 'absolute',
+      top: Spacing.md,
+      right: Spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      backgroundColor: theme.success,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.full,
+    },
+    masteredBadgeText: {
+      fontWeight: '600',
     },
     wordPartOfSpeechRow: {
       flexDirection: 'row',
