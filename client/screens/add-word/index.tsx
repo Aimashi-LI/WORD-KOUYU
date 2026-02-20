@@ -502,7 +502,7 @@ export default function AddWordScreen() {
           </View>
           <TextInput
             style={styles.input}
-            placeholder="输入或自动获取音标"
+            placeholder="点击输入音标"
             placeholderTextColor={theme.textMuted}
             value={phonetic}
             onChangeText={setPhonetic}
