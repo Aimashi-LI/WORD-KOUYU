@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -6,16 +6,21 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import { createStyles } from './styles';
+import { createFormDataFile } from '@/utils';
+
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
 
 export default function CameraScanScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  
+
   const [permission, requestPermission] = useCameraPermissions();
+  const [facing, setFacing] = useState<CameraType>('back');
   const [scanning, setScanning] = useState(false);
+  const cameraRef = useRef<any>(null);
 
   if (!permission) {
     return (
@@ -38,7 +43,7 @@ export default function CameraScanScreen() {
           <ThemedText variant="body" color={theme.textSecondary} style={styles.permissionText}>
             需要访问相机以拍摄文字
           </ThemedText>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.permissionButton}
             onPress={requestPermission}
           >
@@ -56,10 +61,14 @@ export default function CameraScanScreen() {
     );
   }
 
+  function toggleCameraFacing() {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
+  }
+
   return (
     <Screen backgroundColor="#000" statusBarStyle="light">
       <View style={styles.container}>
-        <CameraView style={styles.camera} facing="back">
+        <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
           {/* 扫描框 */}
           <View style={styles.scanBox}>
             <View style={styles.scanCorner} />
@@ -75,8 +84,16 @@ export default function CameraScanScreen() {
             </ThemedText>
           </ThemedView>
 
+          {/* 切换摄像头按钮 */}
+          <TouchableOpacity
+            style={styles.flipButton}
+            onPress={toggleCameraFacing}
+          >
+            <FontAwesome6 name="camera-rotate" size={24} color="#fff" />
+          </TouchableOpacity>
+
           {/* 拍照按钮 */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.captureButton}
             onPress={handleCapture}
           >
@@ -84,7 +101,7 @@ export default function CameraScanScreen() {
           </TouchableOpacity>
 
           {/* 取消按钮 */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.cancelButtonTop}
             onPress={() => router.back()}
           >
@@ -105,25 +122,100 @@ export default function CameraScanScreen() {
   );
 
   async function handleCapture() {
+    if (!cameraRef.current) {
+      Alert.alert('错误', '相机未初始化');
+      return;
+    }
+
     setScanning(true);
-    
-    // 模拟OCR识别（实际需要集成OCR API）
-    setTimeout(() => {
-      // 模拟识别结果
-      const mockWord = 'example';
+
+    try {
+      // 拍照
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        base64: false
+      });
+
+      if (!photo || !photo.uri) {
+        throw new Error('拍照失败');
+      }
+
+      console.log('[Camera] 拍照成功:', photo.uri);
+
+      // 上传图片到后端进行 OCR 识别
+      /**
+       * 服务端文件：server/src/routes/ocr.ts
+       * 接口：POST /api/v1/ocr/recognize
+       * Body (multipart/form-data):
+       *   - file: File (图片文件)
+       * Response:
+       *   {
+       *     success: true,
+       *     word: "识别到的英文单词"
+       *   }
+       */
+      const formData = new FormData();
+
+      // 使用 createFormDataFile 创建跨平台兼容的文件对象
+      const file = await createFormDataFile(photo.uri, 'photo.jpg', 'image/jpeg');
+      formData.append('file', file as any);
+
+      console.log('[Camera] 开始识别...');
+
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ocr/recognize`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      console.log('[Camera] 识别结果:', result);
+
+      if (!result.success) {
+        throw new Error(result.error || '识别失败');
+      }
+
+      const recognizedWord = result.word?.trim() || '';
+
+      if (!recognizedWord) {
+        Alert.alert(
+          '识别失败',
+          '未能识别到英文单词，请确保图片清晰且包含英文单词',
+          [
+            { text: '重拍', onPress: () => setScanning(false) },
+            { text: '取消', onPress: () => setScanning(false) }
+          ]
+        );
+        return;
+      }
+
+      // 显示识别结果
       Alert.alert(
         '识别结果',
-        `识别到单词：${mockWord}`,
+        `识别到单词：${recognizedWord}`,
         [
           { text: '重拍', onPress: () => setScanning(false) },
-          { 
-            text: '确认', 
+          {
+            text: '确认',
             onPress: () => {
-              router.push('/add-word', { word: mockWord });
+              router.push('/add-word', { word: recognizedWord });
             }
           }
         ]
       );
-    }, 1000);
+
+    } catch (error: any) {
+      console.error('[Camera] 识别错误:', error);
+      Alert.alert(
+        '识别失败',
+        error.message || '识别过程中出现错误，请重试',
+        [
+          { text: '重拍', onPress: () => setScanning(false) },
+          { text: '取消', onPress: () => setScanning(false) }
+        ]
+      );
+    } finally {
+      setScanning(false);
+    }
   }
 }

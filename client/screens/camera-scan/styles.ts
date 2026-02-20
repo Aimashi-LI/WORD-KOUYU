@@ -56,6 +56,18 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: 'rgba(0, 0, 0, 0.7)',
       alignItems: 'center',
     },
+    flipButton: {
+      position: 'absolute',
+      bottom: 180,
+      left: '50%',
+      transform: [{ translateX: -25 }],
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: 'rgba(255, 255, 255, 0.3)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     captureButton: {
       position: 'absolute',
       bottom: 80,

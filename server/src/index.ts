@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import ocrRouter from "./routes/ocr";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -14,6 +15,8 @@ app.get('/api/v1/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+// OCR 路由
+app.use('/api/v1/ocr', ocrRouter);
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}/`);
