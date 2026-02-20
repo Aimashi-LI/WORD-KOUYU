@@ -479,10 +479,12 @@ export default function BrushWordsScreen() {
                   {currentWord.split && (
                     <ThemedView level="tertiary" style={styles.splitSection}>
                       <FontAwesome6 name="scissors" size={16} color={theme.accent} />
-                      <ThemedText variant="body" color={theme.textSecondary} style={styles.splitText}>
+                      <View style={styles.splitTextContainer}>
                         <ThemedText variant="body" color={theme.textMuted}>拆分：</ThemedText>
-                        {formatSplitStringForDisplay(currentWord.split)}
-                      </ThemedText>
+                        <ThemedText variant="body" color={theme.textSecondary} style={styles.splitContent}>
+                          {formatSplitStringForDisplay(currentWord.split)}
+                        </ThemedText>
+                      </View>
                     </ThemedView>
                   )}
 

@@ -110,8 +110,11 @@ export const createStyles = (theme: Theme) => {
       padding: Spacing.md,
       borderRadius: BorderRadius.md,
     },
-    splitText: {
+    splitTextContainer: {
       flex: 1,
+      alignItems: 'center',
+    },
+    splitContent: {
       textAlign: 'left',
     },
     mnemonicSection: {
