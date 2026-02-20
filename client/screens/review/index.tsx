@@ -688,7 +688,7 @@ export default function ReviewScreen() {
 
           {/* 方式一：根据词性、释义、拆分填写单词 */}
           {reviewMode === 'type1' && (
-            <View style={styles.reviewModeContainer}>
+            <View style={[styles.reviewModeContainer, styles.reviewModeContainerType1]}>
               <ThemedText variant="body" color={theme.textSecondary} style={styles.modeHint}>
                 根据以下信息填写单词
               </ThemedText>
@@ -755,7 +755,7 @@ export default function ReviewScreen() {
 
           {/* 方式二：根据单词、短句填写释义 */}
           {reviewMode === 'type2' && (
-            <View style={styles.reviewModeContainer}>
+            <View style={[styles.reviewModeContainer, styles.reviewModeContainerType2]}>
               <ThemedText variant="body" color={theme.textSecondary} style={styles.modeHint}>
                 根据以下信息填写释义
               </ThemedText>

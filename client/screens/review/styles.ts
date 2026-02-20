@@ -35,6 +35,18 @@ export const createStyles = (theme: Theme) => {
     reviewModeContainer: {
       gap: Spacing.lg,
     },
+    // 方式一容器背景（包含提示文字、信息展示框、输入框等）- 浅蓝色背景
+    reviewModeContainerType1: {
+      backgroundColor: '#3B82F608', // 非常浅的蓝色背景
+      padding: Spacing.md,
+      borderRadius: BorderRadius.lg,
+    },
+    // 方式二容器背景（包含提示文字、信息展示框、输入框等）- 浅红色背景
+    reviewModeContainerType2: {
+      backgroundColor: '#EF444408', // 非常浅的红色背景
+      padding: Spacing.md,
+      borderRadius: BorderRadius.lg,
+    },
     modeHint: {
       textAlign: 'center',
     },
