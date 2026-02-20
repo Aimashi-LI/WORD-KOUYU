@@ -27,6 +27,13 @@ type ReviewState = 'idle' | 'reviewing' | 'completed';
 type ReviewMode = 'type1' | 'type2'; // type1: 填空单词, type2: 填空释义
 type AnswerStatus = 'none' | 'correct' | 'wrong';
 
+// 单词复习顺序配置
+interface WordReviewOrder {
+  wordId: number;
+  modeOrder: ('type1' | 'type2')[]; // ['type1', 'type2'] 或 ['type2', 'type1']
+  currentModeIndex: number; // 当前进行到第几种方式（0 或 1）
+}
+
 export default function ReviewScreen() {
   console.log('[Review] ========== ReviewScreen 组件开始渲染 ==========');
   
@@ -49,6 +56,9 @@ export default function ReviewScreen() {
   
   // 新增：记录每个单词的得分
   const [wordScores, setWordScores] = useState<{ wordId: number; word: string; score: number; isQuick: boolean }[]>([]);
+  
+  // 新增：记录每个单词的复习顺序
+  const [wordReviewOrders, setWordReviewOrders] = useState<WordReviewOrder[]>([]);
   
   // 复习状态相关
   const [reviewMode, setReviewMode] = useState<ReviewMode>('type1');
@@ -106,6 +116,19 @@ export default function ReviewScreen() {
       setQueue(words);
       setCurrentIndex(0);
       setState('idle');
+      
+      // 生成每个单词的随机复习顺序
+      const reviewOrders: WordReviewOrder[] = words.map(word => ({
+        wordId: word.id,
+        modeOrder: Math.random() < 0.5 ? ['type1', 'type2'] : ['type2', 'type1'],
+        currentModeIndex: 0
+      }));
+      setWordReviewOrders(reviewOrders);
+      
+      console.log('[Review] 生成了', reviewOrders.length, '个单词的复习顺序');
+      reviewOrders.forEach((order, index) => {
+        console.log(`[Review] 单词 ${index + 1} (${words[index].word}): ${order.modeOrder.join(' → ')}`);
+      });
     } catch (error) {
       console.error('[Review] 加载复习队列失败:', error);
       Alert.alert('错误', '加载复习队列失败');
@@ -121,8 +144,14 @@ export default function ReviewScreen() {
   };
 
   const startReview = (word: Word) => {
+    // 根据当前单词的复习顺序，决定先进行哪种方式
+    const currentOrder = wordReviewOrders[currentIndex];
+    const firstMode = currentOrder.modeOrder[0];
+    
+    console.log(`[Review] 开始复习单词: ${word.word}, 复习顺序: ${currentOrder.modeOrder.join(' → ')}, 当前方式: ${firstMode}`);
+    
     setCurrentWord(word);
-    setReviewMode('type1');
+    setReviewMode(firstMode);
     setType1Answer('');
     setType2Answer('');
     setType1Status('none');
@@ -152,10 +181,30 @@ export default function ReviewScreen() {
       setType1Status('wrong');
     }
 
-    // 方式一完成后，切换到方式二
-    setTimeout(() => {
-      setReviewMode('type2');
-    }, 1000);
+    // 检查当前单词是否还有第二种方式需要进行
+    const currentOrder = wordReviewOrders[currentIndex];
+    
+    // 如果当前是第一种方式，且还有第二种方式，则切换到第二种方式
+    if (currentOrder.currentModeIndex === 0 && currentOrder.modeOrder[1]) {
+      setTimeout(() => {
+        // 更新当前单词的模式索引
+        setWordReviewOrders(prev => {
+          const newOrders = [...prev];
+          newOrders[currentIndex].currentModeIndex = 1;
+          return newOrders;
+        });
+        
+        // 切换到第二种方式
+        const nextMode = currentOrder.modeOrder[1];
+        console.log(`[Review] 完成方式一，切换到方式: ${nextMode}`);
+        setReviewMode(nextMode);
+      }, 1000);
+    } else {
+      // 已经完成所有方式，提交最终分数
+      setTimeout(() => {
+        submitFinalScore();
+      }, 1000);
+    }
   };
 
   // 方式二：根据单词、短句填写释义
@@ -175,10 +224,30 @@ export default function ReviewScreen() {
       setType2Status('wrong');
     }
 
-    // 方式二完成后，提交最终分数
-    setTimeout(() => {
-      submitFinalScore();
-    }, 1000);
+    // 检查当前单词是否还有其他方式需要进行
+    const currentOrder = wordReviewOrders[currentIndex];
+    
+    // 如果当前是第一种方式，且还有第二种方式，则切换到第二种方式
+    if (currentOrder.currentModeIndex === 0 && currentOrder.modeOrder[1]) {
+      setTimeout(() => {
+        // 更新当前单词的模式索引
+        setWordReviewOrders(prev => {
+          const newOrders = [...prev];
+          newOrders[currentIndex].currentModeIndex = 1;
+          return newOrders;
+        });
+        
+        // 切换到第二种方式
+        const nextMode = currentOrder.modeOrder[1];
+        console.log(`[Review] 完成方式二，切换到方式: ${nextMode}`);
+        setReviewMode(nextMode);
+      }, 1000);
+    } else {
+      // 已经完成所有方式，提交最终分数
+      setTimeout(() => {
+        submitFinalScore();
+      }, 1000);
+    }
   };
 
   // 快速评分：没印象（0分）
