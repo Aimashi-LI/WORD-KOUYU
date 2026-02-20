@@ -14,6 +14,27 @@ export const createStyles = (theme: Theme) => {
       paddingTop: Spacing['2xl'],
       paddingBottom: Spacing.lg,
     },
+    // 复习计划卡片
+    planCard: {
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+      padding: Spacing.lg,
+      boxShadow: `0px 2px 8px rgba(0, 0, 0, 0.06)`,
+    },
+    planContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    planIcon: {
+      marginRight: Spacing.md,
+    },
+    planTextContainer: {
+      flex: 1,
+    },
+    sectionTitle: {
+      marginBottom: Spacing.md,
+    },
     createButton: {
       flexDirection: 'row',
       alignItems: 'center',

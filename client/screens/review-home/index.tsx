@@ -195,8 +195,31 @@ export default function ReviewHomeScreen() {
           <ThemedText variant="h1" color={theme.textPrimary}>复习</ThemedText>
         </View>
 
-        {/* 项目列表 */}
         <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* 复习计划入口 */}
+          <TouchableOpacity
+            style={styles.planCard}
+            onPress={() => router.push('/review-plan')}
+          >
+            <View style={styles.planContent}>
+              <FontAwesome6 name="calendar-days" size={32} color={theme.primary} style={styles.planIcon} />
+              <View style={styles.planTextContainer}>
+                <ThemedText variant="h3" color={theme.textPrimary}>
+                  复习计划
+                </ThemedText>
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  查看详细的复习安排和进度
+                </ThemedText>
+              </View>
+              <FontAwesome6 name="chevron-right" size={20} color={theme.textMuted} />
+            </View>
+          </TouchableOpacity>
+
+          {/* 项目列表标题 */}
+          <ThemedText variant="h4" color={theme.textSecondary} style={styles.sectionTitle}>
+            复习项目
+          </ThemedText>
+
           {loading ? (
             <View style={styles.loadingContainer}>
               <ThemedText color={theme.textMuted}>加载中...</ThemedText>
