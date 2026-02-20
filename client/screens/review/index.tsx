@@ -429,7 +429,7 @@ export default function ReviewScreen() {
                   {currentWord.split && (
                     <View style={styles.cardItemRow}>
                       <ThemedText variant="body" color={theme.textMuted} style={styles.cardLabel}>拆分：</ThemedText>
-                      <ThemedText variant="body" color={theme.textSecondary} style={styles.cardValue}>{formatSplitStringForDisplay(currentWord.split)}</ThemedText>
+                      <ThemedText variant="body" color={theme.textSecondary} style={[styles.cardValue, { textAlign: 'left' }]}>{formatSplitStringForDisplay(currentWord.split)}</ThemedText>
                     </View>
                   )}
                 </View>

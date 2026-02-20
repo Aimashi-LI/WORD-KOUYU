@@ -112,7 +112,7 @@ export const createStyles = (theme: Theme) => {
     },
     splitText: {
       flex: 1,
-      textAlign: 'center',
+      textAlign: 'left',
     },
     mnemonicSection: {
       flexDirection: 'row',
