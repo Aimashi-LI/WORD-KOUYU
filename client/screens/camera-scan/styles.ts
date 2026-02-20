@@ -9,6 +9,42 @@ export const createStyles = (theme: Theme) => {
     camera: {
       flex: 1,
     },
+    maskContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'transparent',
+    },
+    mask: {
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      position: 'absolute',
+    },
+    maskTop: {
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '30%', // 与扫描框顶部位置一致
+    },
+    maskBottom: {
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: '45%', // 与扫描框底部位置一致
+    },
+    maskLeft: {
+      top: '30%',
+      bottom: '45%',
+      left: 0,
+      width: '15%', // 与扫描框左侧位置一致
+    },
+    maskRight: {
+      top: '30%',
+      bottom: '45%',
+      right: 0,
+      width: '15%', // 与扫描框右侧位置一致
+    },
     scanBox: {
       position: 'absolute',
       top: '30%',

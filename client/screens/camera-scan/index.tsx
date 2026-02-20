@@ -82,6 +82,18 @@ export default function CameraScanScreen() {
     <Screen backgroundColor="#000" statusBarStyle="light">
       <View style={styles.container}>
         <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
+          {/* 扫描框外的遮罩 */}
+          <View style={styles.maskContainer}>
+            {/* 上方遮罩 */}
+            <View style={[styles.mask, styles.maskTop]} />
+            {/* 下方遮罩 */}
+            <View style={[styles.mask, styles.maskBottom]} />
+            {/* 左侧遮罩 */}
+            <View style={[styles.mask, styles.maskLeft]} />
+            {/* 右侧遮罩 */}
+            <View style={[styles.mask, styles.maskRight]} />
+          </View>
+
           {/* 扫描框 */}
           <View
             ref={scanBoxRef}
@@ -100,7 +112,7 @@ export default function CameraScanScreen() {
           {/* 提示 */}
           <ThemedView level="tertiary" style={styles.hintContainer}>
             <ThemedText variant="body" color="#fff">
-              将单个英文单词放入框内，确保清晰可见
+              请将单词卡片放在扫描框内
             </ThemedText>
           </ThemedView>
 
