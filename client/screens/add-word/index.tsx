@@ -45,7 +45,13 @@ export default function AddWordScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  const { wordbookId, word: initialWord } = useSafeSearchParams<{ wordbookId?: string; word?: string }>();
+  const { wordbookId, word: initialWord, phonetic: initialPhonetic, partOfSpeech: initialPartOfSpeech, definition: initialDefinition } = useSafeSearchParams<{
+    wordbookId?: string;
+    word?: string;
+    phonetic?: string;
+    partOfSpeech?: string;
+    definition?: string;
+  }>();
   
   // 基础字段
   const [word, setWord] = useState('');
@@ -64,21 +70,35 @@ export default function AddWordScreen() {
       const wordText = initialWord.trim().replace(/[^a-z]/gi, '');
       if (wordText) {
         setWord(wordText);
-        
-        // 自动获取音标
-        fetchPhoneticByWord(wordText).then(phoneticText => {
-          if (phoneticText) {
-            setPhonetic(phoneticText);
-          }
-        });
-        
+
+        // 如果识别结果中包含音标，使用识别到的音标；否则自动获取
+        if (initialPhonetic && initialPhonetic.trim()) {
+          setPhonetic(initialPhonetic.trim());
+        } else {
+          fetchPhoneticByWord(wordText).then(phoneticText => {
+            if (phoneticText) {
+              setPhonetic(phoneticText);
+            }
+          });
+        }
+
+        // 如果识别结果中包含词性，使用识别到的词性
+        if (initialPartOfSpeech && initialPartOfSpeech.trim()) {
+          setPartOfSpeech(initialPartOfSpeech.trim());
+        }
+
+        // 如果识别结果中包含释义，使用识别到的释义
+        if (initialDefinition && initialDefinition.trim()) {
+          setDefinition(initialDefinition.trim());
+        }
+
         // 自动填充拆分
         loadCodes().then(() => {
           autoFillMeaning(wordText, codes);
         });
       }
     }
-  }, [initialWord]);
+  }, [initialWord, initialPhonetic, initialPartOfSpeech, initialDefinition]);
   
   // 拆分相关
   const [splitItems, setSplitItems] = useState<SplitItem[]>([{ code: '', content: '' }]);

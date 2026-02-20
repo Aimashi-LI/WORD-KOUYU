@@ -203,7 +203,10 @@ export default function CameraScanScreen() {
        * Response:
        *   {
        *     success: true,
-       *     word: "识别到的英文单词"
+       *     word: "识别到的英文单词",
+       *     phonetic: "音标",
+       *     partOfSpeech: "词性",
+       *     definition: "释义"
        *   }
        */
       const formData = new FormData();
@@ -228,11 +231,14 @@ export default function CameraScanScreen() {
       }
 
       const recognizedWord = result.word?.trim() || '';
+      const phonetic = result.phonetic || '';
+      const partOfSpeech = result.partOfSpeech || '';
+      const definition = result.definition || '';
 
       if (!recognizedWord) {
         Alert.alert(
           '识别失败',
-          '未能识别到英文单词，请确保图片清晰且包含英文单词',
+          '未能识别到有效的英文单词，请确保图片清晰且包含完整的单词卡片信息',
           [
             { text: '重拍', onPress: () => setScanning(false) },
             { text: '取消', onPress: () => setScanning(false) }
@@ -242,15 +248,22 @@ export default function CameraScanScreen() {
       }
 
       // 显示识别结果
+      const resultText = `单词：${recognizedWord}\n${phonetic ? `音标：${phonetic}\n` : ''}${partOfSpeech ? `词性：${partOfSpeech}\n` : ''}${definition ? `释义：${definition}` : ''}`;
+
       Alert.alert(
         '识别结果',
-        `识别到单词：${recognizedWord}`,
+        resultText,
         [
           { text: '重拍', onPress: () => setScanning(false) },
           {
             text: '确认',
             onPress: () => {
-              router.push('/add-word', { word: recognizedWord });
+              router.push('/add-word', {
+                word: recognizedWord,
+                phonetic,
+                partOfSpeech,
+                definition
+              });
             }
           }
         ]

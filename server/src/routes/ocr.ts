@@ -48,14 +48,14 @@ router.post('/recognize', upload.single('file'), async (req: Request, res: Respo
     const messages = [
       {
         role: 'system' as const,
-        content: '你是一个专业的 OCR 识别助手。请仔细识别图片中的英文单词。\n\n识别规则：\n1. 如果图片中只有一个英文单词，返回该单词\n2. 如果图片中有多个英文单词，只返回第一个或最突出/最明显的那个单词\n3. 如果没有英文单词，返回空字符串\n4. 只返回单词本身，不要包含任何解释、标点符号、数字或空格\n5. 确保返回的单词格式正确（例如：不能是多个单词连在一起）'
+        content: '你是一个专业的 OCR 识别助手，专门用于识别英语单词学习卡片。\n\n识别规则：\n1. 仔细识别图片中的单词卡片信息\n2. 提取以下字段：\n   - word: 单词本身（只返回小写字母）\n   - phonetic: 音标（如果有）\n   - partOfSpeech: 词性（如 n.名词、v.动词、adj.形容词等）\n   - definition: 释义\n3. 以 JSON 格式返回结果，格式如下：\n   {\n     "word": "单词",\n     "phonetic": "音标",\n     "partOfSpeech": "词性",\n     "definition": "释义"\n   }\n4. 如果某个字段没有识别到，返回空字符串\n5. 只返回 JSON 对象，不要包含任何其他文字'
       },
       {
         role: 'user' as const,
         content: [
           {
             type: 'text' as const,
-            text: '请识别这张图片中的英文单词。如果只有一个单词，返回它；如果有多个单词，只返回第一个或最突出的那个。'
+            text: '请识别这张英语单词卡片，提取单词、音标、词性和释义信息。'
           },
           {
             type: 'image_url' as const,
@@ -71,43 +71,59 @@ router.post('/recognize', upload.single('file'), async (req: Request, res: Respo
     // 使用 vision 模型进行识别
     const response = await client.invoke(messages, {
       model: 'doubao-seed-1-6-vision-250815',
-      temperature: 0.1 // 进一步降低温度以获得更准确的结果
+      temperature: 0.1 // 降低温度以获得更准确的结果
     });
 
     // 提取识别结果
-    let recognizedWord = response.content.trim().toLowerCase();
+    let content = response.content.trim();
 
-    // 移除所有非字母字符
-    recognizedWord = recognizedWord.replace(/[^a-z]/g, '');
+    console.log('[OCR] 原始识别结果:', content);
 
-    // 如果识别到的结果太长（超过20个字母），可能识别了多个单词
-    if (recognizedWord.length > 20) {
-      console.log('[OCR] 检测到可能的多个单词，尝试提取第一个单词');
-
-      // 尝试分割单词（虽然已经被移除了空格，但可以根据常见单词模式）
-      // 这里简单地只取前10个字母作为第一个单词
-      recognizedWord = recognizedWord.substring(0, 10);
-    }
-
-    // 如果识别到的结果是空或太短（少于2个字母），返回空
-    if (recognizedWord.length < 2) {
-      recognizedWord = '';
-    }
-
-    console.log('[OCR] 原始识别结果:', response.content);
-    console.log('[OCR] 处理后的结果:', recognizedWord);
-
-    // 验证结果是否有效
-    if (!recognizedWord) {
+    // 尝试提取 JSON
+    let jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      // 如果没有找到 JSON，尝试创建一个基本的响应
       return res.json({
         success: false,
-        error: '未能识别到有效的英文单词。请确保图片清晰，并且只框选单个单词。'
+        error: '无法解析识别结果，请确保图片清晰且包含完整的单词卡片信息'
+      });
+    }
+
+    const jsonString = jsonMatch[0];
+    let result: any;
+
+    try {
+      result = JSON.parse(jsonString);
+    } catch (error) {
+      console.error('[OCR] JSON 解析失败:', error);
+      return res.json({
+        success: false,
+        error: '解析识别结果失败，请重试'
+      });
+    }
+
+    // 清理和验证字段
+    const word = result.word?.replace(/[^a-z]/g, '') || '';
+    const phonetic = result.phonetic?.trim() || '';
+    const partOfSpeech = result.partOfSpeech?.trim() || '';
+    const definition = result.definition?.trim() || '';
+
+    console.log('[OCR] 解析后的结果:', { word, phonetic, partOfSpeech, definition });
+
+    // 验证单词是否存在
+    if (!word || word.length < 2) {
+      return res.json({
+        success: false,
+        error: '未能识别到有效的英文单词。请确保图片清晰且包含单词卡片。'
       });
     }
 
     return res.json({
       success: true,
-      word: recognizedWord
+      word,
+      phonetic,
+      partOfSpeech,
+      definition
     });
 
   } catch (error: any) {
