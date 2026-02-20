@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import type { Word } from '@/database/types';
 dayjs.extend(utc);
 
 const API_BASE = (process.env.EXPO_PUBLIC_API_BASE ?? '').replace(/\/$/, '');
@@ -73,4 +74,26 @@ export const convertToLocalTimeStr = (utcDateStr: string): string => {
     return utcDateStr;
   }
   return d.local().format('YYYY-MM-DD HH:mm:ss');
+}
+
+/**
+ * 检查单词信息是否完整
+ * 完整的单词信息需要包含：单词、词性、释义、拆分、短句（助记短句）、例句
+ * @param word 单词对象
+ * @returns 如果信息完整返回 false，否则返回 true
+ */
+export const isWordIncomplete = (word: Word): boolean => {
+  // 必填字段检查
+  if (!word.word || !word.definition) {
+    return true;
+  }
+
+  // 可选字段检查 - 只要有一个为空，就认为信息不完整
+  const missingFields = [];
+  if (!word.partOfSpeech) missingFields.push('词性');
+  if (!word.split) missingFields.push('拆分');
+  if (!word.mnemonic) missingFields.push('短句');
+  if (!word.sentence) missingFields.push('例句');
+
+  return missingFields.length > 0;
 }

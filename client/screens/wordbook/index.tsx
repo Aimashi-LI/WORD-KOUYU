@@ -13,6 +13,7 @@ import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordboo
 import { initDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
 import { useCallback } from 'react';
+import { isWordIncomplete } from '@/utils';
 
 export default function WordbookScreen() {
   const { theme, isDark } = useTheme();
@@ -437,13 +438,22 @@ export default function WordbookScreen() {
                     <ThemedText variant="caption" color={theme.textMuted}>{word.phonetic}</ThemedText>
                   )}
                 </View>
-                {/* 已掌握标签 */}
-                {word.is_mastered === 1 && (
-                  <View style={styles.masteredTag}>
-                    <FontAwesome6 name="circle-check" size={14} color={theme.success} />
-                    <ThemedText variant="caption" color={theme.success} style={styles.masteredTagText}>已掌握</ThemedText>
-                  </View>
-                )}
+                <View style={styles.statusTags}>
+                  {/* 已掌握标签 */}
+                  {word.is_mastered === 1 && (
+                    <View style={styles.masteredTag}>
+                      <FontAwesome6 name="circle-check" size={14} color={theme.success} />
+                      <ThemedText variant="caption" color={theme.success} style={styles.masteredTagText}>已掌握</ThemedText>
+                    </View>
+                  )}
+                  {/* 待编辑标签 */}
+                  {isWordIncomplete(word) && (
+                    <View style={styles.incompleteTag}>
+                      <FontAwesome6 name="pen-to-square" size={14} color={theme.warning} />
+                      <ThemedText variant="caption" color={theme.warning} style={styles.incompleteTagText}>待编辑</ThemedText>
+                    </View>
+                  )}
+                </View>
               </View>
               
               {/* 显示词库名称 - 只在全部单词视图中显示 */}

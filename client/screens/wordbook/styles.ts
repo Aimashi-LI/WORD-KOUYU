@@ -213,6 +213,11 @@ export const createStyles = (theme: Theme) => {
     wordInfoLeft: {
       flex: 1,
     },
+    statusTags: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
     // 已掌握标签
     masteredTag: {
       flexDirection: 'row',
@@ -224,6 +229,19 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: `${theme.success}15`,
     },
     masteredTagText: {
+      fontSize: 11,
+    },
+    // 待编辑标签
+    incompleteTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: `${theme.warning}15`,
+    },
+    incompleteTagText: {
       fontSize: 11,
     },
     wordbookTags: {
