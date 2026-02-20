@@ -363,7 +363,7 @@ export default function ReviewScreen() {
     // 延迟提交
     setTimeout(() => {
       if (currentWordSnapshot) {
-        submitQuickScore(currentWordSnapshot);
+        submitQuickScore(currentWordSnapshot, SCORING_CONFIG.QUICK_NO_IMPRESSION);
       }
     }, 1000);
   };
@@ -377,7 +377,7 @@ export default function ReviewScreen() {
     // 延迟提交
     setTimeout(() => {
       if (currentWordSnapshot) {
-        submitQuickScore(currentWordSnapshot);
+        submitQuickScore(currentWordSnapshot, SCORING_CONFIG.QUICK_SOME_IMPRESSION);
       }
     }, 1000);
   };
@@ -491,10 +491,10 @@ export default function ReviewScreen() {
   };
 
   // 提交快速评分分数
-  const submitQuickScore = async (word: Word) => {
+  const submitQuickScore = async (word: Word, score: number) => {
     if (!word) return;
 
-    const finalScore = quickScore!;
+    const finalScore = score;
     const responseTime = (Date.now() - startTimeRef.current) / 1000;
     const isQuick = true;
 
