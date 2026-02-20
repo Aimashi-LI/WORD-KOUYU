@@ -356,23 +356,29 @@ export default function ReviewScreen() {
 
   // 快速评分：没印象（0分）
   const handleNoImpression = () => {
+    const currentWordSnapshot = currentWord; // 保存当前单词引用
     setQuickScore(SCORING_CONFIG.QUICK_NO_IMPRESSION);
     setIsEditing(false);
 
     // 延迟提交
     setTimeout(() => {
-      submitQuickScore();
+      if (currentWordSnapshot) {
+        submitQuickScore(currentWordSnapshot);
+      }
     }, 1000);
   };
 
   // 快速评分：有印象，但想不起来（2分）
   const handleSomeImpression = () => {
+    const currentWordSnapshot = currentWord; // 保存当前单词引用
     setQuickScore(SCORING_CONFIG.QUICK_SOME_IMPRESSION);
     setIsEditing(false);
 
     // 延迟提交
     setTimeout(() => {
-      submitQuickScore();
+      if (currentWordSnapshot) {
+        submitQuickScore(currentWordSnapshot);
+      }
     }, 1000);
   };
 
@@ -485,8 +491,8 @@ export default function ReviewScreen() {
   };
 
   // 提交快速评分分数
-  const submitQuickScore = async () => {
-    if (!currentWord) return;
+  const submitQuickScore = async (word: Word) => {
+    if (!word) return;
 
     const finalScore = quickScore!;
     const responseTime = (Date.now() - startTimeRef.current) / 1000;
@@ -501,19 +507,40 @@ export default function ReviewScreen() {
         nextReviewDate,
         masteryAdjustmentFactor,
         reviewStatus
-      } = await updateWithTimeWeight(currentWord, finalScore, responseTime);
+      } = await updateWithTimeWeight(word, finalScore, responseTime);
 
       // 记录复习时机信息到日志
-      console.log(`[Review] 单词 ${currentWord.word} 复习时机: ${reviewStatus}, 掌握率调整因子: ${masteryAdjustmentFactor.toFixed(2)}`);
+      console.log(`[Review] 单词 ${word.word} 复习时机: ${reviewStatus}, 掌握率调整因子: ${masteryAdjustmentFactor.toFixed(2)}`);
 
-      // 检查是否掌握（快速评分为0分，不太可能掌握）
-      const recentLogs = await getRecentReviewLogs(currentWord.id, MASTERY_CONFIG.consecutiveHighScores);
+      // 先添加复习日志（确保日志包含当前分数）
+      await addReviewLog({
+        word_id: word.id,
+        score: finalScore,
+        response_time: responseTime,
+        reviewed_at: new Date().toISOString()
+      });
+
+      // 检查是否掌握（使用更新后的稳定性）
+      const recentLogs = await getRecentReviewLogs(word.id, MASTERY_CONFIG.consecutiveHighScores);
       const recentScores = recentLogs.map(log => log.score);
-      recentScores.push(finalScore);
 
-      const isMastered = checkMasteryWithConfig(currentWord, recentScores);
+      // 使用更新后的单词数据进行判断
+      const updatedWord = {
+        ...word,
+        difficulty: newDifficulty,
+        stability: newStability,
+        avg_response_time: newAvgResponseTime,
+        last_review: new Date().toISOString(),
+        next_review: nextReviewDate.toISOString(),
+      };
 
-      await updateWord(currentWord.id, {
+      const isMastered = checkMasteryWithConfig(updatedWord, recentScores);
+
+      console.log(`[Review] 提交单词 ${word.word} 的快速评分分数: ${finalScore}`);
+      console.log(`[Review]   新稳定性: ${newStability.toFixed(2)} 天`);
+      console.log(`[Review]   是否已掌握: ${isMastered}`);
+
+      await updateWord(word.id, {
         difficulty: newDifficulty,
         stability: newStability,
         avg_response_time: newAvgResponseTime,
@@ -522,19 +549,12 @@ export default function ReviewScreen() {
         is_mastered: isMastered ? 1 : 0
       });
 
-      await addReviewLog({
-        word_id: currentWord.id,
-        score: finalScore,
-        response_time: responseTime,
-        reviewed_at: new Date().toISOString()
-      });
-
       // 记录单词得分
       setWordScores(prev => [
         ...prev,
         {
-          wordId: currentWord.id,
-          word: currentWord.word,
+          wordId: word.id,
+          word: word.word,
           score: finalScore,
           isQuick
         }
@@ -542,8 +562,6 @@ export default function ReviewScreen() {
 
       // 累加总分
       setTotalScore(prev => prev + finalScore);
-
-      console.log(`[Review] 提交单词 ${currentWord.word} 的快速评分分数: ${finalScore}`);
 
       // 进入下一个步骤
       const nextIndex = currentStepIndex + 1;
