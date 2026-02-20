@@ -206,7 +206,7 @@ export default function WordbookScreen() {
                 </TouchableOpacity>
             ))}
           </ScrollView>
-          </View>
+        </View>
         </View>
 
         {/* 添加按钮组 */}
