@@ -5,6 +5,67 @@ const DB_NAME = 'word_review.db';
 const DB_VERSION = 4; // 数据库版本号 - 升级到 4，强制修复 partOfSpeech 字段
 let db: SQLite.SQLiteDatabase | null = null;
 
+// 基础音标数据（常用词）
+const DEFAULT_PHONETICS = [
+  { word: 'hello', phonetic: '/həˈloʊ/' },
+  { word: 'world', phonetic: '/wɜːrld/' },
+  { word: 'apple', phonetic: '/ˈæpl/' },
+  { word: 'book', phonetic: '/bʊk/' },
+  { word: 'computer', phonetic: '/kəmˈpjuːtər/' },
+  { word: 'water', phonetic: '/ˈwɔːtər/' },
+  { word: 'time', phonetic: '/taɪm/' },
+  { word: 'people', phonetic: '/ˈpiːpl/' },
+  { word: 'year', phonetic: '/jɪr/' },
+  { word: 'good', phonetic: '/ɡʊd/' },
+  { word: 'make', phonetic: '/meɪk/' },
+  { word: 'word', phonetic: '/wɜːrd/' },
+  { word: 'new', phonetic: '/nuː/' },
+  { word: 'first', phonetic: '/fɜːrst/' },
+  { word: 'work', phonetic: '/wɜːrk/' },
+  { word: 'now', phonetic: '/naʊ/' },
+  { word: 'find', phonetic: '/faɪnd/' },
+  { word: 'long', phonetic: '/lɔːŋ/' },
+  { word: 'look', phonetic: '/lʊk/' },
+  { word: 'day', phonetic: '/deɪ/' },
+  { word: 'get', phonetic: '/ɡet/' },
+  { word: 'come', phonetic: '/kʌm/' },
+  { word: 'made', phonetic: '/meɪd/' },
+  { word: 'may', phonetic: '/meɪ/' },
+  { word: 'part', phonetic: '/pɑːrt/' },
+];
+
+// 初始化基础音标数据
+async function initDefaultPhonetics(): Promise<void> {
+  if (!db) return;
+
+  try {
+    // 检查是否已初始化
+    const count = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM phonetics'
+    );
+
+    // 如果音标表为空，插入基础数据
+    if (!count || count.count === 0) {
+      console.log('Initializing default phonetics...');
+      
+      for (const item of DEFAULT_PHONETICS) {
+        try {
+          await db.runAsync(
+            'INSERT OR IGNORE INTO phonetics (word, phonetic, created_at) VALUES (?, ?, datetime("now"))',
+            [item.word, item.phonetic]
+          );
+        } catch (error) {
+          console.error(`Failed to insert phonetic for ${item.word}:`, error);
+        }
+      }
+      
+      console.log(`Initialized ${DEFAULT_PHONETICS.length} default phonetics`);
+    }
+  } catch (error) {
+    console.error('Failed to initialize default phonetics:', error);
+  }
+}
+
 // 获取当前数据库版本
 async function getDatabaseVersion(): Promise<number> {
   if (!db) return 0;
@@ -271,15 +332,27 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE
       );
 
+      -- 音标表（本地音标数据库）
+      CREATE TABLE IF NOT EXISTS phonetics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        word TEXT NOT NULL UNIQUE,
+        phonetic TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
       -- 创建索引
       CREATE INDEX IF NOT EXISTS idx_words_next_review ON words(next_review);
       CREATE INDEX IF NOT EXISTS idx_words_is_mastered ON words(is_mastered);
       CREATE INDEX IF NOT EXISTS idx_review_logs_word_id ON review_logs(word_id);
       CREATE INDEX IF NOT EXISTS idx_wordbook_words_wordbook_id ON wordbook_words(wordbook_id);
       CREATE INDEX IF NOT EXISTS idx_wordbook_words_word_id ON wordbook_words(word_id);
+      CREATE INDEX IF NOT EXISTS idx_phonetics_word ON phonetics(word);
     `);
 
     console.log('Database initialized successfully');
+    
+    // 初始化基础音标数据
+    await initDefaultPhonetics();
   }
 
   // 每次调用都检查是否需要迁移
