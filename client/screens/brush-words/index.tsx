@@ -31,7 +31,7 @@ import { formatSplitStringForDisplay } from '@/utils/splitHelper';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // 单词卡片组件
-const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme, cardRef, router, isCurrent }: {
+const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme, cardRef, router, isCurrent, isLast }: {
   word: Word;
   index: number;
   scrollX: SharedValue<number>;
@@ -42,6 +42,7 @@ const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme,
   cardRef: React.RefObject<View | null>;
   router: any;
   isCurrent: boolean;
+  isLast: boolean;
 }) => {
   const offset = index * (cardWidth + cardSpacing);
 
@@ -69,6 +70,7 @@ const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme,
     <Animated.View
       style={[
         styles.cardWrapper,
+        isLast ? null : styles.cardWrapperWithMargin, // 最后一个卡片不添加右边距
         { width: cardWidth },
         animatedStyle,
       ]}
@@ -563,7 +565,10 @@ export default function BrushWordsScreen() {
           scrollEventThrottle={16}
           decelerationRate="fast"
           snapToInterval={CARD_WIDTH + CARD_SPACING}
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerStyle={[
+            styles.scrollContainer,
+            { justifyContent: 'center' } // 确保内容居中显示
+          ]}
         >
           {words.map((word, index) => (
             <WordCard
@@ -578,6 +583,7 @@ export default function BrushWordsScreen() {
               cardRef={cardRef}
               router={router}
               isCurrent={index === currentIndex}
+              isLast={index === words.length - 1} // 判断是否是最后一个卡片
             />
           ))}
         </Animated.ScrollView>

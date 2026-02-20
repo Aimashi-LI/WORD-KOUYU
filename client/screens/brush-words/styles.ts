@@ -69,6 +69,9 @@ export const createStyles = (theme: Theme) => {
       flexGrow: 1,
     },
     cardWrapper: {
+      // 移除固定的 marginRight，改为根据卡片位置动态添加
+    },
+    cardWrapperWithMargin: {
       marginRight: Spacing.lg,
     },
     wordCard: {
