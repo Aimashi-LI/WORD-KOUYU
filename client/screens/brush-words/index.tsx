@@ -181,14 +181,10 @@ export default function BrushWordsScreen() {
   const CARD_WIDTH = SCREEN_WIDTH - 40; // 20 * 2 padding
   const CARD_SPACING = 20;
 
-  // 计算精确的吸附偏移量
+  // 根据实际单词数量计算精确的吸附偏移量
   const snapOffsets = useMemo(() => {
-    const offsets: number[] = [];
-    for (let i = 0; i < 100; i++) { // 假设最多100个单词
-      offsets.push(i * (CARD_WIDTH + CARD_SPACING));
-    }
-    return offsets;
-  }, [CARD_WIDTH, CARD_SPACING]);
+    return words.map((_, index) => index * (CARD_WIDTH + CARD_SPACING));
+  }, [words.length, CARD_WIDTH, CARD_SPACING]);
 
   // 卡片引用，用于截图分享
   const cardRef = useRef<View>(null);
