@@ -390,4 +390,5 @@ export default function CameraScanScreen() {
         }
       ]
     );
-  };}
+  }
+}
