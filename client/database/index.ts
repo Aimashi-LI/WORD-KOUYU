@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const DB_NAME = 'word_review.db';
-const DB_VERSION = 2; // 数据库版本号
+const DB_VERSION = 3; // 数据库版本号 - 升级以确保 partOfSpeech 字段存在
 let db: SQLite.SQLiteDatabase | null = null;
 
 // 获取当前数据库版本
@@ -63,10 +63,13 @@ async function migrateDatabase(): Promise<void> {
 
     const mnemonicColumn = tableInfo.find(col => col.name === 'mnemonic');
     const sentenceColumn = tableInfo.find(col => col.name === 'sentence');
+    const partOfSpeechColumn = tableInfo.find(col => col.name === 'partOfSpeech');
 
-    // 如果 mnemonic 或 sentence 字段存在且有 NOT NULL 约束，需要重建表
-    if ((mnemonicColumn && mnemonicColumn.notnull === 1) || (sentenceColumn && sentenceColumn.notnull === 1)) {
-      console.log('Found NOT NULL constraint on mnemonic or sentence, recreating table...');
+    // 如果 mnemonic 或 sentence 或 partOfSpeech 字段存在且有 NOT NULL 约束，需要重建表
+    if ((mnemonicColumn && mnemonicColumn.notnull === 1) || 
+        (sentenceColumn && sentenceColumn.notnull === 1) ||
+        (partOfSpeechColumn && partOfSpeechColumn.notnull === 1)) {
+      console.log('Found NOT NULL constraint on mnemonic, sentence or partOfSpeech, recreating table...');
 
       // 备份数据
       const words = await db.getAllAsync<any>('SELECT * FROM words');
@@ -132,6 +135,18 @@ async function migrateDatabase(): Promise<void> {
         try {
           await db.execAsync('ALTER TABLE words ADD COLUMN sentence TEXT');
           console.log('Added sentence column to words table');
+        } catch (error: any) {
+          if (!error.message?.includes('duplicate column')) {
+            throw error;
+          }
+        }
+      }
+
+      // 检查并添加 partOfSpeech 字段
+      if (!partOfSpeechColumn) {
+        try {
+          await db.execAsync('ALTER TABLE words ADD COLUMN partOfSpeech TEXT');
+          console.log('Added partOfSpeech column to words table');
         } catch (error: any) {
           if (!error.message?.includes('duplicate column')) {
             throw error;

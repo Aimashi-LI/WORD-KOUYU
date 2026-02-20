@@ -116,6 +116,10 @@ export const createStyles = (theme: Theme) => {
       fontStyle: 'italic',
       color: theme.textMuted,
     },
+    missingField: {
+      color: theme.primary,
+      textDecorationLine: 'underline',
+    },
     hintContainer: {
       alignItems: 'center',
       paddingVertical: Spacing.md,

@@ -76,6 +76,11 @@ export default function BrushWordsScreen() {
       setShowDefinition(false);
       // 记录所有单词ID
       setBrowsingWords(wordList.map(w => w.id));
+
+      // 调试日志：打印第一个单词的所有字段
+      if (wordList.length > 0) {
+        console.log('[BrushWords] 第一个单词完整数据:', JSON.stringify(wordList[0], null, 2));
+      }
     } catch (error) {
       console.error('加载单词失败:', error);
     } finally {
@@ -386,18 +391,30 @@ export default function BrushWordsScreen() {
 
                   {/* 词性和释义 - 始终显示 */}
                   <View style={styles.definitionSection}>
-                    {currentWord.partOfSpeech && (
+                    {currentWord.partOfSpeech ? (
                       <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.partOfSpeech}>
                         {currentWord.partOfSpeech}.
                       </ThemedText>
+                    ) : (
+                      <TouchableOpacity onPress={() => router.push('/word-detail', { id: String(currentWord.id) })}>
+                        <ThemedText variant="smallMedium" color={theme.primary} style={styles.missingField}>
+                          + 添加词性
+                        </ThemedText>
+                      </TouchableOpacity>
                     )}
                     <ThemedText variant="body" color={theme.textPrimary}>
                       {currentWord.definition}
                     </ThemedText>
-                    {currentWord.sentence && (
+                    {currentWord.sentence ? (
                       <ThemedText variant="caption" color={theme.textSecondary} style={styles.sentence}>
                         例句：{currentWord.sentence}
                       </ThemedText>
+                    ) : (
+                      <TouchableOpacity onPress={() => router.push('/word-detail', { id: String(currentWord.id) })}>
+                        <ThemedText variant="caption" color={theme.primary} style={styles.missingField}>
+                          + 添加例句
+                        </ThemedText>
+                      </TouchableOpacity>
                     )}
                   </View>
                 </ThemedView>
