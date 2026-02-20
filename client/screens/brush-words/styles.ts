@@ -64,9 +64,9 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
     },
     scrollContainer: {
-      paddingHorizontal: Spacing.lg,
       paddingVertical: Spacing.lg,
       flexGrow: 1,
+      justifyContent: 'center', // 让卡片垂直居中
     },
     cardWrapper: {
       marginRight: Spacing.lg,

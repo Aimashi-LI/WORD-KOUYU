@@ -193,6 +193,7 @@ export default function BrushWordsScreen() {
   const scrollViewRef = useRef<Animated.ScrollView>(null);
   const CARD_WIDTH = SCREEN_WIDTH - 40; // 20 * 2 padding
   const CARD_SPACING = 20;
+  const HORIZONTAL_PADDING = (SCREEN_WIDTH - CARD_WIDTH) / 2; // 计算水平 padding 以确保居中
 
   // 卡片引用，用于截图分享
   const cardRef = useRef<View>(null);
@@ -576,7 +577,10 @@ export default function BrushWordsScreen() {
           scrollEventThrottle={16}
           decelerationRate="fast"
           snapToInterval={CARD_WIDTH + CARD_SPACING}
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerStyle={[
+            styles.scrollContainer,
+            { paddingHorizontal: HORIZONTAL_PADDING }
+          ]}
         >
           {words.map((word, index) => (
             <WordCard
