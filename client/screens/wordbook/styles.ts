@@ -205,24 +205,6 @@ export const createStyles = (theme: Theme) => {
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 2,
-      position: 'relative', // 为绝对定位的徽章提供参考
-    },
-    masteredBadge: {
-      position: 'absolute',
-      top: Spacing.md,
-      right: Spacing.md,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.xs,
-      backgroundColor: theme.success,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: 2,
-      borderRadius: BorderRadius.full,
-      zIndex: 10, // 确保徽章显示在最上层
-    },
-    masteredBadgeText: {
-      fontSize: 11,
-      fontWeight: '600',
     },
     wordHeader: {
       flexDirection: 'row',

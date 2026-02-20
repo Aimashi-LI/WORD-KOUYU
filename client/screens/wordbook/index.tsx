@@ -446,17 +446,6 @@ export default function WordbookScreen() {
                   )}
                 </View>
               )}
-
-              {/* 已掌握徽章 */}
-              {word.is_mastered === 1 && (
-                <View style={styles.masteredBadge}>
-                  <FontAwesome6 name="circle-check" size={12} color={theme.buttonPrimaryText} />
-                  <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.masteredBadgeText}>
-                    已掌握
-                  </ThemedText>
-                </View>
-              )}
-
               <View style={styles.wordHeader}>
                 <View style={styles.wordInfoLeft}>
                   <ThemedText variant="h3" color={theme.textPrimary}>{word.word}</ThemedText>
