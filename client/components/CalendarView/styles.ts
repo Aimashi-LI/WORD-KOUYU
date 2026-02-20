@@ -78,5 +78,23 @@ export const createStyles = (theme: Theme) => {
     markDotSelected: {
       backgroundColor: theme.buttonPrimaryText,
     },
+    // 复习计划数量徽章
+    countBadge: {
+      position: 'absolute',
+      top: -2,
+      right: -2,
+      backgroundColor: theme.warning,
+      borderRadius: 8,
+      minWidth: 16,
+      height: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 3,
+    },
+    countText: {
+      fontSize: 9,
+      fontWeight: '600',
+      lineHeight: 16,
+    },
   });
 };

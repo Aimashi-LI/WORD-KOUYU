@@ -202,6 +202,11 @@ export default function ReviewScreen() {
   const startReview = (step: ReviewStep) => {
     console.log(`[Review] 开始复习步骤: ${step.word.word} (${step.mode})`);
     
+    // 检查复习时机（仅在第一个单词检查一次）
+    if (currentStepIndex === 0) {
+      checkReviewTiming(step.word);
+    }
+    
     setCurrentWord(step.word);
     setReviewMode(step.mode);
     setType1Answer('');
@@ -216,6 +221,41 @@ export default function ReviewScreen() {
     // 记录复习开始时间（用于统计总耗时）
     if (currentStepIndex === 0) {
       reviewStartTimeRef.current = Date.now();
+    }
+  };
+
+  // 检查复习时机并提醒用户
+  const checkReviewTiming = (word: Word) => {
+    if (!word.next_review || !word.last_review) return;
+
+    const scheduledTime = new Date(word.next_review).getTime();
+    const currentTime = Date.now();
+    const timeDiffHours = (currentTime - scheduledTime) / (1000 * 60 * 60);
+
+    // 提前复习（提前时间 < 6小时）
+    if (timeDiffHours < -6) {
+      const earlyHours = Math.abs(timeDiffHours).toFixed(1);
+      Alert.alert(
+        '提前复习提醒',
+        `您提前了 ${earlyHours} 小时进行复习。\n\n根据认知心理学研究，过早复习会影响记忆效果，建议按推算时间进行复习。如果继续复习，掌握率的计算将适当调低。`,
+        [
+          { text: '返回', onPress: () => router.back(), style: 'cancel' },
+          { text: '继续复习', style: 'default' }
+        ]
+      );
+    }
+
+    // 延后复习（延后时间 > 6小时）
+    if (timeDiffHours > 6) {
+      const lateHours = timeDiffHours.toFixed(1);
+      Alert.alert(
+        '延后复习提醒',
+        `您延后了 ${lateHours} 小时进行复习。\n\n由于已超过推算的复习时间，单词的遗忘程度可能很大。根据遗忘曲线，掌握率的计算将适当调低。`,
+        [
+          { text: '返回', onPress: () => router.back(), style: 'cancel' },
+          { text: '继续复习', style: 'default' }
+        ]
+      );
     }
   };
 
@@ -369,13 +409,18 @@ export default function ReviewScreen() {
     const isQuick = false;
 
     try {
-      // 更新数据库
+      // 更新数据库（获取掌握率调整因子）
       const {
         newDifficulty,
         newStability,
         newAvgResponseTime,
-        nextReviewDate
+        nextReviewDate,
+        masteryAdjustmentFactor,
+        reviewStatus
       } = await updateWithTimeWeight(word, finalScore, responseTime);
+
+      // 记录复习时机信息到日志
+      console.log(`[Review] 单词 ${word.word} 复习时机: ${reviewStatus}, 掌握率调整因子: ${masteryAdjustmentFactor.toFixed(2)}`);
 
       // 先添加复习日志（确保日志包含当前分数）
       await addReviewLog({
@@ -448,13 +493,18 @@ export default function ReviewScreen() {
     const isQuick = true;
 
     try {
-      // 更新数据库
+      // 更新数据库（获取掌握率调整因子）
       const {
         newDifficulty,
         newStability,
         newAvgResponseTime,
-        nextReviewDate
+        nextReviewDate,
+        masteryAdjustmentFactor,
+        reviewStatus
       } = await updateWithTimeWeight(currentWord, finalScore, responseTime);
+
+      // 记录复习时机信息到日志
+      console.log(`[Review] 单词 ${currentWord.word} 复习时机: ${reviewStatus}, 掌握率调整因子: ${masteryAdjustmentFactor.toFixed(2)}`);
 
       // 检查是否掌握（快速评分为0分，不太可能掌握）
       const recentLogs = await getRecentReviewLogs(currentWord.id, MASTERY_CONFIG.consecutiveHighScores);

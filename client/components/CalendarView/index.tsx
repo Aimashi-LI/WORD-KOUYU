@@ -9,9 +9,10 @@ interface CalendarViewProps {
   selectedDate?: Date;
   onDateSelect?: (date: Date) => void;
   markedDates?: string[];  // 有复习计划的日期，格式为 YYYY-MM-DD
+  markedDatesCount?: Record<string, number>;  // 日期到复习计划数量的映射，格式为 { '2024-01-15': 5 }
 }
 
-export function CalendarView({ selectedDate, onDateSelect, markedDates = [] }: CalendarViewProps) {
+export function CalendarView({ selectedDate, onDateSelect, markedDates = [], markedDatesCount = {} }: CalendarViewProps) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   
@@ -46,11 +47,14 @@ export function CalendarView({ selectedDate, onDateSelect, markedDates = [] }: C
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
       const dateStr = date.toISOString().split('T')[0];
+      const isMarked = markedDates.includes(dateStr);
+      const count = markedDatesCount[dateStr] || 0;
       days.push({
         day,
         date,
         dateStr,
-        isMarked: markedDates.includes(dateStr),
+        isMarked,
+        count,
         isSelected: selectedDate && dateStr === selectedDate.toISOString().split('T')[0],
         isToday: dateStr === new Date().toISOString().split('T')[0],
       });
@@ -63,7 +67,7 @@ export function CalendarView({ selectedDate, onDateSelect, markedDates = [] }: C
       weekDays,
       days,
     };
-  }, [currentDate, selectedDate, markedDates]);
+  }, [currentDate, selectedDate, markedDates, markedDatesCount]);
 
   // 切换月份
   const changeMonth = (delta: number) => {
@@ -131,7 +135,7 @@ export function CalendarView({ selectedDate, onDateSelect, markedDates = [] }: C
             return <View key={index} style={styles.emptyCell} />;
           }
 
-          const { day, date, dateStr, isMarked, isSelected, isToday } = dayInfo;
+          const { day, date, dateStr, isMarked, count, isSelected, isToday } = dayInfo;
           const pastDate = isPastDate(date);
 
           return (
@@ -173,6 +177,19 @@ export function CalendarView({ selectedDate, onDateSelect, markedDates = [] }: C
                       isSelected && styles.markDotSelected,
                     ]}
                   />
+                )}
+
+                {/* 复习计划数量（仅当数量大于1时显示） */}
+                {count > 1 && (
+                  <View style={styles.countBadge}>
+                    <ThemedText
+                      variant="caption"
+                      color={isSelected ? theme.buttonPrimaryText : theme.textMuted}
+                      style={styles.countText}
+                    >
+                      {count}
+                    </ThemedText>
+                  </View>
                 )}
               </View>
             </TouchableOpacity>

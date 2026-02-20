@@ -33,6 +33,7 @@ export default function ReviewPlanScreen() {
   // 日历相关状态
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [markedDates, setMarkedDates] = useState<string[]>([]);
+  const [markedDatesCount, setMarkedDatesCount] = useState<Record<string, number>>({});
   const [selectedDateWords, setSelectedDateWords] = useState<any[]>([]);
   
   // 判断今天是否有待复习的单词
@@ -58,6 +59,13 @@ export default function ReviewPlanScreen() {
       // 提取有复习计划的日期
       const dates = plan.map(item => item.date);
       setMarkedDates(dates);
+      
+      // 提取每个日期的复习计划数量
+      const countMap: Record<string, number> = {};
+      plan.forEach(item => {
+        countMap[item.date] = item.count;
+      });
+      setMarkedDatesCount(countMap);
     } catch (error) {
       console.error('加载复习计划失败:', error);
     } finally {
@@ -205,6 +213,7 @@ export default function ReviewPlanScreen() {
           selectedDate={selectedDate}
           onDateSelect={handleDateSelect}
           markedDates={markedDates}
+          markedDatesCount={markedDatesCount}
         />
         
         {/* 选中日期的复习单词 */}
