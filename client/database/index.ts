@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const DB_NAME = 'word_review.db';
-const DB_VERSION = 3; // 数据库版本号 - 升级以确保 partOfSpeech 字段存在
+const DB_VERSION = 4; // 数据库版本号 - 升级到 4，强制修复 partOfSpeech 字段
 let db: SQLite.SQLiteDatabase | null = null;
 
 // 获取当前数据库版本
@@ -165,6 +165,27 @@ async function migrateDatabase(): Promise<void> {
         console.log('Migrated sentence to mnemonic for words without mnemonic');
       } catch (error) {
         console.error('Failed to migrate sentence to mnemonic:', error);
+      }
+
+      // 强制修复：确保 partOfSpeech 字段存在，并为现有单词设置默认值
+      try {
+        // 检查 partOfSpeech 字段是否存在
+        const tableInfo = await db.getAllAsync<{ name: string, type: string, notnull: number }>(
+          'PRAGMA table_info(words)'
+        );
+        const hasPartOfSpeech = tableInfo.some(col => col.name === 'partOfSpeech');
+
+        if (!hasPartOfSpeech) {
+          console.log('partOfSpeech field missing, adding it...');
+          await db.execAsync('ALTER TABLE words ADD COLUMN partOfSpeech TEXT');
+          console.log('Added partOfSpeech column');
+        }
+
+        // 为所有没有词性的单词设置默认词性（如果是动词词库，默认设为 v.动词）
+        // 这里先不设置默认值，让用户手动补充
+        console.log('partOfSpeech field exists, no migration needed');
+      } catch (error) {
+        console.error('Failed to fix partOfSpeech field:', error);
       }
     }
 
