@@ -31,7 +31,7 @@ import { formatSplitStringForDisplay } from '@/utils/splitHelper';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // 单词卡片组件
-const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme, cardRef, router, isCurrent, isLast }: {
+const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme, cardRef, router, isCurrent, isLast, initialOffset }: {
   word: Word;
   index: number;
   scrollX: SharedValue<number>;
@@ -43,8 +43,9 @@ const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme,
   router: any;
   isCurrent: boolean;
   isLast: boolean;
+  initialOffset: number;
 }) => {
-  const offset = index * (cardWidth + cardSpacing);
+  const offset = index * (cardWidth + cardSpacing) + initialOffset;
 
   const animatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(
@@ -182,6 +183,8 @@ export default function BrushWordsScreen() {
   const scrollViewRef = useRef<Animated.ScrollView>(null);
   const CARD_WIDTH = SCREEN_WIDTH - 40; // 20 * 2 padding
   const CARD_SPACING = 20;
+  // 计算初始偏移量，使第一个卡片居中
+  const INITIAL_OFFSET = (SCREEN_WIDTH - CARD_WIDTH) / 2;
 
   // 卡片引用，用于截图分享
   const cardRef = useRef<View>(null);
@@ -282,6 +285,11 @@ export default function BrushWordsScreen() {
       // 记录所有单词ID
       setBrowsingWords(wordList.map(w => w.id));
 
+      // 滚动到初始位置
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ x: INITIAL_OFFSET, animated: false });
+      }, 100);
+
       // 调试日志：打印第一个单词的所有字段
       if (wordList.length > 0) {
         console.log('[BrushWords] 第一个单词完整数据:', JSON.stringify(wordList[0], null, 2));
@@ -348,7 +356,10 @@ export default function BrushWordsScreen() {
       const newIndex = currentIndex + 1;
       setCurrentIndex(newIndex);
       setShowDefinition(false);
-      scrollViewRef.current?.scrollTo({ x: newIndex * (CARD_WIDTH + CARD_SPACING), animated: true });
+      scrollViewRef.current?.scrollTo({ 
+        x: INITIAL_OFFSET + newIndex * (CARD_WIDTH + CARD_SPACING), 
+        animated: true 
+      });
     } else {
       // 到达最后一个单词，询问是否创建复习项目
       handleFinishBrowsing();
@@ -360,7 +371,10 @@ export default function BrushWordsScreen() {
       const newIndex = currentIndex - 1;
       setCurrentIndex(newIndex);
       setShowDefinition(false);
-      scrollViewRef.current?.scrollTo({ x: newIndex * (CARD_WIDTH + CARD_SPACING), animated: true });
+      scrollViewRef.current?.scrollTo({ 
+        x: INITIAL_OFFSET + newIndex * (CARD_WIDTH + CARD_SPACING), 
+        animated: true 
+      });
     }
   };
 
@@ -462,7 +476,8 @@ export default function BrushWordsScreen() {
   // 根据滚动位置更新当前索引
   const onMomentumScrollEnd = (event: any) => {
     const offset = event.nativeEvent.contentOffset.x;
-    const newIndex = Math.round(offset / (CARD_WIDTH + CARD_SPACING));
+    // 减去初始偏移，计算实际索引
+    const newIndex = Math.round((offset - INITIAL_OFFSET) / (CARD_WIDTH + CARD_SPACING));
     setCurrentIndex(Math.max(0, Math.min(newIndex, words.length - 1)));
   };
 
@@ -565,10 +580,9 @@ export default function BrushWordsScreen() {
           scrollEventThrottle={16}
           decelerationRate="fast"
           snapToInterval={CARD_WIDTH + CARD_SPACING}
-          contentContainerStyle={[
-            styles.scrollContainer,
-            { justifyContent: 'center' } // 确保内容居中显示
-          ]}
+          contentInsetAdjustmentBehavior="never"
+          contentContainerStyle={styles.scrollContainer}
+          contentOffset={{ x: INITIAL_OFFSET, y: 0 }}
         >
           {words.map((word, index) => (
             <WordCard
@@ -583,7 +597,8 @@ export default function BrushWordsScreen() {
               cardRef={cardRef}
               router={router}
               isCurrent={index === currentIndex}
-              isLast={index === words.length - 1} // 判断是否是最后一个卡片
+              isLast={index === words.length - 1}
+              initialOffset={INITIAL_OFFSET}
             />
           ))}
         </Animated.ScrollView>

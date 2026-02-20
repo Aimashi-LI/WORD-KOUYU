@@ -64,15 +64,16 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
     },
     scrollContainer: {
-      paddingHorizontal: Spacing.lg,
       paddingVertical: Spacing.lg,
       flexGrow: 1,
     },
     cardWrapper: {
       // 移除固定的 marginRight，改为根据卡片位置动态添加
+      alignSelf: 'center', // 确保卡片在容器中居中对齐
     },
     cardWrapperWithMargin: {
       marginRight: Spacing.lg,
+      alignSelf: 'center', // 确保卡片在容器中居中对齐
     },
     wordCard: {
       padding: Spacing.xl,
