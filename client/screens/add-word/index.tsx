@@ -474,7 +474,7 @@ export default function AddWordScreen() {
         <ThemedView level="tertiary" style={styles.inputContainer}>
           <View style={styles.labelRow}>
             <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
-              音标（自动获取，可编辑）
+              音标
             </ThemedText>
             {word && !phonetic && (
               <TouchableOpacity
@@ -560,7 +560,7 @@ export default function AddWordScreen() {
         <ThemedView level="tertiary" style={styles.inputContainer}>
           <View style={styles.labelRow}>
             <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
-              拆分（可选）
+              拆分
             </ThemedText>
             {splitHistory.length > 0 && (
               <TouchableOpacity onPress={handleUndoSplit} style={styles.undoButton}>
@@ -649,7 +649,7 @@ export default function AddWordScreen() {
         {/* 短句输入 */}
         <ThemedView level="tertiary" style={styles.inputContainer}>
           <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
-            助记句子（可选）
+            助记句子
           </ThemedText>
           <TextInput
             style={[styles.input, styles.textArea]}
