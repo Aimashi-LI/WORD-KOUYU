@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, Alert, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -17,6 +17,7 @@ export default function CameraScanScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
@@ -159,40 +160,60 @@ export default function CameraScanScreen() {
       console.log('[Camera] 扫描框位置:', scanBoxLayout);
       console.log('[Camera] 图片尺寸:', photo.width, 'x', photo.height);
 
-      // 获取屏幕尺寸
-      const screenWidth = photo.width;
-      const screenHeight = photo.height;
+      let imageUri = photo.uri;
 
-      // 计算裁剪区域（注意：相机的坐标系与屏幕坐标系可能不同）
-      // 扫描框在屏幕上的百分比位置
-      const cropX = Math.floor(scanBoxLayout.x / (screenWidth / screenWidth) * photo.width);
-      const cropY = Math.floor(scanBoxLayout.y / (screenHeight / screenHeight) * photo.height);
-      const cropWidth = Math.floor(scanBoxLayout.width / (screenWidth / screenWidth) * photo.width);
-      const cropHeight = Math.floor(scanBoxLayout.height / (screenHeight / screenHeight) * photo.height);
+      // 尝试裁剪图片到扫描框区域
+      try {
+        // 计算屏幕和图片的比例
+        const scaleX = photo.width / screenWidth;
+        const scaleY = photo.height / screenHeight;
 
-      console.log('[Camera] 裁剪区域:', { cropX, cropY, cropWidth, cropHeight });
+        // 计算裁剪区域
+        const cropX = Math.floor(scanBoxLayout.x * scaleX);
+        const cropY = Math.floor(scanBoxLayout.y * scaleY);
+        const cropWidth = Math.floor(scanBoxLayout.width * scaleX);
+        const cropHeight = Math.floor(scanBoxLayout.height * scaleY);
 
-      // 裁剪图片到扫描框区域
-      const croppedImage = await ImageManipulator.manipulateAsync(
-        photo.uri,
-        [
-          {
-            crop: {
-              originX: cropX,
-              originY: cropY,
-              width: cropWidth,
-              height: cropHeight,
-            },
-          },
-        ],
-        {
-          compress: 0.9,
-          format: ImageManipulator.SaveFormat.JPEG,
-          base64: false,
+        // 确保裁剪区域在图片范围内
+        const safeCropX = Math.max(0, cropX);
+        const safeCropY = Math.max(0, cropY);
+        const safeCropWidth = Math.min(cropWidth, photo.width - safeCropX);
+        const safeCropHeight = Math.min(cropHeight, photo.height - safeCropY);
+
+        console.log('[Camera] 计算比例:', { scaleX, scaleY });
+        console.log('[Camera] 裁剪区域:', { safeCropX, safeCropY, safeCropWidth, safeCropHeight });
+
+        // 检查是否可以进行裁剪
+        if (safeCropWidth > 0 && safeCropHeight > 0) {
+          const croppedImage = await ImageManipulator.manipulateAsync(
+            photo.uri,
+            [
+              {
+                crop: {
+                  originX: safeCropX,
+                  originY: safeCropY,
+                  width: safeCropWidth,
+                  height: safeCropHeight,
+                },
+              },
+            ],
+            {
+              compress: 0.9,
+              format: ImageManipulator.SaveFormat.JPEG,
+              base64: false,
+            }
+          );
+
+          console.log('[Camera] 裁剪成功:', croppedImage.uri);
+          imageUri = croppedImage.uri;
+        } else {
+          console.log('[Camera] 裁剪区域无效，使用原始图片');
         }
-      );
-
-      console.log('[Camera] 裁剪成功:', croppedImage.uri);
+      } catch (cropError: any) {
+        console.error('[Camera] 裁剪失败，使用原始图片:', cropError);
+        // 裁剪失败时使用原始图片
+        imageUri = photo.uri;
+      }
 
       // 上传图片到后端进行 OCR 识别
       /**
@@ -212,7 +233,7 @@ export default function CameraScanScreen() {
       const formData = new FormData();
 
       // 使用 createFormDataFile 创建跨平台兼容的文件对象
-      const file = await createFormDataFile(croppedImage.uri, 'photo.jpg', 'image/jpeg');
+      const file = await createFormDataFile(imageUri, 'photo.jpg', 'image/jpeg');
       formData.append('file', file as any);
 
       console.log('[Camera] 开始识别...');
