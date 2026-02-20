@@ -81,6 +81,16 @@ export const createStyles = (theme: Theme) => {
     undoText: {
       marginLeft: 4,
     },
+    retryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+    },
+    retryText: {
+      marginLeft: 4,
+    },
     splitItemContainer: {
       marginBottom: Spacing.md,
       backgroundColor: theme.backgroundDefault,

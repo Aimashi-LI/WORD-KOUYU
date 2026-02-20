@@ -466,6 +466,43 @@ export default function AddWordScreen() {
           />
         </ThemedView>
 
+        {/* 音标输入 */}
+        <ThemedView level="tertiary" style={styles.inputContainer}>
+          <View style={styles.labelRow}>
+            <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
+              音标（自动获取，可编辑）
+            </ThemedText>
+            {word && !phonetic && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (word) {
+                    fetchPhoneticByWord(word).then(phoneticText => {
+                      if (phoneticText) {
+                        setPhonetic(phoneticText);
+                      } else {
+                        Alert.alert('提示', '未能获取到该单词的音标');
+                      }
+                    });
+                  }
+                }}
+                style={styles.retryButton}
+              >
+                <FontAwesome6 name="rotate" size={14} color={theme.primary} />
+                <ThemedText variant="caption" color={theme.primary} style={styles.retryText}>
+                  重试
+                </ThemedText>
+              </TouchableOpacity>
+            )}
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="输入或自动获取音标"
+            placeholderTextColor={theme.textMuted}
+            value={phonetic}
+            onChangeText={setPhonetic}
+          />
+        </ThemedView>
+
         {/* 词性选择 */}
         <ThemedView level="tertiary" style={styles.inputContainer}>
           <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
