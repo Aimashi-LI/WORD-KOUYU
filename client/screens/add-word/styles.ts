@@ -246,5 +246,37 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.md,
       alignItems: 'center',
     },
+    keyboardModalOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'transparent',
+    },
+    keyboardCloseArea: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    keyboardDragHandle: {
+      width: 40,
+      height: 4,
+      backgroundColor: theme.border,
+      borderRadius: 2,
+      marginBottom: Spacing.md,
+    },
+    keyboardContainer: {
+      backgroundColor: theme.backgroundRoot,
+      borderTopLeftRadius: BorderRadius['4xl'],
+      borderTopRightRadius: BorderRadius['4xl'],
+      paddingTop: Spacing.sm,
+      paddingBottom: Spacing.md,
+      paddingHorizontal: Spacing.md,
+    },
+    keyboardHideButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+      marginTop: Spacing.sm,
+    },
   });
 };

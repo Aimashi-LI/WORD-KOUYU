@@ -33,6 +33,7 @@ import {
   CodeSuggestion
 } from '@/utils/splitHelper';
 import { fetchPhoneticByWord } from '@/utils';
+import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
 
 // 词性列表
 const PART_OF_SPEECH_LIST = [
@@ -52,6 +53,9 @@ export default function AddWordScreen() {
   const [definition, setDefinition] = useState('');
   const [partOfSpeech, setPartOfSpeech] = useState('');
   const [sentence, setSentence] = useState('');
+  
+  // 音标键盘
+  const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
   
   // 初始化：如果从拍照识别页面传入单词，自动填充
   useEffect(() => {
@@ -500,6 +504,8 @@ export default function AddWordScreen() {
             placeholderTextColor={theme.textMuted}
             value={phonetic}
             onChangeText={setPhonetic}
+            onFocus={() => setShowPhoneticKeyboard(true)}
+            onBlur={() => setShowPhoneticKeyboard(false)}
           />
         </ThemedView>
 
@@ -729,6 +735,40 @@ export default function AddWordScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* 音标键盘 */}
+      <Modal
+        visible={showPhoneticKeyboard}
+        transparent
+        animationType="slide"
+      >
+        <View style={styles.keyboardModalOverlay}>
+          <TouchableOpacity
+            style={styles.keyboardCloseArea}
+            activeOpacity={1}
+            onPress={() => setShowPhoneticKeyboard(false)}
+          >
+            <View style={styles.keyboardDragHandle} />
+          </TouchableOpacity>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={0}
+          >
+            <View style={styles.keyboardContainer}>
+              <PhoneticKeyboard
+                onKeyPress={(symbol) => setPhonetic(phonetic + symbol)}
+                onDelete={() => setPhonetic(phonetic.slice(0, -1))}
+              />
+              <TouchableOpacity
+                style={styles.keyboardHideButton}
+                onPress={() => setShowPhoneticKeyboard(false)}
+              >
+                <ThemedText variant="body" color={theme.buttonPrimaryText}>完成</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </Screen>
   );
