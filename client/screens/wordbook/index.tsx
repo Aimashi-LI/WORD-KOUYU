@@ -166,7 +166,18 @@ export default function WordbookScreen() {
 
         {/* 词库切换栏 */}
         <View style={styles.wordbookBar}>
-          <ThemedText variant="body" color={theme.textMuted}>当前词库：</ThemedText>
+          {/* 第一行：标题和添加按钮 */}
+          <View style={styles.wordbookBarHeader}>
+            <ThemedText variant="body" color={theme.textMuted}>当前词库：</ThemedText>
+            <TouchableOpacity 
+              style={styles.addWordbookButton}
+              onPress={() => setShowWordbookModal(true)}
+            >
+              <FontAwesome6 name="plus" size={20} color={theme.primary} />
+            </TouchableOpacity>
+          </View>
+          
+          {/* 第二行：词库芯片滚动区域 */}
           <View style={styles.wordbookScrollContainer}>
             <ScrollView 
               horizontal 
@@ -193,16 +204,9 @@ export default function WordbookScreen() {
                     {book.name} ({book.word_count})
                   </ThemedText>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+            ))}
+          </ScrollView>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.addWordbookButton}
-            onPress={() => setShowWordbookModal(true)}
-          >
-            <FontAwesome6 name="plus" size={20} color={theme.primary} />
-          </TouchableOpacity>
         </View>
 
         {/* 添加按钮组 */}

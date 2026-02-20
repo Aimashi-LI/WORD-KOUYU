@@ -36,29 +36,33 @@ export const createStyles = (theme: Theme) => {
     },
     // 词库切换栏
     wordbookBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: Spacing.sm,
       backgroundColor: theme.backgroundDefault,
       borderRadius: BorderRadius.lg,
       borderWidth: 1,
       borderColor: theme.borderLight,
       marginBottom: Spacing.lg,
-      gap: Spacing.sm,
+      paddingVertical: Spacing.sm,  // ✅ 新增：垂直内边距
+      paddingHorizontal: Spacing.md,  // ✅ 新增：水平内边距
+      gap: Spacing.sm,  // ✅ 新增：行与行之间的间距
+    },
+    wordbookBarHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.xs,  // ✅ 新增：与词库滚动区域的间距
     },
     wordbookScrollContainer: {
       flex: 1,
     },
     wordbookScroll: {
-      flex: 1,
+      // ✅ 移除 flex: 1，让 ScrollView 自适应宽度
     },
     wordbookScrollContent: {
-      gap: Spacing.xs,  // 从 Spacing.sm 改为 Spacing.xs，减少间距
+      gap: Spacing.xs,
       paddingHorizontal: Spacing.xs,
     },
     wordbookChip: {
-      paddingHorizontal: Spacing.xs,  // 从 Spacing.md 改为 Spacing.xs，减少左右内边距
+      paddingHorizontal: Spacing.xs,
       paddingVertical: Spacing.xs,
       borderRadius: BorderRadius.md,
       backgroundColor: theme.backgroundTertiary,
