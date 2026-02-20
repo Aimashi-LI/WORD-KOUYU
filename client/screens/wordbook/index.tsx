@@ -318,7 +318,7 @@ export default function WordbookScreen() {
                     {book.name} ({book.word_count})
                   </ThemedText>
                 </TouchableOpacity>
-            ))}
+              ))}
           </ScrollView>
         </View>
         </View>
