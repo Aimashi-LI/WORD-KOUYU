@@ -1,13 +1,8 @@
 import { Word } from '../database/types';
+import { MASTERY_CONFIG, FSRS_PARAMS as FSRS_CONFIG, TIME_CONFIG } from '../constants/reviewConfig';
 
-// FSRS 参数
-const FSRS_PARAMS = {
-  REQUEST_PRIOR: { ease: 0.5, stability: 0 },
-  MINIMUM_STABILITY: 0.1,
-  DESIRED_RETENTION: 0.9,
-  MAXIMUM_INTERVAL: 36500, // 100年
-  EASE_FACTOR: 1.3
-};
+// 向后兼容：导出 FSRS_PARAMS 别名
+export const FSRS_PARAMS = FSRS_CONFIG;
 
 /**
  * 计算可提取性 R 值
@@ -62,10 +57,7 @@ export function predictNextInterval(word: Word, score: number): number {
  * 时间预算 = 基础时间 + 难度加成
  */
 export function calculateTimeBudget(word: Word): number {
-  const BASE_TIME = 20; // 秒
-  const DIFFICULTY_FACTOR = 10; // 难度每增加 0.1，增加 1 秒
-  
-  return Math.floor(BASE_TIME + (word.difficulty * DIFFICULTY_FACTOR));
+  return Math.floor(TIME_CONFIG.BASE_TIME + (word.difficulty * TIME_CONFIG.DIFFICULTY_FACTOR));
 }
 
 /**
@@ -139,17 +131,17 @@ export async function updateWithTimeWeight(
  * 考虑回忆时间
  */
 function calculateWeightedScore(word: Word, score: number, responseTime: number): number {
-  const avgTime = word.avg_response_time || 10;
-  const stdDev = avgTime * 0.3; // 假设标准差为平均时间的30%
-  
+  const avgTime = word.avg_response_time || TIME_CONFIG.BASE_TIME;
+  const stdDev = avgTime * TIME_CONFIG.STD_DEV_RATIO;
+
   let weight = 1.0;
-  
-  if (responseTime > avgTime + stdDev) {
-    weight = 0.8; // 降权，缩短间隔
-  } else if (responseTime < avgTime - stdDev) {
-    weight = 1.2; // 提权，延长间隔
+
+  if (responseTime > avgTime * TIME_CONFIG.SLOW_RESPONSE_THRESHOLD) {
+    weight = TIME_CONFIG.SLOW_RESPONSE_WEIGHT; // 降权，缩短间隔
+  } else if (responseTime < avgTime * TIME_CONFIG.FAST_RESPONSE_THRESHOLD) {
+    weight = TIME_CONFIG.FAST_RESPONSE_WEIGHT; // 提权，延长间隔
   }
-  
+
   const weightedScore = score * weight;
   return Math.min(6, Math.max(0, weightedScore));
 }
@@ -174,13 +166,16 @@ function scoreToQuality(score: number): number {
 
 /**
  * 判断是否已掌握
- * 条件1：稳定性 S > 365天
- * 条件2：最近连续3次得分 ≥ 5分
+ * 使用统一的掌握标准配置
  */
 export function checkMastery(word: Word, recentScores: number[]): boolean {
-  const condition1 = word.stability > 365;
-  const condition2 = recentScores.length >= 3 && recentScores.slice(0, 3).every(s => s >= 5);
-  
+  // 条件1：稳定性达到阈值
+  const condition1 = word.stability >= MASTERY_CONFIG.stabilityThreshold;
+
+  // 条件2：最近N次得分都≥高分标准
+  const condition2 = recentScores.length >= MASTERY_CONFIG.consecutiveHighScores &&
+    recentScores.slice(0, MASTERY_CONFIG.consecutiveHighScores).every(s => s >= MASTERY_CONFIG.highScoreThreshold);
+
   return condition1 && condition2;
 }
 

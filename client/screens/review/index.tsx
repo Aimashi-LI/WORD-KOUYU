@@ -20,13 +20,8 @@ import {
 } from '@/algorithm/fsrs';
 import { useCallback } from 'react';
 import { formatSplitStringForDisplay } from '@/utils/splitHelper';
-
-// 掌握标准配置
-const MASTERY_CONFIG = {
-  stabilityThreshold: 14, // 稳定性阈值（天）- 2周内很难遗忘
-  consecutiveHighScores: 2, // 连续高分次数 - 连续2次高分
-  highScoreThreshold: 5, // 高分标准
-};
+import { calculateImprovedSimilarity } from '@/utils/stringSimilarity';
+import { MASTERY_CONFIG, SCORING_CONFIG, SIMILARITY_THRESHOLD } from '@/constants/reviewConfig';
 
 type ReviewState = 'idle' | 'reviewing' | 'completed';
 type ReviewMode = 'type1' | 'type2'; // type1: 填空单词, type2: 填空释义
@@ -167,14 +162,14 @@ export default function ReviewScreen() {
   const handleSubmitType2 = () => {
     if (!currentWord) return;
 
-    // 释义匹配：简单判断是否包含关键词
-    const userAnswer = type2Answer.trim().toLowerCase();
-    const correctAnswer = currentWord.definition.trim().toLowerCase();
+    // 释义匹配：使用改进的相似度匹配算法
+    const userAnswer = type2Answer.trim();
+    const correctAnswer = currentWord.definition.trim();
 
-    // 简单匹配：用户答案至少包含正确答案的一半字符
-    const matchScore = calculateStringSimilarity(userAnswer, correctAnswer);
+    // 使用改进的相似度算法（结合编辑距离、字符集合和最长公共子序列）
+    const matchScore = calculateImprovedSimilarity(userAnswer, correctAnswer);
 
-    if (matchScore >= 0.5) {
+    if (matchScore >= SIMILARITY_THRESHOLD) {
       setType2Status('correct');
     } else {
       setType2Status('wrong');
@@ -186,22 +181,9 @@ export default function ReviewScreen() {
     }, 1000);
   };
 
-  // 计算字符串相似度
-  const calculateStringSimilarity = (str1: string, str2: string): number => {
-    if (str1 === str2) return 1;
-    if (str1.length === 0 || str2.length === 0) return 0;
-
-    const set1 = new Set(str1);
-    const set2 = new Set(str2);
-    const intersection = new Set([...set1].filter(x => set2.has(x)));
-    const union = new Set([...set1, ...set2]);
-
-    return intersection.size / union.size;
-  };
-
   // 快速评分：没印象（0分）
   const handleNoImpression = () => {
-    setQuickScore(0);
+    setQuickScore(SCORING_CONFIG.QUICK_NO_IMPRESSION);
     setIsEditing(false);
 
     // 延迟提交
@@ -212,7 +194,7 @@ export default function ReviewScreen() {
 
   // 快速评分：有印象，但想不起来（2分）
   const handleSomeImpression = () => {
-    setQuickScore(2);
+    setQuickScore(SCORING_CONFIG.QUICK_SOME_IMPRESSION);
     setIsEditing(false);
 
     // 延迟提交
@@ -235,11 +217,11 @@ export default function ReviewScreen() {
     // 只有一种方式正确：4分
     // 两种方式都错误：0分
     if (type1Score === 1 && type2Score === 1) {
-      return 6;
+      return SCORING_CONFIG.PERFECT_SCORE;
     } else if (type1Score === 1 || type2Score === 1) {
-      return 4;
+      return SCORING_CONFIG.PARTIAL_SCORE;
     } else {
-      return 0;
+      return SCORING_CONFIG.WRONG_SCORE;
     }
   };
 
