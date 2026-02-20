@@ -1,5 +1,6 @@
 import { getDatabase } from './index';
 import { Word, NewWord, ReviewLog } from './types';
+import { updateWordbookCount } from './wordbookDao';
 
 // 获取所有单词
 export async function getAllWords(): Promise<Word[]> {
@@ -163,7 +164,31 @@ export async function updateWord(id: number, updates: Partial<Omit<Word, 'id' | 
 // 删除单词
 export async function deleteWord(id: number): Promise<void> {
   const db = getDatabase();
+  
+  // 1. 先获取该单词关联的所有词库
+  const wordbookRows = await db.getAllAsync<{ wordbook_id: number }>(
+    'SELECT DISTINCT wordbook_id FROM wordbook_words WHERE word_id = ?',
+    [id]
+  );
+  
+  const wordbookIds = wordbookRows.map(row => row.wordbook_id);
+  
+  console.log('[deleteWord] 单词 ID:', id);
+  console.log('[deleteWord] 关联的词库 ID:', wordbookIds);
+  
+  // 2. 删除关联表中的记录
+  await db.runAsync('DELETE FROM wordbook_words WHERE word_id = ?', [id]);
+  
+  // 3. 删除单词
   await db.runAsync('DELETE FROM words WHERE id = ?', [id]);
+  
+  // 4. 更新所有关联词库的单词数
+  for (const wordbookId of wordbookIds) {
+    await updateWordbookCount(wordbookId);
+    console.log('[deleteWord] 已更新词库 ID:', wordbookId, '的单词数');
+  }
+  
+  console.log('[deleteWord] 删除完成');
 }
 
 // 获取待复习单词

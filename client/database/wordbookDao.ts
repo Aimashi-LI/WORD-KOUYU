@@ -159,7 +159,7 @@ export async function getWordbookStats(wordbookId: number): Promise<{
 }
 
 // 更新词库单词数
-async function updateWordbookCount(wordbookId: number): Promise<void> {
+export async function updateWordbookCount(wordbookId: number): Promise<void> {
   const db = getDatabase();
   await db.runAsync(
     `UPDATE wordbooks 
