@@ -159,9 +159,7 @@ export const createStyles = (theme: Theme) => {
       gap: Spacing.md,
     },
     wordCardSelected: {
-      borderWidth: 2,
-      borderColor: theme.primary,
-      backgroundColor: `${theme.primary}05`,
+      // 删除选中样式（边框和背景色变化）
     },
     checkbox: {
       width: 22,
