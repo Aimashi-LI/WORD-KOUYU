@@ -27,11 +27,19 @@ type ReviewState = 'idle' | 'reviewing' | 'completed';
 type ReviewMode = 'type1' | 'type2'; // type1: 填空单词, type2: 填空释义
 type AnswerStatus = 'none' | 'correct' | 'wrong';
 
-// 单词复习顺序配置
-interface WordReviewOrder {
+// 复习步骤配置
+interface ReviewStep {
+  word: Word;
+  mode: 'type1' | 'type2';
   wordId: number;
-  modeOrder: ('type1' | 'type2')[]; // ['type1', 'type2'] 或 ['type2', 'type1']
-  currentModeIndex: number; // 当前进行到第几种方式（0 或 1）
+}
+
+// 单词完成状态
+interface WordCompletion {
+  wordId: number;
+  completedModes: Set<'type1' | 'type2'>;
+  type1Score: number; // 0: 未完成, 1: 正确, 2: 错误
+  type2Score: number; // 0: 未完成, 1: 正确, 2: 错误
 }
 
 export default function ReviewScreen() {
@@ -48,7 +56,8 @@ export default function ReviewScreen() {
 
   const [state, setState] = useState<ReviewState>('idle');
   const [queue, setQueue] = useState<Word[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [reviewQueue, setReviewQueue] = useState<ReviewStep[]>([]);
   const [currentWord, setCurrentWord] = useState<Word | null>(null);
   const [totalScore, setTotalScore] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -57,8 +66,8 @@ export default function ReviewScreen() {
   // 新增：记录每个单词的得分
   const [wordScores, setWordScores] = useState<{ wordId: number; word: string; score: number; isQuick: boolean }[]>([]);
   
-  // 新增：记录每个单词的复习顺序
-  const [wordReviewOrders, setWordReviewOrders] = useState<WordReviewOrder[]>([]);
+  // 新增：记录每个单词的完成状态
+  const [wordCompletionStatus, setWordCompletionStatus] = useState<Map<number, WordCompletion>>(new Map());
   
   // 复习状态相关
   const [reviewMode, setReviewMode] = useState<ReviewMode>('type1');
@@ -114,20 +123,39 @@ export default function ReviewScreen() {
 
       console.log('[Review] 最终加载了', words.length, '个单词');
       setQueue(words);
-      setCurrentIndex(0);
+      setCurrentStepIndex(0);
       setState('idle');
       
-      // 生成每个单词的随机复习顺序
-      const reviewOrders: WordReviewOrder[] = words.map(word => ({
-        wordId: word.id,
-        modeOrder: Math.random() < 0.5 ? ['type1', 'type2'] : ['type2', 'type1'],
-        currentModeIndex: 0
-      }));
-      setWordReviewOrders(reviewOrders);
+      // 生成所有单词的两种方式的复习步骤
+      const steps: ReviewStep[] = [];
+      words.forEach(word => {
+        steps.push({ word, mode: 'type1', wordId: word.id });
+        steps.push({ word, mode: 'type2', wordId: word.id });
+      });
       
-      console.log('[Review] 生成了', reviewOrders.length, '个单词的复习顺序');
-      reviewOrders.forEach((order, index) => {
-        console.log(`[Review] 单词 ${index + 1} (${words[index].word}): ${order.modeOrder.join(' → ')}`);
+      // 随机打乱复习步骤
+      shuffleArray(steps);
+      
+      // 确保同一个单词的两种方式不连续出现
+      const shuffledSteps = ensureNonConsecutiveSameWord(steps);
+      
+      setReviewQueue(shuffledSteps);
+      
+      // 初始化每个单词的完成状态
+      const completionMap = new Map<number, WordCompletion>();
+      words.forEach(word => {
+        completionMap.set(word.id, {
+          wordId: word.id,
+          completedModes: new Set(),
+          type1Score: 0,
+          type2Score: 0
+        });
+      });
+      setWordCompletionStatus(completionMap);
+      
+      console.log('[Review] 生成了', shuffledSteps.length, '个复习步骤');
+      shuffledSteps.forEach((step, index) => {
+        console.log(`[Review] 步骤 ${index + 1}: ${step.word.word} (${step.mode})`);
       });
     } catch (error) {
       console.error('[Review] 加载复习队列失败:', error);
@@ -137,21 +165,45 @@ export default function ReviewScreen() {
     }
   };
 
+  // Fisher-Yates 随机打乱算法
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // 确保同一个单词的两种方式不连续出现
+  const ensureNonConsecutiveSameWord = (steps: ReviewStep[]): ReviewStep[] => {
+    // 简单的贪婪算法：如果有相邻的是同一个单词，就交换位置
+    const result = [...steps];
+    for (let i = 0; i < result.length - 1; i++) {
+      if (result[i].wordId === result[i + 1].wordId) {
+        // 找到下一个不冲突的位置进行交换
+        for (let j = i + 2; j < result.length; j++) {
+          if (result[j].wordId !== result[i].wordId && result[j].wordId !== result[i + 1].wordId) {
+            [result[i + 1], result[j]] = [result[j], result[i + 1]];
+            break;
+          }
+        }
+      }
+    }
+    return result;
+  };
+
   const handleStartReview = () => {
-    if (queue.length > 0) {
-      startReview(queue[0]);
+    if (reviewQueue.length > 0) {
+      startReview(reviewQueue[0]);
     }
   };
 
-  const startReview = (word: Word) => {
-    // 根据当前单词的复习顺序，决定先进行哪种方式
-    const currentOrder = wordReviewOrders[currentIndex];
-    const firstMode = currentOrder.modeOrder[0];
+  const startReview = (step: ReviewStep) => {
+    console.log(`[Review] 开始复习步骤: ${step.word.word} (${step.mode})`);
     
-    console.log(`[Review] 开始复习单词: ${word.word}, 复习顺序: ${currentOrder.modeOrder.join(' → ')}, 当前方式: ${firstMode}`);
-    
-    setCurrentWord(word);
-    setReviewMode(firstMode);
+    setCurrentWord(step.word);
+    setReviewMode(step.mode);
     setType1Answer('');
     setType2Answer('');
     setType1Status('none');
@@ -162,7 +214,7 @@ export default function ReviewScreen() {
     startTimeRef.current = Date.now();
     
     // 记录复习开始时间（用于统计总耗时）
-    if (currentIndex === 0) {
+    if (currentStepIndex === 0) {
       reviewStartTimeRef.current = Date.now();
     }
   };
@@ -175,36 +227,20 @@ export default function ReviewScreen() {
     const userAnswer = type1Answer.trim().toLowerCase();
     const correctAnswer = currentWord.word.trim().toLowerCase();
 
-    if (userAnswer === correctAnswer) {
+    const isCorrect = userAnswer === correctAnswer;
+    if (isCorrect) {
       setType1Status('correct');
     } else {
       setType1Status('wrong');
     }
 
-    // 检查当前单词是否还有第二种方式需要进行
-    const currentOrder = wordReviewOrders[currentIndex];
-    
-    // 如果当前是第一种方式，且还有第二种方式，则切换到第二种方式
-    if (currentOrder.currentModeIndex === 0 && currentOrder.modeOrder[1]) {
-      setTimeout(() => {
-        // 更新当前单词的模式索引
-        setWordReviewOrders(prev => {
-          const newOrders = [...prev];
-          newOrders[currentIndex].currentModeIndex = 1;
-          return newOrders;
-        });
-        
-        // 切换到第二种方式
-        const nextMode = currentOrder.modeOrder[1];
-        console.log(`[Review] 完成方式一，切换到方式: ${nextMode}`);
-        setReviewMode(nextMode);
-      }, 1000);
-    } else {
-      // 已经完成所有方式，提交最终分数
-      setTimeout(() => {
-        submitFinalScore();
-      }, 1000);
-    }
+    // 记录方式一的得分
+    updateWordCompletion(currentWord.id, 'type1', isCorrect ? 1 : 2);
+
+    // 延迟后进入下一个步骤
+    setTimeout(() => {
+      goToNextStep();
+    }, 1000);
   };
 
   // 方式二：根据单词、短句填写释义
@@ -218,35 +254,63 @@ export default function ReviewScreen() {
     // 使用改进的相似度算法（结合编辑距离、字符集合和最长公共子序列）
     const matchScore = calculateImprovedSimilarity(userAnswer, correctAnswer);
 
-    if (matchScore >= SIMILARITY_THRESHOLD) {
+    const isCorrect = matchScore >= SIMILARITY_THRESHOLD;
+    if (isCorrect) {
       setType2Status('correct');
     } else {
       setType2Status('wrong');
     }
 
-    // 检查当前单词是否还有其他方式需要进行
-    const currentOrder = wordReviewOrders[currentIndex];
+    // 记录方式二的得分
+    updateWordCompletion(currentWord.id, 'type2', isCorrect ? 1 : 2);
+
+    // 延迟后进入下一个步骤
+    setTimeout(() => {
+      goToNextStep();
+    }, 1000);
+  };
+
+  // 更新单词的完成状态
+  const updateWordCompletion = (wordId: number, mode: 'type1' | 'type2', score: number) => {
+    setWordCompletionStatus(prev => {
+      const newMap = new Map(prev);
+      const completion = newMap.get(wordId);
+      if (completion) {
+        completion.completedModes.add(mode);
+        if (mode === 'type1') {
+          completion.type1Score = score;
+        } else {
+          completion.type2Score = score;
+        }
+        newMap.set(wordId, completion);
+      }
+      return newMap;
+    });
+  };
+
+  // 进入下一个步骤
+  const goToNextStep = async () => {
+    const nextIndex = currentStepIndex + 1;
     
-    // 如果当前是第一种方式，且还有第二种方式，则切换到第二种方式
-    if (currentOrder.currentModeIndex === 0 && currentOrder.modeOrder[1]) {
-      setTimeout(() => {
-        // 更新当前单词的模式索引
-        setWordReviewOrders(prev => {
-          const newOrders = [...prev];
-          newOrders[currentIndex].currentModeIndex = 1;
-          return newOrders;
-        });
-        
-        // 切换到第二种方式
-        const nextMode = currentOrder.modeOrder[1];
-        console.log(`[Review] 完成方式二，切换到方式: ${nextMode}`);
-        setReviewMode(nextMode);
-      }, 1000);
+    if (nextIndex >= reviewQueue.length) {
+      // 所有步骤都完成了，提交所有单词的分数
+      await submitAllScores();
+      setState('completed');
     } else {
-      // 已经完成所有方式，提交最终分数
-      setTimeout(() => {
-        submitFinalScore();
-      }, 1000);
+      // 进入下一个步骤
+      setCurrentStepIndex(nextIndex);
+      
+      // 检查当前单词是否已经完成了两种方式
+      const currentStep = reviewQueue[currentStepIndex];
+      const currentWordCompletion = wordCompletionStatus.get(currentStep.wordId);
+      
+      if (currentWordCompletion && currentWordCompletion.completedModes.size === 2) {
+        // 当前单词已经完成了两种方式，提交分数
+        await submitWordScore(currentWordCompletion.wordId);
+      }
+      
+      // 开始下一个步骤
+      startReview(reviewQueue[nextIndex]);
     }
   };
 
@@ -257,7 +321,7 @@ export default function ReviewScreen() {
 
     // 延迟提交
     setTimeout(() => {
-      submitFinalScore();
+      submitQuickScore();
     }, 1000);
   };
 
@@ -268,39 +332,107 @@ export default function ReviewScreen() {
 
     // 延迟提交
     setTimeout(() => {
-      submitFinalScore();
+      submitQuickScore();
     }, 1000);
   };
 
   // 计算最终分数
-  const calculateFinalScore = (): number => {
-    if (quickScore !== null) {
-      return quickScore; // 0分或2分
-    }
-
-    // 计算方式一和方式二的得分
-    const type1Score = type1Status === 'correct' ? 1 : 0;
-    const type2Score = type2Status === 'correct' ? 1 : 0;
+  const calculateFinalScore = (completion: WordCompletion): number => {
+    // type1Score: 0=未完成, 1=正确, 2=错误
+    // type2Score: 0=未完成, 1=正确, 2=错误
+    
+    const type1Correct = completion.type1Score === 1;
+    const type2Correct = completion.type2Score === 1;
 
     // 两种方式都正确：6分
     // 只有一种方式正确：4分
     // 两种方式都错误：0分
-    if (type1Score === 1 && type2Score === 1) {
+    if (type1Correct && type2Correct) {
       return SCORING_CONFIG.PERFECT_SCORE;
-    } else if (type1Score === 1 || type2Score === 1) {
+    } else if (type1Correct || type2Correct) {
       return SCORING_CONFIG.PARTIAL_SCORE;
     } else {
       return SCORING_CONFIG.WRONG_SCORE;
     }
   };
 
-  // 提交最终分数
-  const submitFinalScore = async () => {
+  // 提交单词分数
+  const submitWordScore = async (wordId: number) => {
+    const word = queue.find(w => w.id === wordId);
+    if (!word) return;
+
+    const completion = wordCompletionStatus.get(wordId);
+    if (!completion || completion.completedModes.size < 2) return;
+
+    const finalScore = calculateFinalScore(completion);
+    const responseTime = (Date.now() - startTimeRef.current) / 1000;
+    const isQuick = false;
+
+    try {
+      // 更新数据库
+      const {
+        newDifficulty,
+        newStability,
+        newAvgResponseTime,
+        nextReviewDate
+      } = await updateWithTimeWeight(word, finalScore, responseTime);
+
+      // 检查是否掌握
+      const recentLogs = await getRecentReviewLogs(word.id, MASTERY_CONFIG.consecutiveHighScores);
+      const recentScores = recentLogs.map(log => log.score);
+      recentScores.push(finalScore);
+
+      const isMastered = checkMasteryWithConfig(word, recentScores);
+
+      await updateWord(word.id, {
+        difficulty: newDifficulty,
+        stability: newStability,
+        avg_response_time: newAvgResponseTime,
+        last_review: new Date().toISOString(),
+        next_review: nextReviewDate.toISOString(),
+        is_mastered: isMastered ? 1 : 0
+      });
+
+      await addReviewLog({
+        word_id: word.id,
+        score: finalScore,
+        response_time: responseTime,
+        reviewed_at: new Date().toISOString()
+      });
+
+      // 记录单词得分
+      setWordScores(prev => [
+        ...prev,
+        {
+          wordId: word.id,
+          word: word.word,
+          score: finalScore,
+          isQuick
+        }
+      ]);
+
+      // 如果单词已掌握，添加到已掌握列表
+      if (isMastered && !word.is_mastered) {
+        setMasteredWords(prev => [...prev, word]);
+      }
+
+      // 累加总分
+      setTotalScore(prev => prev + finalScore);
+
+      console.log(`[Review] 提交单词 ${word.word} 的分数: ${finalScore}`);
+    } catch (error) {
+      console.error('提交分数失败:', error);
+      Alert.alert('错误', '提交失败，请重试');
+    }
+  };
+
+  // 提交快速评分分数
+  const submitQuickScore = async () => {
     if (!currentWord) return;
 
-    const finalScore = calculateFinalScore();
+    const finalScore = quickScore!;
     const responseTime = (Date.now() - startTimeRef.current) / 1000;
-    const isQuick = quickScore !== null;
+    const isQuick = true;
 
     try {
       // 更新数据库
@@ -311,7 +443,7 @@ export default function ReviewScreen() {
         nextReviewDate
       } = await updateWithTimeWeight(currentWord, finalScore, responseTime);
 
-      // 检查是否掌握
+      // 检查是否掌握（快速评分为0分，不太可能掌握）
       const recentLogs = await getRecentReviewLogs(currentWord.id, MASTERY_CONFIG.consecutiveHighScores);
       const recentScores = recentLogs.map(log => log.score);
       recentScores.push(finalScore);
@@ -345,26 +477,40 @@ export default function ReviewScreen() {
         }
       ]);
 
-      // 如果单词已掌握，添加到已掌握列表
-      if (isMastered && !currentWord.is_mastered) {
-        setMasteredWords(prev => [...prev, currentWord]);
-      }
-
       // 累加总分
       setTotalScore(prev => prev + finalScore);
 
-      // 进入下一个单词
-      const nextIndex = currentIndex + 1;
-      if (nextIndex < queue.length) {
-        setCurrentIndex(nextIndex);
-        startReview(queue[nextIndex]);
-      } else {
+      console.log(`[Review] 提交单词 ${currentWord.word} 的快速评分分数: ${finalScore}`);
+
+      // 进入下一个步骤
+      const nextIndex = currentStepIndex + 1;
+      if (nextIndex >= reviewQueue.length) {
         setState('completed');
+      } else {
+        setCurrentStepIndex(nextIndex);
+        startReview(reviewQueue[nextIndex]);
       }
     } catch (error) {
       console.error('提交分数失败:', error);
       Alert.alert('错误', '提交失败，请重试');
     }
+  };
+
+  // 提交所有剩余单词的分数
+  const submitAllScores = async () => {
+    // 找出所有未提交的单词
+    const unsubmittedWords = queue.filter(word => {
+      const completion = wordCompletionStatus.get(word.id);
+      return completion && completion.completedModes.size === 2 && 
+             !wordScores.some(ws => ws.wordId === word.id);
+    });
+
+    // 提交每个未提交的单词
+    for (const word of unsubmittedWords) {
+      await submitWordScore(word.id);
+    }
+
+    console.log(`[Review] 所有单词的分数已提交，共 ${unsubmittedWords.length} 个单词`);
   };
 
   // 使用配置的掌握标准判断
@@ -450,12 +596,21 @@ export default function ReviewScreen() {
 
           {/* 进度指示 */}
           <View style={styles.progressContainer}>
-            <ThemedText variant="caption" color={theme.textMuted}>
-              单词 {currentIndex + 1} / {queue.length}
-            </ThemedText>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${((currentIndex + 1) / queue.length) * 100}%`, backgroundColor: theme.primary }]} />
-            </View>
+            {/* 计算已完成的单词数量（两种方式都完成了） */}
+            {(() => {
+              const completedWordCount = Array.from(wordCompletionStatus.values())
+                .filter(comp => comp.completedModes.size === 2).length;
+              return (
+                <>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    单词 {completedWordCount} / {queue.length}
+                  </ThemedText>
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: `${(completedWordCount / queue.length) * 100}%`, backgroundColor: theme.primary }]} />
+                  </View>
+                </>
+              );
+            })()}
           </View>
 
           {/* 方式一：根据词性、释义、拆分填写单词 */}
@@ -795,10 +950,11 @@ export default function ReviewScreen() {
             <TouchableOpacity 
               style={[styles.completeButton, { backgroundColor: theme.primary }]}
               onPress={() => {
-                setCurrentIndex(0);
+                setCurrentStepIndex(0);
                 setTotalScore(0);
                 setMasteredWords([]);
                 setWordScores([]);
+                setWordCompletionStatus(new Map());
                 reviewStartTimeRef.current = 0;
                 loadReviewQueue();
               }}
