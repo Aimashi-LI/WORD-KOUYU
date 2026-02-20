@@ -69,17 +69,8 @@ export const createStyles = (theme: Theme) => {
     cardText: {
       textAlign: 'center',
     },
-    cardItemRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    cardLabel: {
-      minWidth: 60,
-    },
-    cardValue: {
-      flex: 1,
-      textAlign: 'center',
+    cardItem: {
+      gap: Spacing.xs,
     },
     input: {
       padding: Spacing.md,
