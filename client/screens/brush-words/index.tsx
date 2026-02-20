@@ -20,7 +20,7 @@ import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getAllWords } from '@/database/wordDao';
 import { getWordsInWordbook, createWordbook, addWordToWordbook, getAllWordbooks } from '@/database/wordbookDao';
-import { initDatabase } from '@/database';
+import { initDatabase, getDatabase } from '@/database';
 import { Word, Wordbook } from '@/database/types';
 import { useCallback } from 'react';
 
@@ -60,6 +60,26 @@ export default function BrushWordsScreen() {
     setLoading(true);
     try {
       await initDatabase();
+      
+      // 强制检查数据库表结构
+      const db = getDatabase();
+      const tableInfo = await db.getAllAsync<{ name: string, type: string }>(
+        'PRAGMA table_info(words)'
+      );
+      
+      console.log('[loadWords] words 表的所有字段:', tableInfo.map(col => `${col.name} (${col.type})`));
+      const hasPartOfSpeech = tableInfo.some(col => col.name === 'partOfSpeech');
+      console.log('[loadWords] partOfSpeech 字段是否存在:', hasPartOfSpeech);
+      
+      if (!hasPartOfSpeech) {
+        console.log('[loadWords] 警告：partOfSpeech 字段不存在，尝试添加...');
+        try {
+          await db.execAsync('ALTER TABLE words ADD COLUMN partOfSpeech TEXT');
+          console.log('[loadWords] 成功添加 partOfSpeech 字段');
+        } catch (error) {
+          console.error('[loadWords] 添加 partOfSpeech 字段失败:', error);
+        }
+      }
       
       let wordList: Word[];
       

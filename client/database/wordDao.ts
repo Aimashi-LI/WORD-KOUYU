@@ -5,6 +5,14 @@ import { Word, NewWord, ReviewLog } from './types';
 export async function getAllWords(): Promise<Word[]> {
   const db = getDatabase();
   const rows = await db.getAllAsync<any>('SELECT * FROM words ORDER BY created_at DESC');
+  
+  console.log('[getAllWords] 查询返回的行数:', rows.length);
+  if (rows.length > 0) {
+    console.log('[getAllWords] 第一行的所有字段:', Object.keys(rows[0]));
+    console.log('[getAllWords] 第一行完整数据:', JSON.stringify(rows[0], null, 2));
+    console.log('[getAllWords] 第一行 partOfSpeech 值:', rows[0].partOfSpeech);
+  }
+  
   return rows.map(mapToWord);
 }
 
