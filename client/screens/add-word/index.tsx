@@ -16,7 +16,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
-import { createWord, getWordByText } from '@/database/wordDao';
+import { createWord, getWordByText, getWordById } from '@/database/wordDao';
 import { addWordToWordbook } from '@/database/wordbookDao';
 import { getAllCodes, addCode } from '@/database/codeDao';
 import { initDatabase } from '@/database';
@@ -269,9 +269,16 @@ export default function AddWordScreen() {
       console.log('[AddWord] 准备保存的单词数据:', JSON.stringify(newWord, null, 2));
       console.log('[AddWord] partOfSpeech 值:', partOfSpeech);
       console.log('[AddWord] partOfSpeech 类型:', typeof partOfSpeech);
+      console.log('[AddWord] partOfSpeech 是否为空:', partOfSpeech === '' || partOfSpeech === null || partOfSpeech === undefined);
       
       const wordId = await createWord(newWord);
       console.log('[AddWord] 单词保存成功，ID:', wordId);
+      
+      // 立即查询验证词性是否保存成功
+      const savedWord = await getWordById(wordId);
+      console.log('[AddWord] 验证查询 - 保存后的单词数据:', JSON.stringify(savedWord, null, 2));
+      console.log('[AddWord] 验证查询 - partOfSpeech 值:', savedWord?.partOfSpeech);
+      console.log('[AddWord] 验证查询 - partOfSpeech 是否正确:', savedWord?.partOfSpeech === partOfSpeech);
       
       // 如果有词库ID，将单词添加到词库
       if (wordbookId) {
@@ -443,7 +450,10 @@ export default function AddWordScreen() {
                     styles.posButton,
                     partOfSpeech === pos && styles.posButtonActive
                   ]}
-                  onPress={() => setPartOfSpeech(pos)}
+                  onPress={() => {
+                    console.log('[词性选择] 选择了词性:', pos);
+                    setPartOfSpeech(pos);
+                  }}
                 >
                   <ThemedText
                     variant="caption"

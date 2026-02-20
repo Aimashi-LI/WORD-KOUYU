@@ -27,24 +27,34 @@ export async function createWord(word: NewWord): Promise<number> {
   const db = getDatabase();
   const now = new Date().toISOString();
   
+  console.log('[createWord] 准备插入单词:', word.word);
+  console.log('[createWord] partOfSpeech 参数值:', word.partOfSpeech);
+  console.log('[createWord] partOfSpeech 参数类型:', typeof word.partOfSpeech);
+  
+  const params = [
+    word.word,
+    word.phonetic || null,
+    word.definition,
+    word.partOfSpeech || null,
+    word.split || null,
+    word.mnemonic || null,
+    word.sentence || null,
+    word.difficulty || 0,
+    word.stability || 0,
+    word.avg_response_time || 0,
+    word.is_mastered || 0,
+    now
+  ];
+  
+  console.log('[createWord] SQL 参数数组:', params.map((p, i) => `参数${i}: ${p}`));
+  
   const result = await db.runAsync(
     `INSERT INTO words (word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, difficulty, stability, avg_response_time, is_mastered, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      word.word,
-      word.phonetic || null,
-      word.definition,
-      word.partOfSpeech || null,
-      word.split || null,
-      word.mnemonic || null,
-      word.sentence || null,
-      word.difficulty || 0,
-      word.stability || 0,
-      word.avg_response_time || 0,
-      word.is_mastered || 0,
-      now
-    ]
+    params
   );
+  
+  console.log('[createWord] 插入成功，lastInsertRowId:', result.lastInsertRowId);
   
   return result.lastInsertRowId;
 }
