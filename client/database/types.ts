@@ -86,5 +86,6 @@ export interface ImportWord {
   definition: string;
   split?: string;
   mnemonic?: string;
+  partOfSpeech?: string;
   example?: string;
 }

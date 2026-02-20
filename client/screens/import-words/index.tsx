@@ -43,7 +43,8 @@ export default function ImportWordsScreen() {
           definition: parts[2] || '待补充',
           split: parts[3],
           mnemonic: parts[4] || '待补充',
-          example: parts[5],
+          partOfSpeech: parts[5] || undefined, // 新增词性字段
+          example: parts[6] || undefined, // 例句字段位置调整
         });
       }
     }
@@ -95,8 +96,10 @@ export default function ImportWordsScreen() {
         word: w.word,
         phonetic: w.phonetic,
         definition: w.definition,
+        partOfSpeech: w.partOfSpeech || undefined, // 新增词性字段映射
         split: w.split,
         mnemonic: w.mnemonic || '待补充',
+        sentence: w.example || undefined, // 将 example 映射到 sentence
       }));
 
       await createWords(newWords);
@@ -170,10 +173,10 @@ export default function ImportWordsScreen() {
               CSV 格式：
             </ThemedText>
             <ThemedText variant="caption" color={theme.textMuted} style={styles.infoText}>
-              列：word, phonetic, definition, split, mnemonic, example
+              列：word, phonetic, definition, split, mnemonic, partOfSpeech, example
             </ThemedText>
             <ThemedText variant="caption" color={theme.textMuted} style={styles.infoText}>
-              示例：apple, /ˈæpl/, 苹果, a-pp-le, 阿婆拿着苹果跑了, I eat an apple
+              示例：apple, /ˈæpl/, 苹果, a-pp-le, 阿婆拿着苹果跑了, n., I eat an apple
             </ThemedText>
           </ThemedView>
         </View>
