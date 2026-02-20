@@ -1,13 +1,16 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { PanGestureHandler, GestureHandlerRootView, State } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
   runOnJS,
-  useSharedValue
+  useSharedValue,
+  useAnimatedScrollHandler,
+  interpolate,
+  Extrapolation,
+  SharedValue
 } from 'react-native-reanimated';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
@@ -24,6 +27,134 @@ import { initDatabase, getDatabase } from '@/database';
 import { Word, Wordbook } from '@/database/types';
 import { useCallback } from 'react';
 import { formatSplitStringForDisplay } from '@/utils/splitHelper';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// 单词卡片组件
+const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme, cardRef, router, isCurrent }: {
+  word: Word;
+  index: number;
+  scrollX: SharedValue<number>;
+  cardWidth: number;
+  cardSpacing: number;
+  styles: any;
+  theme: any;
+  cardRef: React.RefObject<View | null>;
+  router: any;
+  isCurrent: boolean;
+}) => {
+  const offset = index * (cardWidth + cardSpacing);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      scrollX.value,
+      [offset - cardWidth, offset, offset + cardWidth],
+      [0.85, 1, 0.85],
+      Extrapolation.CLAMP
+    );
+    const opacity = interpolate(
+      scrollX.value,
+      [offset - cardWidth, offset, offset + cardWidth],
+      [0.3, 1, 0.3],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      transform: [{ scale }],
+      opacity,
+    };
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.cardWrapper,
+        { width: cardWidth },
+        animatedStyle,
+      ]}
+    >
+      <View ref={isCurrent ? cardRef : null} collapsable={false}>
+        <ThemedView level="default" style={styles.wordCard}>
+          {/* 单词和词性 - 同排显示 */}
+          <View style={styles.wordPartOfSpeechRow}>
+            <ThemedText variant="h1" color={theme.textPrimary} style={styles.wordText}>
+              {word.word}
+            </ThemedText>
+            {word.partOfSpeech ? (
+              <ThemedText variant="smallMedium" color={theme.primary} style={styles.inlinePartOfSpeech}>
+                {word.partOfSpeech}
+              </ThemedText>
+            ) : (
+              <TouchableOpacity
+                onPress={() => router.push('/word-detail', { id: String(word.id) })}
+                style={styles.addPartOfSpeechButton}
+              >
+                <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.addPartOfSpeechText}>
+                  + 词性
+                </ThemedText>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* 音标 */}
+          {word.phonetic && (
+            <ThemedText variant="body" color={theme.textSecondary} style={styles.phonetic}>
+              {word.phonetic}
+            </ThemedText>
+          )}
+
+          {/* 释义 */}
+          <View style={styles.definitionSection}>
+            <ThemedText variant="body" color={theme.textPrimary}>
+              <ThemedText variant="body" color={theme.textMuted}>释义：</ThemedText>
+              {word.definition}
+            </ThemedText>
+          </View>
+
+          {/* 拆分 */}
+          {word.split && (
+            <ThemedView level="tertiary" style={styles.splitSection}>
+              <FontAwesome6 name="scissors" size={16} color={theme.accent} />
+              <View style={styles.splitRow}>
+                <ThemedText variant="body" color={theme.textMuted} style={styles.splitLabel}>拆分：</ThemedText>
+                <ThemedText variant="body" color={theme.textSecondary} style={styles.splitValue}>
+                  {formatSplitStringForDisplay(word.split)}
+                </ThemedText>
+              </View>
+            </ThemedView>
+          )}
+
+          {/* 助记句（短句） */}
+          {word.mnemonic ? (
+            <ThemedView level="tertiary" style={styles.mnemonicSection}>
+              <FontAwesome6 name="lightbulb" size={16} color={theme.accent} />
+              <ThemedText variant="body" color={theme.textSecondary} style={styles.mnemonicText}>
+                <ThemedText variant="body" color={theme.textMuted}>助记：</ThemedText>
+                {word.mnemonic}
+              </ThemedText>
+            </ThemedView>
+          ) : (
+            <TouchableOpacity onPress={() => router.push('/word-detail', { id: String(word.id) })}>
+              <ThemedView level="tertiary" style={styles.mnemonicSection}>
+                <FontAwesome6 name="lightbulb" size={16} color={theme.primary} />
+                <ThemedText variant="body" color={theme.primary} style={styles.mnemonicText}>
+                  + 助记句
+                </ThemedText>
+              </ThemedView>
+            </TouchableOpacity>
+          )}
+
+          {/* 例句 */}
+          {word.sentence && (
+            <ThemedText variant="caption" color={theme.textSecondary} style={styles.sentence}>
+              例句：{word.sentence}
+            </ThemedText>
+          )}
+        </ThemedView>
+      </View>
+    </Animated.View>
+  );
+};
 
 export default function BrushWordsScreen() {
   const { theme, isDark } = useTheme();
@@ -44,9 +175,11 @@ export default function BrushWordsScreen() {
   const [overlapInfo, setOverlapInfo] = useState<{ overlapCount: number; existingWordbookName: string } | null>(null);
   const [isSharing, setIsSharing] = useState(false);
 
-  // 手势相关
-  const translateY = useSharedValue(0);
-  const swipeThreshold = 100;
+  // 滑动相关
+  const scrollX = useSharedValue(0);
+  const scrollViewRef = useRef<Animated.ScrollView>(null);
+  const CARD_WIDTH = SCREEN_WIDTH - 40; // 20 * 2 padding
+  const CARD_SPACING = 20;
 
   // 卡片引用，用于截图分享
   const cardRef = useRef<View>(null);
@@ -210,8 +343,10 @@ export default function BrushWordsScreen() {
 
   const handleSwipeLeft = () => {
     if (currentIndex < words.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      const newIndex = currentIndex + 1;
+      setCurrentIndex(newIndex);
       setShowDefinition(false);
+      scrollViewRef.current?.scrollTo({ x: newIndex * (CARD_WIDTH + CARD_SPACING), animated: true });
     } else {
       // 到达最后一个单词，询问是否创建复习项目
       handleFinishBrowsing();
@@ -220,8 +355,10 @@ export default function BrushWordsScreen() {
 
   const handleSwipeRight = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+      const newIndex = currentIndex - 1;
+      setCurrentIndex(newIndex);
       setShowDefinition(false);
+      scrollViewRef.current?.scrollTo({ x: newIndex * (CARD_WIDTH + CARD_SPACING), animated: true });
     }
   };
 
@@ -313,34 +450,19 @@ export default function BrushWordsScreen() {
     }
   }, [currentWord]);
 
-  // 手势处理函数
-  const onGestureEvent = (event: any) => {
-    if (event.nativeEvent.state === State.ACTIVE) {
-      translateY.value = event.nativeEvent.translationY;
-    }
-  };
-
-  const onHandlerStateChange = (event: any) => {
-    if (event.nativeEvent.state === State.END) {
-      const { translationY } = event.nativeEvent;
-
-      if (translationY < -swipeThreshold) {
-        // 上滑 - 下一个
-        runOnJS(handleSwipeLeft)();
-      } else if (translationY > swipeThreshold) {
-        // 下滑 - 上一个
-        runOnJS(handleSwipeRight)();
-      }
-
-      translateY.value = withSpring(0);
-    }
-  };
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-    };
+  // 滑动处理函数
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollX.value = event.contentOffset.x;
+    },
   });
+
+  // 根据滚动位置更新当前索引
+  const onMomentumScrollEnd = (event: any) => {
+    const offset = event.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(offset / (CARD_WIDTH + CARD_SPACING));
+    setCurrentIndex(Math.max(0, Math.min(newIndex, words.length - 1)));
+  };
 
   // 分享单词卡片
   const handleShare = async () => {
@@ -403,157 +525,97 @@ export default function BrushWordsScreen() {
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
-      <GestureHandlerRootView style={styles.container}>
-        <View style={styles.container}>
-          {/* 顶部栏 */}
-          <View style={styles.topBar}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <FontAwesome6 name="arrow-left" size={24} color={theme.textPrimary} />
-            </TouchableOpacity>
-            <ThemedText variant="h3" color={theme.textPrimary}>
-              刷单词 ({currentIndex + 1}/{words.length})
-            </ThemedText>
-            <View style={styles.placeholder} />
-          </View>
-
-          {/* 进度条 */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${((currentIndex + 1) / words.length) * 100}%` }
-                ]}
-              />
-            </View>
-          </View>
-
-          {/* 单词卡片 - 支持左右滑动 */}
-          <PanGestureHandler
-            onGestureEvent={onGestureEvent}
-            onHandlerStateChange={onHandlerStateChange}
-          >
-            <Animated.View style={[styles.cardContainer, animatedStyle]}>
-              <View ref={cardRef} collapsable={false}>
-                <ThemedView level="default" style={styles.wordCard}>
-                  {/* 单词和词性 - 同排显示 */}
-                  <View style={styles.wordPartOfSpeechRow}>
-                    <ThemedText variant="h1" color={theme.textPrimary} style={styles.wordText}>
-                      {currentWord.word}
-                    </ThemedText>
-                    {currentWord.partOfSpeech ? (
-                      <ThemedText variant="smallMedium" color={theme.primary} style={styles.inlinePartOfSpeech}>
-                        {currentWord.partOfSpeech}
-                      </ThemedText>
-                    ) : (
-                      <TouchableOpacity 
-                        onPress={() => router.push('/word-detail', { id: String(currentWord.id) })}
-                        style={styles.addPartOfSpeechButton}
-                      >
-                        <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.addPartOfSpeechText}>
-                          + 词性
-                        </ThemedText>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  {/* 音标 */}
-                  {currentWord.phonetic && (
-                    <ThemedText variant="body" color={theme.textSecondary} style={styles.phonetic}>
-                      {currentWord.phonetic}
-                    </ThemedText>
-                  )}
-
-                  {/* 释义 */}
-                  <View style={styles.definitionSection}>
-                    <ThemedText variant="body" color={theme.textPrimary}>
-                      <ThemedText variant="body" color={theme.textMuted}>释义：</ThemedText>
-                      {currentWord.definition}
-                    </ThemedText>
-                  </View>
-
-                  {/* 拆分 */}
-                  {currentWord.split && (
-                    <ThemedView level="tertiary" style={styles.splitSection}>
-                      <FontAwesome6 name="scissors" size={16} color={theme.accent} />
-                      <View style={styles.splitRow}>
-                        <ThemedText variant="body" color={theme.textMuted} style={styles.splitLabel}>拆分：</ThemedText>
-                        <ThemedText variant="body" color={theme.textSecondary} style={styles.splitValue}>
-                          {formatSplitStringForDisplay(currentWord.split)}
-                        </ThemedText>
-                      </View>
-                    </ThemedView>
-                  )}
-
-                  {/* 助记句（短句） */}
-                  {currentWord.mnemonic ? (
-                    <ThemedView level="tertiary" style={styles.mnemonicSection}>
-                      <FontAwesome6 name="lightbulb" size={16} color={theme.accent} />
-                      <ThemedText variant="body" color={theme.textSecondary} style={styles.mnemonicText}>
-                        <ThemedText variant="body" color={theme.textMuted}>助记：</ThemedText>
-                        {currentWord.mnemonic}
-                      </ThemedText>
-                    </ThemedView>
-                  ) : (
-                    <TouchableOpacity onPress={() => router.push('/word-detail', { id: String(currentWord.id) })}>
-                      <ThemedView level="tertiary" style={styles.mnemonicSection}>
-                        <FontAwesome6 name="lightbulb" size={16} color={theme.primary} />
-                        <ThemedText variant="body" color={theme.primary} style={styles.mnemonicText}>
-                          + 助记句
-                        </ThemedText>
-                      </ThemedView>
-                    </TouchableOpacity>
-                  )}
-
-                  {/* 例句 */}
-                  {currentWord.sentence && (
-                    <ThemedText variant="caption" color={theme.textSecondary} style={styles.sentence}>
-                      例句：{currentWord.sentence}
-                    </ThemedText>
-                  )}
-                </ThemedView>
-              </View>
-            </Animated.View>
-          </PanGestureHandler>
-
-          {/* 分享按钮 */}
+      <View style={styles.container}>
+        {/* 顶部栏 */}
+        <View style={styles.topBar}>
           <TouchableOpacity
-            style={[styles.shareButton, { backgroundColor: theme.backgroundTertiary }]}
-            onPress={handleShare}
-            disabled={isSharing}
+            style={styles.backButton}
+            onPress={() => router.back()}
           >
-            <FontAwesome6 name="share-nodes" size={20} color={theme.primary} />
-            <ThemedText variant="body" color={theme.primary}>
-              {isSharing ? '生成中...' : '分享'}
-            </ThemedText>
+            <FontAwesome6 name="arrow-left" size={24} color={theme.textPrimary} />
           </TouchableOpacity>
-
-          {/* 滑动提示 */}
-          <View style={styles.hintContainer}>
-            <ThemedText variant="caption" color={theme.textMuted}>
-              ↑ 上滑下一个 | 下滑上一个 ↓
-            </ThemedText>
-          </View>
-
-          {/* 完成学习按钮 - 只在最后一个单词显示 */}
-          {currentIndex === words.length - 1 && (
-            <View style={styles.finishButtonContainer}>
-              <TouchableOpacity
-                style={[styles.finishButton, { backgroundColor: theme.primary }]}
-                onPress={handleFinishBrowsing}
-              >
-                <FontAwesome6 name="circle-check" size={20} color={theme.buttonPrimaryText} />
-                <ThemedText variant="body" color={theme.buttonPrimaryText} style={styles.finishButtonText}>
-                  完成学习
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          )}
+          <ThemedText variant="h3" color={theme.textPrimary}>
+            刷单词 ({currentIndex + 1}/{words.length})
+          </ThemedText>
+          <View style={styles.placeholder} />
         </View>
-      </GestureHandlerRootView>
+
+        {/* 进度条 */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${((currentIndex + 1) / words.length) * 100}%` }
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* 单词卡片 - 支持水平滑动 */}
+        <Animated.ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={scrollHandler}
+          onMomentumScrollEnd={onMomentumScrollEnd}
+          scrollEventThrottle={16}
+          decelerationRate="fast"
+          snapToInterval={CARD_WIDTH + CARD_SPACING}
+          contentContainerStyle={styles.scrollContainer}
+        >
+          {words.map((word, index) => (
+            <WordCard
+              key={word.id}
+              word={word}
+              index={index}
+              scrollX={scrollX}
+              cardWidth={CARD_WIDTH}
+              cardSpacing={CARD_SPACING}
+              styles={styles}
+              theme={theme}
+              cardRef={cardRef}
+              router={router}
+              isCurrent={index === currentIndex}
+            />
+          ))}
+        </Animated.ScrollView>
+
+        {/* 分享按钮 */}
+        <TouchableOpacity
+          style={[styles.shareButton, { backgroundColor: theme.backgroundTertiary }]}
+          onPress={handleShare}
+          disabled={isSharing}
+        >
+          <FontAwesome6 name="share-nodes" size={20} color={theme.primary} />
+          <ThemedText variant="body" color={theme.primary}>
+            {isSharing ? '生成中...' : '分享'}
+          </ThemedText>
+        </TouchableOpacity>
+
+        {/* 滑动提示 */}
+        <View style={styles.hintContainer}>
+          <ThemedText variant="caption" color={theme.textMuted}>
+            ← 滑动切换单词 →
+          </ThemedText>
+        </View>
+
+        {/* 完成学习按钮 - 只在最后一个单词显示 */}
+        {currentIndex === words.length - 1 && (
+          <View style={styles.finishButtonContainer}>
+            <TouchableOpacity
+              style={[styles.finishButton, { backgroundColor: theme.primary }]}
+              onPress={handleFinishBrowsing}
+            >
+              <FontAwesome6 name="circle-check" size={20} color={theme.buttonPrimaryText} />
+              <ThemedText variant="body" color={theme.buttonPrimaryText} style={styles.finishButtonText}>
+                完成学习
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
       {/* 重复项目提示弹窗 */}
       <Modal

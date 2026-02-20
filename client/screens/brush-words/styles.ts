@@ -63,6 +63,14 @@ export const createStyles = (theme: Theme) => {
       padding: Spacing.lg,
       justifyContent: 'center',
     },
+    scrollContainer: {
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.lg,
+      flexGrow: 1,
+    },
+    cardWrapper: {
+      marginRight: Spacing.lg,
+    },
     wordCard: {
       padding: Spacing.xl,
       borderRadius: BorderRadius.xl,
