@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { createStyles } from './styles';
 import { createFormDataFile } from '@/utils';
 
@@ -21,6 +22,8 @@ export default function CameraScanScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [scanning, setScanning] = useState(false);
   const cameraRef = useRef<any>(null);
+  const scanBoxRef = useRef<View>(null);
+  const [scanBoxLayout, setScanBoxLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   if (!permission) {
     return (
@@ -70,7 +73,14 @@ export default function CameraScanScreen() {
       <View style={styles.container}>
         <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
           {/* 扫描框 */}
-          <View style={styles.scanBox}>
+          <View
+            ref={scanBoxRef}
+            style={styles.scanBox}
+            onLayout={(event) => {
+              const { x, y, width, height } = event.nativeEvent.layout;
+              setScanBoxLayout({ x, y, width, height });
+            }}
+          >
             <View style={styles.scanCorner} />
             <View style={[styles.scanCorner, styles.topRight]} />
             <View style={[styles.scanCorner, styles.bottomLeft]} />
@@ -127,12 +137,17 @@ export default function CameraScanScreen() {
       return;
     }
 
+    if (scanBoxLayout.width === 0 || scanBoxLayout.height === 0) {
+      Alert.alert('错误', '扫描框未初始化，请稍后重试');
+      return;
+    }
+
     setScanning(true);
 
     try {
       // 拍照
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8,
+        quality: 0.9,
         base64: false
       });
 
@@ -141,6 +156,43 @@ export default function CameraScanScreen() {
       }
 
       console.log('[Camera] 拍照成功:', photo.uri);
+      console.log('[Camera] 扫描框位置:', scanBoxLayout);
+      console.log('[Camera] 图片尺寸:', photo.width, 'x', photo.height);
+
+      // 获取屏幕尺寸
+      const screenWidth = photo.width;
+      const screenHeight = photo.height;
+
+      // 计算裁剪区域（注意：相机的坐标系与屏幕坐标系可能不同）
+      // 扫描框在屏幕上的百分比位置
+      const cropX = Math.floor(scanBoxLayout.x / (screenWidth / screenWidth) * photo.width);
+      const cropY = Math.floor(scanBoxLayout.y / (screenHeight / screenHeight) * photo.height);
+      const cropWidth = Math.floor(scanBoxLayout.width / (screenWidth / screenWidth) * photo.width);
+      const cropHeight = Math.floor(scanBoxLayout.height / (screenHeight / screenHeight) * photo.height);
+
+      console.log('[Camera] 裁剪区域:', { cropX, cropY, cropWidth, cropHeight });
+
+      // 裁剪图片到扫描框区域
+      const croppedImage = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [
+          {
+            crop: {
+              originX: cropX,
+              originY: cropY,
+              width: cropWidth,
+              height: cropHeight,
+            },
+          },
+        ],
+        {
+          compress: 0.9,
+          format: ImageManipulator.SaveFormat.JPEG,
+          base64: false,
+        }
+      );
+
+      console.log('[Camera] 裁剪成功:', croppedImage.uri);
 
       // 上传图片到后端进行 OCR 识别
       /**
@@ -157,7 +209,7 @@ export default function CameraScanScreen() {
       const formData = new FormData();
 
       // 使用 createFormDataFile 创建跨平台兼容的文件对象
-      const file = await createFormDataFile(photo.uri, 'photo.jpg', 'image/jpeg');
+      const file = await createFormDataFile(croppedImage.uri, 'photo.jpg', 'image/jpeg');
       formData.append('file', file as any);
 
       console.log('[Camera] 开始识别...');
