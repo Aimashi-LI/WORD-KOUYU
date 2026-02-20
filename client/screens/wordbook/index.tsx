@@ -134,22 +134,6 @@ export default function WordbookScreen() {
     await loadWordbookData(wordbookId);
   };
 
-  const handleAddWordToBook = async (wordId: number) => {
-    if (!currentWordbookId) {
-      Alert.alert('提示', '请先创建或选择一个词库');
-      return;
-    }
-    
-    try {
-      await addWordToWordbook(currentWordbookId, wordId);
-      await loadData();
-      Alert.alert('成功', '单词已添加到词库');
-    } catch (error) {
-      console.error('添加单词失败:', error);
-      Alert.alert('错误', '添加单词失败');
-    }
-  };
-
   // 批量选择相关函数
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
@@ -453,15 +437,6 @@ export default function WordbookScreen() {
                     <ThemedText variant="caption" color={theme.textMuted}>{word.phonetic}</ThemedText>
                   )}
                 </View>
-                {/* 添加到词库按钮 - 只在非全部单词视图中显示 */}
-                {currentWordbookId !== null && (
-                  <TouchableOpacity 
-                    style={styles.addToBookButton}
-                    onPress={() => handleAddWordToBook(word.id)}
-                  >
-                    <FontAwesome6 name="circle-plus" size={20} color={theme.primary} />
-                  </TouchableOpacity>
-                )}
               </View>
               
               {/* 显示词库名称 - 只在全部单词视图中显示 */}
