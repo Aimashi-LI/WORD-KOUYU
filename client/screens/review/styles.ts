@@ -65,15 +65,18 @@ export const createStyles = (theme: Theme) => {
     },
     cardContent: {
       gap: Spacing.md,
-      alignItems: 'center',
     },
     cardText: {
       textAlign: 'center',
+      flex: 1,
     },
     cardItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Spacing.sm,
+      justifyContent: 'flex-start',
+    },
+    infoLabel: {
+      width: 60, // 固定标签宽度，确保所有标签左对齐
     },
     input: {
       padding: Spacing.md,
