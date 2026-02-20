@@ -15,6 +15,7 @@ import Animated, {
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 import { useTheme } from '@/hooks/useTheme';
+import { useWindowDimensions } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -27,8 +28,6 @@ import { initDatabase, getDatabase } from '@/database';
 import { Word, Wordbook } from '@/database/types';
 import { useCallback } from 'react';
 import { formatSplitStringForDisplay } from '@/utils/splitHelper';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // 单词卡片组件
 const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme, cardRef, router, isCurrent }: {
@@ -174,6 +173,7 @@ export default function BrushWordsScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   const { projectId } = useSafeSearchParams<{ projectId?: string }>();
+  const { width: screenWidth } = useWindowDimensions();
 
   const [words, setWords] = useState<Word[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -191,8 +191,9 @@ export default function BrushWordsScreen() {
   // 滑动相关
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<Animated.ScrollView>(null);
-  const CARD_WIDTH = SCREEN_WIDTH - 40; // 20 * 2 padding
+  const CARD_WIDTH = screenWidth - 40; // 20 * 2 padding
   const CARD_SPACING = 20;
+  const SNAP_INTERVAL = CARD_WIDTH + CARD_SPACING;
 
   // 卡片引用，用于截图分享
   const cardRef = useRef<View>(null);
@@ -359,7 +360,7 @@ export default function BrushWordsScreen() {
       const newIndex = currentIndex + 1;
       setCurrentIndex(newIndex);
       setShowDefinition(false);
-      scrollViewRef.current?.scrollTo({ x: newIndex * (CARD_WIDTH + CARD_SPACING), animated: true });
+      scrollViewRef.current?.scrollTo({ x: newIndex * SNAP_INTERVAL, animated: true });
     } else {
       // 到达最后一个单词，询问是否创建复习项目
       handleFinishBrowsing();
@@ -371,7 +372,7 @@ export default function BrushWordsScreen() {
       const newIndex = currentIndex - 1;
       setCurrentIndex(newIndex);
       setShowDefinition(false);
-      scrollViewRef.current?.scrollTo({ x: newIndex * (CARD_WIDTH + CARD_SPACING), animated: true });
+      scrollViewRef.current?.scrollTo({ x: newIndex * SNAP_INTERVAL, animated: true });
     }
   };
 
@@ -473,7 +474,7 @@ export default function BrushWordsScreen() {
   // 根据滚动位置更新当前索引
   const onMomentumScrollEnd = (event: any) => {
     const offset = event.nativeEvent.contentOffset.x;
-    const newIndex = Math.round(offset / (CARD_WIDTH + CARD_SPACING));
+    const newIndex = Math.round(offset / SNAP_INTERVAL);
     setCurrentIndex(Math.max(0, Math.min(newIndex, words.length - 1)));
   };
 
@@ -575,7 +576,7 @@ export default function BrushWordsScreen() {
           onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={16}
           decelerationRate="fast"
-          snapToInterval={CARD_WIDTH + CARD_SPACING}
+          snapToInterval={SNAP_INTERVAL}
           contentContainerStyle={styles.scrollContainer}
         >
           {words.map((word, index) => (
