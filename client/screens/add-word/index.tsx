@@ -53,6 +53,7 @@ export default function AddWordScreen() {
   const [definition, setDefinition] = useState('');
   const [partOfSpeech, setPartOfSpeech] = useState('');
   const [sentence, setSentence] = useState('');
+  const [example, setExample] = useState('');
   
   // 音标键盘
   const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
@@ -298,6 +299,7 @@ export default function AddWordScreen() {
         partOfSpeech: partOfSpeech,
         split: splitText || undefined,
         mnemonic: sentence.trim() || undefined, // 助记句子
+        sentence: example.trim() || undefined, // 例句
       };
       
       console.log('[AddWord] 准备保存的单词数据:', JSON.stringify(newWord, null, 2));
@@ -659,6 +661,22 @@ export default function AddWordScreen() {
             onChangeText={setSentence}
             multiline
             numberOfLines={1}
+          />
+        </ThemedView>
+
+        {/* 例句输入 */}
+        <ThemedView level="tertiary" style={styles.inputContainer}>
+          <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
+            例句（可选）
+          </ThemedText>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="输入例句，帮助理解单词用法"
+            placeholderTextColor={theme.textMuted}
+            value={example}
+            onChangeText={setExample}
+            multiline
+            numberOfLines={2}
           />
         </ThemedView>
 
