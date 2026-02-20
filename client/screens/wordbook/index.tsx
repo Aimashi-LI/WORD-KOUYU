@@ -437,6 +437,13 @@ export default function WordbookScreen() {
                     <ThemedText variant="caption" color={theme.textMuted}>{word.phonetic}</ThemedText>
                   )}
                 </View>
+                {/* 已掌握标签 */}
+                {word.is_mastered === 1 && (
+                  <View style={styles.masteredTag}>
+                    <FontAwesome6 name="circle-check" size={14} color={theme.success} />
+                    <ThemedText variant="caption" color={theme.success} style={styles.masteredTagText}>已掌握</ThemedText>
+                  </View>
+                )}
               </View>
               
               {/* 显示词库名称 - 只在全部单词视图中显示 */}

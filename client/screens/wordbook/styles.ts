@@ -213,6 +213,19 @@ export const createStyles = (theme: Theme) => {
     wordInfoLeft: {
       flex: 1,
     },
+    // 已掌握标签
+    masteredTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: `${theme.success}15`,
+    },
+    masteredTagText: {
+      fontSize: 11,
+    },
     wordbookTags: {
       flexDirection: 'row',
       flexWrap: 'wrap',

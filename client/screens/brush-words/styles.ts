@@ -88,6 +88,12 @@ export const createStyles = (theme: Theme) => {
       gap: Spacing.sm,
       flexWrap: 'wrap',
     },
+    wordInfoLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      flex: 1,
+    },
     wordText: {
       textAlign: 'center',
     },
@@ -106,6 +112,19 @@ export const createStyles = (theme: Theme) => {
     },
     addPartOfSpeechText: {
       fontSize: 14,
+    },
+    // 已掌握标签
+    masteredTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: `${theme.success}15`,
+    },
+    masteredTagText: {
+      fontSize: 11,
     },
     wordSection: {
       alignItems: 'center',

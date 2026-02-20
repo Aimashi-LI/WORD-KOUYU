@@ -77,22 +77,31 @@ const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme,
         <ThemedView level="default" style={styles.wordCard}>
           {/* 单词和词性 - 同排显示 */}
           <View style={styles.wordPartOfSpeechRow}>
-            <ThemedText variant="h1" color={theme.textPrimary} style={styles.wordText}>
-              {word.word}
-            </ThemedText>
-            {word.partOfSpeech ? (
-              <ThemedText variant="smallMedium" color={theme.primary} style={styles.inlinePartOfSpeech}>
-                {word.partOfSpeech}
+            <View style={styles.wordInfoLeft}>
+              <ThemedText variant="h1" color={theme.textPrimary} style={styles.wordText}>
+                {word.word}
               </ThemedText>
-            ) : (
-              <TouchableOpacity
-                onPress={() => router.push('/word-detail', { id: String(word.id) })}
-                style={styles.addPartOfSpeechButton}
-              >
-                <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.addPartOfSpeechText}>
-                  + 词性
+              {word.partOfSpeech ? (
+                <ThemedText variant="smallMedium" color={theme.primary} style={styles.inlinePartOfSpeech}>
+                  {word.partOfSpeech}
                 </ThemedText>
-              </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => router.push('/word-detail', { id: String(word.id) })}
+                  style={styles.addPartOfSpeechButton}
+                >
+                  <ThemedText variant="smallMedium" color={theme.textMuted} style={styles.addPartOfSpeechText}>
+                    + 词性
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+            </View>
+            {/* 已掌握标签 */}
+            {word.is_mastered === 1 && (
+              <View style={styles.masteredTag}>
+                <FontAwesome6 name="circle-check" size={14} color={theme.success} />
+                <ThemedText variant="caption" color={theme.success} style={styles.masteredTagText}>已掌握</ThemedText>
+              </View>
             )}
           </View>
 
