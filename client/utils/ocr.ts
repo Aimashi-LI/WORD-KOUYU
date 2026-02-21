@@ -1,8 +1,9 @@
 // OCR 主入口文件
-// 使用 Tesseract.js 进行离线 OCR 识别
+// 使用 Tesseract.js Core 进行离线 OCR 识别
+// 适配 React Native 环境（直接使用 core，不依赖 Web Worker）
 
 import * as FileSystem from 'expo-file-system/legacy';
-import Tesseract from 'tesseract.js';
+import { createWorker, OEM, PSM } from 'tesseract.js-core';
 import { extractValidWords } from './ocr-common';
 
 // 通用工具函数
@@ -11,7 +12,7 @@ export type { OCRResult } from './ocr-common';
 
 /**
  * 统一的 OCR 识别接口
- * 使用 Tesseract.js 进行离线识别
+ * 使用 Tesseract.js Core 进行离线识别（React Native 兼容模式）
  *
  * @param imageUri 图片 URI
  * @returns OCR 识别结果
@@ -24,6 +25,8 @@ export type { OCRResult } from './ocr-common';
  * }
  */
 export const recognizeText = async (imageUri: string) => {
+  let worker: any = null;
+
   try {
     if (__DEV__) {
       console.log('[OCR] 开始识别:', imageUri);
@@ -34,18 +37,32 @@ export const recognizeText = async (imageUri: string) => {
       encoding: 'base64',
     });
 
-    // 使用 Tesseract.js 进行 OCR 识别
-    const result = await Tesseract.recognize(
-      `data:image/jpeg;base64,${base64}`,
-      'eng', // 使用英语语言包
-      {
-        logger: (m) => {
-          if (__DEV__ && m.status === 'recognizing text') {
+    // 创建 worker（使用 core 模式，不依赖 Web Worker）
+    worker = await createWorker({
+      logger: (m: any) => {
+        if (__DEV__) {
+          if (m.status === 'recognizing text') {
             console.log(`[OCR] 识别进度: ${(m.progress * 100).toFixed(0)}%`);
+          } else {
+            console.log(`[OCR] ${m.status}`);
           }
-        },
-      }
-    );
+        }
+      },
+    });
+
+    // 加载英语语言包
+    await worker.loadLanguage('eng');
+
+    // 初始化识别器
+    await worker.initialize('eng', OEM.LSTM_ONLY);
+
+    // 设置识别参数
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.AUTO,
+    });
+
+    // 识别图片
+    const result = await worker.recognize(`data:image/jpeg;base64,${base64}`);
 
     const { data } = result as any;
 
@@ -89,6 +106,15 @@ export const recognizeText = async (imageUri: string) => {
       success: false,
       error: error.message || 'OCR 识别失败',
     };
+  } finally {
+    // 清理 worker
+    if (worker) {
+      try {
+        await worker.terminate();
+      } catch (e) {
+        console.error('[OCR] 清理 worker 失败:', e);
+      }
+    }
   }
 };
 
