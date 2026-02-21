@@ -194,9 +194,21 @@ export default function CameraScanScreen() {
 
     } catch (error: any) {
       console.error('[Camera] 识别错误:', error);
+
+      let errorMessage = error.message || '识别过程中出现错误，请重试';
+
+      // 针对本地 OCR 的特殊错误处理
+      if (errorMessage.includes('ML Kit') || errorMessage.includes('module') || errorMessage.includes('模块')) {
+        errorMessage = 'ML Kit OCR 模块未加载\n\n请确保已进行原生构建（EAS Build 或 Expo Dev Client）\n\n如果是 Expo Go，请使用真机测试或重新构建应用';
+      } else if (errorMessage.includes('Web')) {
+        errorMessage = 'Web 环境暂不支持本地 OCR\n\n请使用 Expo Go 或真机测试';
+      } else if (errorMessage.includes('语言包')) {
+        errorMessage = '语言包未下载\n\n请检查网络连接并重试';
+      }
+
       Alert.alert(
         '识别失败',
-        error.message || '识别过程中出现错误，请重试',
+        errorMessage,
         [
           { text: '重拍', onPress: () => setScanning(false) },
           { text: '取消', onPress: () => setScanning(false) }
