@@ -9,7 +9,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { createStyles } from './styles';
-import { recognizeText, extractValidWords } from '@/utils/ocr';
+import { recognizeText } from '@/utils/ocr';
 
 interface RecognizedWord {
   word: string;
@@ -162,22 +162,21 @@ export default function CameraScanScreen() {
         imageUri = photo.uri;
       }
 
-      // 使用本地 OCR 识别
-      console.log('[Camera] 开始本地 OCR 识别...');
+      // 使用后端 OCR API 识别
+      console.log('[Camera] 开始后端 OCR 识别...');
 
       const ocrResult = await recognizeText(imageUri);
 
       console.log('[Camera] OCR 识别结果:', ocrResult);
 
-      if (!ocrResult.success || !ocrResult.text) {
+      if (!ocrResult.success) {
         throw new Error(ocrResult.error || 'OCR 识别失败');
       }
 
-      // 从识别结果中提取英文单词
-      const extractedWords = extractValidWords(ocrResult);
-      console.log('[Camera] 提取到的单词:', extractedWords);
+      // 从识别结果中提取单词
+      const recognizedWords = ocrResult.words || [];
 
-      if (extractedWords.length === 0) {
+      if (recognizedWords.length === 0) {
         Alert.alert(
           '识别失败',
           '未能识别到有效的英文单词，请确保图片清晰且包含单词卡片',
@@ -189,52 +188,8 @@ export default function CameraScanScreen() {
         return;
       }
 
-      // 调用后端 API 获取单词详情（音标、词性、释义）
-      console.log('[Camera] 获取', extractedWords.length, '个单词的详情...');
-
-      const wordsWithDetails: RecognizedWord[] = [];
-
-      // 批量获取单词详情
-      for (const word of extractedWords) {
-        try {
-          /**
-           * 服务端文件：server/src/index.ts
-           * 接口：GET /api/v1/words/lookup
-           * Query 参数：word: string (英文单词)
-           * Response:
-           * {
-           *   success: true,
-           *   word: "单词",
-           *   phonetic: "音标",
-           *   partOfSpeech: "词性",
-           *   definition: "释义"
-           * }
-           */
-          const response = await fetch(
-            `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/words/lookup?word=${encodeURIComponent(word)}`
-          );
-          const result = await response.json();
-
-          if (result.success) {
-            wordsWithDetails.push({
-              word: result.word || word,
-              phonetic: result.phonetic,
-              partOfSpeech: result.partOfSpeech,
-              definition: result.definition,
-            });
-          } else {
-            // 即使获取详情失败，也添加单词
-            wordsWithDetails.push({ word });
-          }
-        } catch (lookupError) {
-          console.error('[Camera] 获取单词详情失败:', lookupError);
-          // 即使获取详情失败，也添加单词
-          wordsWithDetails.push({ word });
-        }
-      }
-
-      console.log('[Camera] 识别到', wordsWithDetails.length, '个单词');
-      setRecognizedWords(wordsWithDetails);
+      console.log('[Camera] 识别到', recognizedWords.length, '个单词');
+      setRecognizedWords(recognizedWords);
       setShowResults(true);
 
     } catch (error: any) {

@@ -6,6 +6,12 @@ export interface OCRResult {
   text?: string;
   lines?: string[];
   error?: string;
+  words?: Array<{
+    word: string;
+    phonetic?: string;
+    partOfSpeech?: string;
+    definition?: string;
+  }>;
 }
 
 /**
