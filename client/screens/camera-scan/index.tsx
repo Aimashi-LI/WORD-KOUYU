@@ -9,13 +9,13 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { createStyles } from './styles';
-import { createFormDataFile } from '@/utils';
+import { recognizeText, extractValidWords } from '@/utils/ocr';
 
 interface RecognizedWord {
   word: string;
-  phonetic: string;
-  partOfSpeech: string;
-  definition: string;
+  phonetic?: string;
+  partOfSpeech?: string;
+  definition?: string;
 }
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
@@ -162,45 +162,22 @@ export default function CameraScanScreen() {
         imageUri = photo.uri;
       }
 
-      // 上传图片到后端进行 OCR 识别
-      /**
-       * 服务端文件：server/src/routes/ocr.ts
-       * 接口：POST /api/v1/ocr/recognize
-       * Body (multipart/form-data):
-       *   - file: File (图片文件)
-       * Response:
-       *   {
-       *     success: true,
-       *     word: "识别到的英文单词",
-       *     phonetic: "音标",
-       *     partOfSpeech: "词性",
-       *     definition: "释义"
-       *   }
-       */
-      const formData = new FormData();
+      // 使用本地 OCR 识别
+      console.log('[Camera] 开始本地 OCR 识别...');
 
-      // 使用 createFormDataFile 创建跨平台兼容的文件对象
-      const file = await createFormDataFile(imageUri, 'photo.jpg', 'image/jpeg');
-      formData.append('file', file as any);
+      const ocrResult = await recognizeText(imageUri);
 
-      console.log('[Camera] 开始识别...');
+      console.log('[Camera] OCR 识别结果:', ocrResult);
 
-      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ocr/recognize`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      console.log('[Camera] 识别结果:', result);
-
-      if (!result.success) {
-        throw new Error(result.error || '识别失败');
+      if (!ocrResult.success || !ocrResult.text) {
+        throw new Error(ocrResult.error || 'OCR 识别失败');
       }
 
-      const words: RecognizedWord[] = result.words || [];
+      // 从识别结果中提取英文单词
+      const extractedWords = extractValidWords(ocrResult);
+      console.log('[Camera] 提取到的单词:', extractedWords);
 
-      if (words.length === 0) {
+      if (extractedWords.length === 0) {
         Alert.alert(
           '识别失败',
           '未能识别到有效的英文单词，请确保图片清晰且包含单词卡片',
@@ -212,8 +189,52 @@ export default function CameraScanScreen() {
         return;
       }
 
-      console.log('[Camera] 识别到', words.length, '个单词');
-      setRecognizedWords(words);
+      // 调用后端 API 获取单词详情（音标、词性、释义）
+      console.log('[Camera] 获取', extractedWords.length, '个单词的详情...');
+
+      const wordsWithDetails: RecognizedWord[] = [];
+
+      // 批量获取单词详情
+      for (const word of extractedWords) {
+        try {
+          /**
+           * 服务端文件：server/src/index.ts
+           * 接口：GET /api/v1/words/lookup
+           * Query 参数：word: string (英文单词)
+           * Response:
+           * {
+           *   success: true,
+           *   word: "单词",
+           *   phonetic: "音标",
+           *   partOfSpeech: "词性",
+           *   definition: "释义"
+           * }
+           */
+          const response = await fetch(
+            `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/words/lookup?word=${encodeURIComponent(word)}`
+          );
+          const result = await response.json();
+
+          if (result.success) {
+            wordsWithDetails.push({
+              word: result.word || word,
+              phonetic: result.phonetic,
+              partOfSpeech: result.partOfSpeech,
+              definition: result.definition,
+            });
+          } else {
+            // 即使获取详情失败，也添加单词
+            wordsWithDetails.push({ word });
+          }
+        } catch (lookupError) {
+          console.error('[Camera] 获取单词详情失败:', lookupError);
+          // 即使获取详情失败，也添加单词
+          wordsWithDetails.push({ word });
+        }
+      }
+
+      console.log('[Camera] 识别到', wordsWithDetails.length, '个单词');
+      setRecognizedWords(wordsWithDetails);
       setShowResults(true);
 
     } catch (error: any) {
