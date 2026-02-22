@@ -83,9 +83,15 @@ export default function WordbookScreen() {
     }
   };
 
+  // 添加一个 ref 来跟踪是否已经初始化过
+  const isInitializedRef = useRef(false);
+
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      if (!isInitializedRef.current) {
+        isInitializedRef.current = true;
+        loadData();
+      }
     }, [])
   );
 
@@ -100,10 +106,16 @@ export default function WordbookScreen() {
       // 加载词库列表（只在初始化时加载一次）
       if (wordbooks.length === 0) {
         const bookList = await getAllWordbooks();
+        console.log('[loadData] 获取到词库列表，数量:', bookList.length);
+        console.log('[loadData] 词库ID:', bookList.map(b => b.id));
+        
         // 去重：根据 ID 去重，确保每个词库只出现一次
         const uniqueBooks = Array.from(
           new Map(bookList.map(book => [book.id, book])).values()
         );
+        console.log('[loadData] 去重后词库数量:', uniqueBooks.length);
+        console.log('[loadData] 去重后词库ID:', uniqueBooks.map(b => b.id));
+        
         setWordbooks(uniqueBooks);
         
         // 如果有词库且没有当前选中的，默认选中第一个
@@ -145,14 +157,27 @@ export default function WordbookScreen() {
         // 只有当最后一次切换的 ID 与当前 ID 一致时才更新
         if (lastWordbookIdRef.current === wordbookId) {
           try {
+            console.log('[loadWordbookData] 开始更新词库列表，当前ID:', wordbookId);
+            
             // 重新计算所有词库的单词数，修复数据错误
             await recalculateAllWordbookCounts();
             
             const updatedBooks = await getAllWordbooks();
+            console.log('[loadWordbookData] 获取到更新后的词库列表，数量:', updatedBooks.length);
+            console.log('[loadWordbookData] 词库ID:', updatedBooks.map(b => b.id));
+            
             // 去重：根据 ID 去重，确保每个词库只出现一次
             const uniqueBooks = Array.from(
               new Map(updatedBooks.map(book => [book.id, book])).values()
             );
+            console.log('[loadWordbookData] 去重后词库数量:', uniqueBooks.length);
+            
+            // 检查是否有重复的 ID
+            const idSet = new Set(uniqueBooks.map(b => b.id));
+            if (idSet.size !== uniqueBooks.length) {
+              console.error('[loadWordbookData] 发现重复的词库ID！');
+            }
+            
             setWordbooks(uniqueBooks);
           } catch (error) {
             console.error('更新词库列表失败:', error);

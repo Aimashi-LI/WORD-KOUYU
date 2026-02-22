@@ -4,8 +4,18 @@ import { Wordbook, Word } from './types';
 // 获取所有词库
 export async function getAllWordbooks(): Promise<Wordbook[]> {
   const db = getDatabase();
-  const rows = await db.getAllAsync<any>('SELECT * FROM wordbooks ORDER BY is_preset DESC, name ASC');
-  return rows.map(mapToWordbook);
+  const rows = await db.getAllAsync<any>('SELECT DISTINCT * FROM wordbooks ORDER BY is_preset DESC, name ASC');
+  const mappedRows = rows.map(mapToWordbook);
+  
+  // 额外的去重保护：确保返回的词库列表中没有重复的 ID
+  const uniqueRows = Array.from(
+    new Map(mappedRows.map(book => [book.id, book])).values()
+  );
+  
+  console.log('[getAllWordbooks] 获取词库列表:', uniqueRows.length, '个');
+  console.log('[getAllWordbooks] 词库ID列表:', uniqueRows.map(b => b.id));
+  
+  return uniqueRows;
 }
 
 // 获取单词所在的词库列表
