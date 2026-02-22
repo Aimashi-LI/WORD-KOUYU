@@ -643,7 +643,7 @@ export default function AddWordScreen() {
           </ThemedText>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="输入助记句子，帮助记忆单词"
+            placeholder="例：阿婆（ap）拿着苹果跑了（ple）- 可在助记中引用拆分内容"
             placeholderTextColor={theme.textMuted}
             value={sentence}
             onChangeText={setSentence}
@@ -681,7 +681,7 @@ export default function AddWordScreen() {
 
         {/* 提示 */}
         <ThemedText variant="caption" color={theme.textMuted} style={styles.hint}>
-          * 为必填项 • 拆分功能可帮助记忆单词
+          * 为必填项 • 助记中可用括号引用拆分：阿婆（ap）拿着苹果跑了（ple）
         </ThemedText>
       </ScrollView>
 
