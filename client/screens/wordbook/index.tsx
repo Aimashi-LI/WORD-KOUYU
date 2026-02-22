@@ -141,7 +141,7 @@ export default function WordbookScreen() {
     setSelectedWordIds(newSelection);
   };
 
-  // 处理搜索输入（实时预览）
+  // 处理搜索输入（实时预览 - 全局搜索）
   const handleSearchInput = async (keyword: string) => {
     setSearchKeyword(keyword);
     
@@ -152,12 +152,8 @@ export default function WordbookScreen() {
     }
 
     try {
-      let results: any[];
-      if (currentWordbookId) {
-        results = await searchWordsInWordbook(currentWordbookId, keyword);
-      } else {
-        results = await searchWords(keyword);
-      }
+      // 全局搜索：在所有词库中搜索
+      const results = await searchWords(keyword);
       setSearchResults(results);
       setShowSearchConfirm(true);
     } catch (error) {
@@ -348,7 +344,7 @@ export default function WordbookScreen() {
                 <View style={styles.searchPreviewInfo}>
                   <FontAwesome6 name="magnifying-glass" size={16} color={theme.primary} />
                   <ThemedText variant="caption" color={theme.textSecondary} style={styles.searchPreviewText}>
-                    找到 {searchResults.length} 个结果
+                    全局搜索：找到 {searchResults.length} 个结果
                   </ThemedText>
                 </View>
                 <View style={styles.searchPreviewActions}>
@@ -403,7 +399,7 @@ export default function WordbookScreen() {
         {isSearching && (
           <View style={styles.searchResultHint}>
             <ThemedText variant="caption" color={theme.textMuted}>
-              搜索结果：找到 {words.length} 个单词
+              全局搜索结果：找到 {words.length} 个单词
               <TouchableOpacity onPress={handleSearchCancel} style={styles.clearSearchLink}>
                 <ThemedText variant="caption" color={theme.primary}>清空</ThemedText>
               </TouchableOpacity>
