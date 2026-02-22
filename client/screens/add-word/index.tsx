@@ -213,19 +213,25 @@ export default function AddWordScreen() {
       const { code, content } = split;
       if (!code || !content) continue;
 
-      // 检查是否已经包含了"中文（字母）"或"中文(字母)"的形式
-      const patternWithBrackets = new RegExp(`${escapeRegex(content)}[\\(（]${escapeRegex(code)}[\\)）]`);
-      if (patternWithBrackets.test(newText)) {
-        continue; // 已经有了括号补全，跳过
-      }
+      // 将 content 拆分为多个含义（用逗号分隔）
+      const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
 
-      // 检查是否包含纯中文（需要补全）
-      // 只补全单词边界（前后是空格或标点）
-      const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(content)})([^\\w\\s]|$)`);
-      if (wordBoundaryPattern.test(newText)) {
-        // 替换为"中文（字母）"形式
-        newText = newText.replace(new RegExp(`(^|[^\\w\\s])(${escapeRegex(content)})([^\\w\\s]|$)`, 'g'), `$1${content}（${code}）$3`);
-        hasChanges = true;
+      // 检查每个含义
+      for (const meaning of meanings) {
+        // 检查是否已经包含了"中文（字母）"或"中文(字母)"的形式
+        const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
+        if (patternWithBrackets.test(newText)) {
+          continue; // 已经有了括号补全，跳过这个含义
+        }
+
+        // 检查是否包含纯中文（需要补全）
+        // 只补全单词边界（前后是空格或标点）
+        const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`);
+        if (wordBoundaryPattern.test(newText)) {
+          // 替换为"中文（字母）"形式
+          newText = newText.replace(new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'), `$1${meaning}（${code}）$3`);
+          hasChanges = true;
+        }
       }
     }
 
@@ -710,7 +716,7 @@ export default function AddWordScreen() {
           </View>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="例：阿婆拿着苹果 → 自动补全为：阿婆（ap）拿着苹果"
+            placeholder="例：编码an对应多个含义（阿牛、一个），填写任一含义即可触发补全"
             placeholderTextColor={theme.textMuted}
             value={sentence}
             onChangeText={setSentence}
