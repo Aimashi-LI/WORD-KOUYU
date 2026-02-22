@@ -1,6 +1,7 @@
 import express, { type Request, type Response } from 'express';
 import multer from 'multer';
 import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import { authMiddleware, consumeAttempt } from './user';
 
 const router = express.Router();
 
@@ -15,18 +16,33 @@ const upload = multer({
  * 接收图片文件，使用 LLM 视觉能力识别图片中的英文单词
  *
  * POST /api/v1/ocr/recognize
+ * Headers:
+ *   - Authorization: Bearer {token}
  * Body (multipart/form-data):
  *   - file: 图片文件
  * Response:
  *   {
  *     success: true,
- *     word: "识别到的英文单词"
+ *     words: [{ word, phonetic, partOfSpeech, definition }]
  *   }
  */
-router.post('/recognize', upload.single('file'), async (req: Request, res: Response) => {
+router.post('/recognize', authMiddleware, upload.single('file'), async (req: Request, res: Response) => {
   try {
+    const userId = (req as any).userId;
+
     if (!req.file) {
       return res.status(400).json({ success: false, error: '未上传图片文件' });
+    }
+
+    // 检查并扣减识别次数
+    const hasAttempts = await consumeAttempt(userId);
+    if (!hasAttempts) {
+      return res.status(403).json({
+        success: false,
+        error: '识别次数已用完，请充值后再使用',
+        needPayment: true,
+        code: 'INSUFFICIENT_ATTEMPTS'
+      });
     }
 
     const { buffer, mimetype } = req.file;
