@@ -202,10 +202,8 @@ export default function ReviewScreen() {
   const startReview = (step: ReviewStep) => {
     console.log(`[Review] 开始复习步骤: ${step.word.word} (${step.mode})`);
     
-    // 检查复习时机（仅在第一个单词检查一次）
-    if (currentStepIndex === 0) {
-      checkReviewTiming(step.word);
-    }
+    // 检查复习时机（每个单词都检查）
+    checkReviewTiming(step.word);
     
     setCurrentWord(step.word);
     setReviewMode(step.mode);

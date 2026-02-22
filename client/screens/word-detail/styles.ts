@@ -110,6 +110,22 @@ export const createStyles = (theme: Theme) => {
       minHeight: 80,
       textAlignVertical: 'top',
     },
+    posScroll: {
+      marginBottom: Spacing.lg,
+    },
+    posButton: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.md,
+      backgroundColor: theme.backgroundTertiary,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      marginRight: Spacing.sm,
+    },
+    posButtonActive: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
     modalFooter: {
       flexDirection: 'row',
       padding: Spacing.lg,

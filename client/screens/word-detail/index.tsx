@@ -13,6 +13,12 @@ import { Word, NewWord } from '@/database/types';
 
 type EditMode = 'none' | 'edit';
 
+// 词性列表
+const PART_OF_SPEECH_LIST = [
+  'n.名词', 'pron.代词', 'v.动词', 'adj.形容词', 'adv.副词',
+  'prep.介词', 'conj.连词', 'int.感叹词', 'num.数词', 'art.冠词'
+];
+
 export default function WordDetailScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -309,13 +315,27 @@ export default function WordDetailScreen() {
                 <ThemedText variant="caption" color={theme.textMuted} style={styles.label}>
                   词性
                 </ThemedText>
-                <TextInput
-                  style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]}
-                  value={editForm.partOfSpeech}
-                  onChangeText={(text) => setEditForm({ ...editForm, partOfSpeech: text })}
-                  placeholder="例如：n.名词"
-                  placeholderTextColor={theme.textMuted}
-                />
+                <View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.posScroll}>
+                    {PART_OF_SPEECH_LIST.map((pos) => (
+                      <TouchableOpacity
+                        key={pos}
+                        style={[
+                          styles.posButton,
+                          editForm.partOfSpeech === pos && styles.posButtonActive
+                        ]}
+                        onPress={() => setEditForm({ ...editForm, partOfSpeech: pos })}
+                      >
+                        <ThemedText
+                          variant="caption"
+                          color={editForm.partOfSpeech === pos ? theme.buttonPrimaryText : theme.textSecondary}
+                        >
+                          {pos}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
 
                 <ThemedText variant="caption" color={theme.textMuted} style={styles.label}>
                   释义 *

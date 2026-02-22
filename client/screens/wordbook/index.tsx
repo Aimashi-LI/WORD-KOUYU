@@ -332,7 +332,7 @@ export default function WordbookScreen() {
                 autoFocus
               />
               {searchKeyword.length > 0 && (
-                <TouchableOpacity onPress={() => { setSearchKeyword(''); setSearchResults([]); setShowSearchConfirm(false); }}>
+                <TouchableOpacity onPress={toggleSearch}>
                   <FontAwesome6 name="circle-xmark" size={20} color={theme.textMuted} />
                 </TouchableOpacity>
               )}
@@ -373,14 +373,18 @@ export default function WordbookScreen() {
                   contentContainerStyle={styles.searchPreviewScrollContent}
                 >
                   {searchResults.slice(0, 10).map((word) => (
-                    <View key={word.id} style={styles.searchPreviewItem}>
+                    <TouchableOpacity 
+                      key={word.id} 
+                      style={styles.searchPreviewItem}
+                      onPress={() => router.push('/word-detail', { id: word.id })}
+                    >
                       <ThemedText variant="body" color={theme.textPrimary} style={styles.searchPreviewWord}>
                         {word.word}
                       </ThemedText>
                       <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
                         {word.definition}
                       </ThemedText>
-                    </View>
+                    </TouchableOpacity>
                   ))}
                   {searchResults.length > 10 && (
                     <View style={styles.searchPreviewMore}>
