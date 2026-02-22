@@ -180,10 +180,11 @@ export default function WordbookScreen() {
     await loadWordbookData(currentWordbookId || wordbooks[0]?.id);
   };
 
-  const toggleSearch = () => {
+  const toggleSearch = async () => {
     if (showSearch) {
       // 关闭搜索框，清空搜索
-      handleSearchCancel();
+      await handleSearchCancel();
+      setShowSearch(false);
     } else {
       // 打开搜索框
       setShowSearch(true);
