@@ -6,8 +6,23 @@ export const createStyles = (theme: Theme) => {
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.xl,
+      paddingTop: Spacing.lg,
       paddingBottom: Spacing['5xl'],
+    },
+    // 顶部导航栏
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.lg,
+    },
+    aboutButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 20,
+      backgroundColor: theme.backgroundTertiary,
     },
     // 统计卡片
     statsCard: {

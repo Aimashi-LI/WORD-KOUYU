@@ -246,6 +246,17 @@ export default function WordbookScreen() {
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* 顶部导航栏 */}
+        <View style={styles.topBar}>
+          <ThemedText variant="h2" color={theme.textPrimary}>单词本</ThemedText>
+          <TouchableOpacity 
+            style={styles.aboutButton}
+            onPress={() => router.push('/about')}
+          >
+            <FontAwesome6 name="circle-info" size={24} color={theme.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         {/* 顶部统计卡片 */}
         <ThemedView level="default" style={styles.statsCard}>
           <View style={styles.statRow}>

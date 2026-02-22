@@ -72,3 +72,69 @@ import { Screen } from '../../../components/Screen';
 ```bash
 coze dev
 ```
+
+## 法律文档
+
+本应用包含完整的法律文档，位于 `docs/legal/` 目录：
+
+- **隐私政策** - 说明数据收集和使用方式（本应用完全离线，不上传数据）
+- **用户协议** - 规范用户使用应用的权利和义务
+- **应用权限说明** - 详细说明应用请求的各项权限及其用途
+
+详细使用说明请查看 [docs/README.md](./docs/README.md) 和 [docs/legal/README.md](./docs/legal/README.md)。
+
+## 应用特色
+
+- ✅ 完全离线运行，无需网络连接
+- ✅ 所有数据存储在本地 SQLite 数据库
+- ✅ 不收集任何个人信息
+- ✅ 基于艾宾浩斯记忆法的智能复习
+- ✅ 编码拆分记忆法，高效记忆单词
+- ✅ 支持批量导入和导出
+- ✅ 无内购，完全免费
+
+## 核心功能
+
+- **单词本管理** - 创建、编辑、分类管理单词词库
+- **智能复习** - 根据遗忘曲线自动安排复习计划
+- **刷单词模式** - 卡片式学习体验
+- **编码拆分** - 将单词拆分为编码，辅助记忆
+- **批量导入** - 支持 CSV/JSON 格式批量导入
+- **数据导出** - 导出学习数据，便于备份
+
+## 技术栈
+
+- **前端**：Expo 54 + React Native + TypeScript
+- **数据库**：SQLite (expo-sqlite)
+- **状态管理**：React Context + Hooks
+- **导航**：Expo Router
+- **主题系统**：支持亮色/暗色主题
+- **后端**：Express.js (已移除，应用完全单机运行)
+
+## 打包发布
+
+### 开发版本测试
+
+```bash
+# Android
+cd client && eas build --platform android --profile development
+
+# iOS
+cd client && eas build --platform ios --profile development
+```
+
+### 生产版本构建
+
+```bash
+# Android App Bundle
+cd client && eas build --platform android --profile production
+
+# iOS (需要 Apple 开发者账号)
+cd client && eas build --platform ios --profile production
+```
+
+详细打包说明请参考 [Expo 官方文档](https://docs.expo.dev/build/introduction/)。
+
+## 许可证
+
+Copyright © 2025. All rights reserved.

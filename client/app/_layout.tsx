@@ -85,6 +85,13 @@ export default function RootLayout() {
                 presentation: 'card'
               }} 
             />
+            <Stack.Screen 
+              name="about" 
+              options={{ 
+                title: "关于",
+                presentation: 'card'
+              }} 
+            />
           </Stack>
           <Toast />
         </GestureHandlerRootView>
