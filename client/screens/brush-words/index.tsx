@@ -508,20 +508,47 @@ export default function BrushWordsScreen() {
       console.log('[Share] 开始图片分享...');
 
       // 使用 ViewShot 捕获卡片
-      const uri = await (shareCardRef.current as any).capture();
+      const capturedUri = await (shareCardRef.current as any).capture();
 
-      console.log('[Share] 捕获的图片 URI:', uri);
+      console.log('[Share] 捕获的图片 URI:', capturedUri);
+
+      // 使用 FileSystem 将图片复制到可访问的缓存目录
+      const cacheDirectory = (FileSystem as any).cacheDirectory;
+      const timestamp = Date.now();
+      const targetUri = `${cacheDirectory}word_share_${timestamp}.png`;
+
+      console.log('[Share] 目标路径:', targetUri);
+
+      // 读取原始图片并写入到新位置
+      const base64Data = await (FileSystem as any).readAsStringAsync(capturedUri, {
+        encoding: (FileSystem as any).EncodingType.Base64,
+      });
+
+      await (FileSystem as any).writeAsStringAsync(targetUri, base64Data, {
+        encoding: (FileSystem as any).EncodingType.Base64,
+      });
+
+      console.log('[Share] 图片复制成功');
 
       // 检查设备是否支持分享
       const isAvailable = await Sharing.isAvailableAsync();
       console.log('[Share] 设备支持分享:', isAvailable);
 
       if (isAvailable) {
-        await Sharing.shareAsync(uri, {
+        await Sharing.shareAsync(targetUri, {
           dialogTitle: `分享单词：${currentWord.word}`,
           mimeType: 'image/png',
         });
         console.log('[Share] 分享成功');
+
+        // 分享成功后删除临时文件
+        try {
+          await (FileSystem as any).deleteAsync(targetUri, { idempotent: true });
+          console.log('[Share] 临时文件已删除');
+        } catch (deleteError) {
+          console.log('[Share] 删除临时文件失败（可忽略）:', deleteError);
+        }
+
         Alert.alert('成功', '图片分享成功');
       } else {
         Alert.alert('提示', '您的设备不支持分享功能');
