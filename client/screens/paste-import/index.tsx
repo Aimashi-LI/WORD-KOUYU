@@ -26,7 +26,7 @@ export default function PasteImportScreen() {
     if (!line.trim()) return null;
 
     // 去掉开头的序号（如 "1. " 或 "1、"）
-    let cleanedLine = line.replace(/^\d+[\.\、]\s*/, '');
+    let cleanedLine = line.replace(/^\d+[.、]\s*/, '');
 
     // 去掉加粗标记（如 "**abandon**" -> "abandon"）
     cleanedLine = cleanedLine.replace(/\*\*/g, '');
@@ -48,7 +48,7 @@ export default function PasteImportScreen() {
 
     // parts[0] 应该是单词，parts[1] 是词性+释义
     const wordText = parts[0].trim();
-    if (!wordText || !/^[a-zA-Z]+$/.test(wordText)) return null;
+    if (!wordText || !/^[a-z]+$/i.test(wordText)) return null;
 
     // 提取词性和释义
     let pos = '';

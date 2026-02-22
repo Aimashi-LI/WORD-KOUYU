@@ -43,6 +43,8 @@ export default function WordbookScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearchConfirm, setShowSearchConfirm] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -139,19 +141,16 @@ export default function WordbookScreen() {
     setSelectedWordIds(newSelection);
   };
 
-  // 处理搜索
-  const handleSearch = async (keyword: string) => {
+  // 处理搜索输入（实时预览）
+  const handleSearchInput = async (keyword: string) => {
     setSearchKeyword(keyword);
     
     if (!keyword.trim()) {
-      // 如果搜索框为空，恢复显示当前词库的所有单词
-      await loadWordbookData(currentWordbookId || wordbooks[0]?.id);
-      setIsSearching(false);
+      setSearchResults([]);
+      setShowSearchConfirm(false);
       return;
     }
 
-    setIsSearching(true);
-    
     try {
       let results: any[];
       if (currentWordbookId) {
@@ -159,21 +158,39 @@ export default function WordbookScreen() {
       } else {
         results = await searchWords(keyword);
       }
-      setWords(results);
+      setSearchResults(results);
+      setShowSearchConfirm(true);
     } catch (error) {
       console.error('搜索失败:', error);
-      Alert.alert('错误', '搜索失败');
     }
   };
 
+  // 确认搜索结果
+  const handleSearchConfirm = () => {
+    if (searchResults.length > 0) {
+      setWords(searchResults);
+      setIsSearching(true);
+      setShowSearchConfirm(false);
+    }
+  };
+
+  // 取消搜索
+  const handleSearchCancel = async () => {
+    setSearchKeyword('');
+    setSearchResults([]);
+    setShowSearchConfirm(false);
+    setIsSearching(false);
+    // 恢复显示当前词库的所有单词
+    await loadWordbookData(currentWordbookId || wordbooks[0]?.id);
+  };
+
   const toggleSearch = () => {
-    setShowSearch(!showSearch);
-    if (!showSearch) {
-      // 打开搜索框
-    } else {
+    if (showSearch) {
       // 关闭搜索框，清空搜索
-      setSearchKeyword('');
-      handleSearch('');
+      handleSearchCancel();
+    } else {
+      // 打开搜索框
+      setShowSearch(true);
     }
   };
 
@@ -307,20 +324,77 @@ export default function WordbookScreen() {
 
         {/* 搜索框 */}
         {showSearch && (
-          <View style={styles.searchBar}>
-            <FontAwesome6 name="magnifying-glass" size={20} color={theme.textMuted} style={styles.searchIcon} />
-            <TextInput
-              style={[styles.searchInput, { color: theme.textPrimary }]}
-              placeholder="搜索单词或释义..."
-              placeholderTextColor={theme.textMuted}
-              value={searchKeyword}
-              onChangeText={handleSearch}
-              autoFocus
-            />
-            {searchKeyword.length > 0 && (
-              <TouchableOpacity onPress={() => { setSearchKeyword(''); handleSearch(''); }}>
-                <FontAwesome6 name="xmark-circle" size={20} color={theme.textMuted} />
-              </TouchableOpacity>
+          <View>
+            <View style={styles.searchBar}>
+              <FontAwesome6 name="magnifying-glass" size={20} color={theme.textMuted} style={styles.searchIcon} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.textPrimary }]}
+                placeholder="搜索单词或释义..."
+                placeholderTextColor={theme.textMuted}
+                value={searchKeyword}
+                onChangeText={handleSearchInput}
+                autoFocus
+              />
+              {searchKeyword.length > 0 && (
+                <TouchableOpacity onPress={() => { setSearchKeyword(''); setSearchResults([]); setShowSearchConfirm(false); }}>
+                  <FontAwesome6 name="circle-xmark" size={20} color={theme.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* 搜索结果预览和确认按钮 */}
+            {showSearchConfirm && searchResults.length > 0 && (
+              <View style={styles.searchPreviewBar}>
+                <View style={styles.searchPreviewInfo}>
+                  <FontAwesome6 name="magnifying-glass" size={16} color={theme.primary} />
+                  <ThemedText variant="caption" color={theme.textSecondary} style={styles.searchPreviewText}>
+                    找到 {searchResults.length} 个结果
+                  </ThemedText>
+                </View>
+                <View style={styles.searchPreviewActions}>
+                  <TouchableOpacity 
+                    style={[styles.searchPreviewButton, styles.searchPreviewCancel]}
+                    onPress={handleSearchCancel}
+                  >
+                    <ThemedText variant="caption" color={theme.textPrimary}>取消</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.searchPreviewButton, styles.searchPreviewConfirm]}
+                    onPress={handleSearchConfirm}
+                  >
+                    <ThemedText variant="caption" color={theme.buttonPrimaryText}>确认</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* 搜索结果预览列表 */}
+            {showSearchConfirm && searchResults.length > 0 && (
+              <View style={styles.searchPreviewList}>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.searchPreviewScrollContent}
+                >
+                  {searchResults.slice(0, 10).map((word) => (
+                    <View key={word.id} style={styles.searchPreviewItem}>
+                      <ThemedText variant="body" color={theme.textPrimary} style={styles.searchPreviewWord}>
+                        {word.word}
+                      </ThemedText>
+                      <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
+                        {word.definition}
+                      </ThemedText>
+                    </View>
+                  ))}
+                  {searchResults.length > 10 && (
+                    <View style={styles.searchPreviewMore}>
+                      <ThemedText variant="caption" color={theme.textMuted}>
+                        +{searchResults.length - 10} 更多
+                      </ThemedText>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
             )}
           </View>
         )}
@@ -329,7 +403,10 @@ export default function WordbookScreen() {
         {isSearching && (
           <View style={styles.searchResultHint}>
             <ThemedText variant="caption" color={theme.textMuted}>
-              找到 {words.length} 个与 "{searchKeyword}" 相关的单词
+              搜索结果：找到 {words.length} 个单词
+              <TouchableOpacity onPress={handleSearchCancel} style={styles.clearSearchLink}>
+                <ThemedText variant="caption" color={theme.primary}>清空</ThemedText>
+              </TouchableOpacity>
             </ThemedText>
           </View>
         )}

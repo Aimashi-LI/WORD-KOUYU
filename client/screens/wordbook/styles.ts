@@ -57,8 +57,76 @@ export const createStyles = (theme: Theme) => {
       fontSize: 16,
       paddingVertical: 0,
     },
+    searchPreviewBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: `${theme.primary}15`,
+      borderRadius: BorderRadius.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+    searchPreviewInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    searchPreviewText: {
+      marginLeft: Spacing.xs,
+    },
+    searchPreviewActions: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    searchPreviewButton: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs,
+      borderRadius: BorderRadius.sm,
+    },
+    searchPreviewCancel: {
+      backgroundColor: theme.backgroundDefault,
+    },
+    searchPreviewConfirm: {
+      backgroundColor: theme.primary,
+    },
+    searchPreviewList: {
+      marginBottom: Spacing.sm,
+    },
+    searchPreviewScrollContent: {
+      gap: Spacing.sm,
+      paddingHorizontal: Spacing.sm,
+    },
+    searchPreviewItem: {
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      minWidth: 120,
+      maxWidth: 140,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    searchPreviewWord: {
+      fontWeight: '600',
+      marginBottom: 2,
+    },
+    searchPreviewMore: {
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
     searchResultHint: {
+      flexDirection: 'row',
+      alignItems: 'center',
       marginBottom: Spacing.md,
+    },
+    clearSearchLink: {
+      marginLeft: Spacing.sm,
     },
     // 统计卡片
     statsCard: {
