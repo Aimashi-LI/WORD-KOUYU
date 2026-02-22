@@ -198,6 +198,8 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: '#fff',
       borderRadius: BorderRadius.xl,
       overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
     },
     resultsHeader: {
       flexDirection: 'row',
@@ -225,7 +227,7 @@ export const createStyles = (theme: Theme) => {
       borderColor: '#e0e0e0',
     },
     resultsList: {
-      maxHeight: '70%',
+      flex: 1,
       padding: Spacing.md,
     },
     wordItem: {
@@ -246,14 +248,13 @@ export const createStyles = (theme: Theme) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: Spacing.sm,
-      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.xl,
       backgroundColor: '#333',
-      width: '20%',
       borderRadius: 10,
       alignSelf: 'center',
-      marginTop: Spacing.sm,
-      marginBottom: Spacing.md,
+      margin: Spacing.md,
+      gap: Spacing.xs,
     },
   });
 };
