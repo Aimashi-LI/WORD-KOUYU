@@ -445,20 +445,24 @@ export default function AddWordScreen() {
         mnemonic: sentence.trim() || undefined, // 助记句子
         sentence: example.trim() || undefined, // 例句
       };
-      
+
       console.log('[AddWord] 准备保存的单词数据:', JSON.stringify(newWord, null, 2));
       console.log('[AddWord] partOfSpeech 值:', partOfSpeech);
       console.log('[AddWord] partOfSpeech 类型:', typeof partOfSpeech);
       console.log('[AddWord] partOfSpeech 是否为空:', partOfSpeech === '' || partOfSpeech === null || partOfSpeech === undefined);
-      
+      console.log('[AddWord] 助记句子 (mnemonic):', newWord.mnemonic);
+      console.log('[AddWord] 例句 (sentence):', newWord.sentence);
+
       const wordId = await createWord(newWord);
       console.log('[AddWord] 单词保存成功，ID:', wordId);
-      
-      // 立即查询验证词性是否保存成功
+
+      // 立即查询验证例句是否保存成功
       const savedWord = await getWordById(wordId);
       console.log('[AddWord] 验证查询 - 保存后的单词数据:', JSON.stringify(savedWord, null, 2));
       console.log('[AddWord] 验证查询 - partOfSpeech 值:', savedWord?.partOfSpeech);
-      console.log('[AddWord] 验证查询 - partOfSpeech 是否正确:', savedWord?.partOfSpeech === partOfSpeech);
+      console.log('[AddWord] 验证查询 - 助记句子 (mnemonic):', savedWord?.mnemonic);
+      console.log('[AddWord] 验证查询 - 例句 (sentence):', savedWord?.sentence);
+      console.log('[AddWord] 验证查询 - 例句是否正确:', savedWord?.sentence === newWord.sentence);
       
       // 如果有词库ID，将单词添加到词库
       if (wordbookId) {

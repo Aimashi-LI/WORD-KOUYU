@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const DB_NAME = 'word_review.db';
-const DB_VERSION = 4; // 数据库版本号 - 升级到 4，强制修复 partOfSpeech 字段
+const DB_VERSION = 5; // 数据库版本号 - 升级到 5，确保 sentence 字段正确处理
 let db: SQLite.SQLiteDatabase | null = null;
 
 // 基础音标数据（常用词）
@@ -247,6 +247,27 @@ async function migrateDatabase(): Promise<void> {
         console.log('partOfSpeech field exists, no migration needed');
       } catch (error) {
         console.error('Failed to fix partOfSpeech field:', error);
+      }
+
+      // 版本 5 迁移：确保 sentence 字段正确处理
+      if (currentVersion < 5) {
+        console.log('Migrating to version 5: checking sentence field...');
+
+        // 检查 sentence 字段是否存在
+        const tableInfo = await db.getAllAsync<{ name: string, type: string, notnull: number }>(
+          'PRAGMA table_info(words)'
+        );
+        const hasSentence = tableInfo.some(col => col.name === 'sentence');
+
+        if (!hasSentence) {
+          console.log('sentence field missing, adding it...');
+          await db.execAsync('ALTER TABLE words ADD COLUMN sentence TEXT');
+          console.log('Added sentence column to words table');
+        } else {
+          console.log('sentence field already exists');
+        }
+
+        console.log('Migration to version 5 completed');
       }
     }
 
