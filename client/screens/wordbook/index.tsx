@@ -9,7 +9,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
-import { getAllWords, getWordStats, deleteWord } from '@/database/wordDao';
+import { getAllWords, getWordStats, deleteWord, searchWords, searchWordsInWordbook } from '@/database/wordDao';
 import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordbook, getWordsInWordbook, getWordbookStats, getWordbookNamesByWordId } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
@@ -38,6 +38,11 @@ export default function WordbookScreen() {
   const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
   const [showBatchActionModal, setShowBatchActionModal] = useState(false);
   const [showMoveToBookModal, setShowMoveToBookModal] = useState(false);
+  
+  // 搜索相关状态
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -132,6 +137,44 @@ export default function WordbookScreen() {
       newSelection.add(wordId);
     }
     setSelectedWordIds(newSelection);
+  };
+
+  // 处理搜索
+  const handleSearch = async (keyword: string) => {
+    setSearchKeyword(keyword);
+    
+    if (!keyword.trim()) {
+      // 如果搜索框为空，恢复显示当前词库的所有单词
+      await loadWordbookData(currentWordbookId || wordbooks[0]?.id);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    
+    try {
+      let results: any[];
+      if (currentWordbookId) {
+        results = await searchWordsInWordbook(currentWordbookId, keyword);
+      } else {
+        results = await searchWords(keyword);
+      }
+      setWords(results);
+    } catch (error) {
+      console.error('搜索失败:', error);
+      Alert.alert('错误', '搜索失败');
+    }
+  };
+
+  const toggleSearch = () => {
+    setShowSearch(!showSearch);
+    if (!showSearch) {
+      // 打开搜索框
+    } else {
+      // 关闭搜索框，清空搜索
+      setSearchKeyword('');
+      handleSearch('');
+    }
   };
 
   const selectAllWords = () => {
@@ -235,6 +278,16 @@ export default function WordbookScreen() {
           <View style={styles.topBarRight}>
             <TouchableOpacity
               style={styles.topBarButton}
+              onPress={toggleSearch}
+            >
+              <FontAwesome6
+                name={showSearch ? "xmark" : "magnifying-glass"}
+                size={24}
+                color={showSearch ? theme.error : theme.textMuted}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.topBarButton}
               onPress={toggleTheme}
             >
               <FontAwesome6
@@ -251,6 +304,35 @@ export default function WordbookScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* 搜索框 */}
+        {showSearch && (
+          <View style={styles.searchBar}>
+            <FontAwesome6 name="magnifying-glass" size={20} color={theme.textMuted} style={styles.searchIcon} />
+            <TextInput
+              style={[styles.searchInput, { color: theme.textPrimary }]}
+              placeholder="搜索单词或释义..."
+              placeholderTextColor={theme.textMuted}
+              value={searchKeyword}
+              onChangeText={handleSearch}
+              autoFocus
+            />
+            {searchKeyword.length > 0 && (
+              <TouchableOpacity onPress={() => { setSearchKeyword(''); handleSearch(''); }}>
+                <FontAwesome6 name="xmark-circle" size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* 搜索结果提示 */}
+        {isSearching && (
+          <View style={styles.searchResultHint}>
+            <ThemedText variant="caption" color={theme.textMuted}>
+              找到 {words.length} 个与 "{searchKeyword}" 相关的单词
+            </ThemedText>
+          </View>
+        )}
 
         {/* 顶部统计卡片 */}
         <ThemedView level="default" style={styles.statsCard}>

@@ -2,6 +2,38 @@ import { getDatabase } from './index';
 import { Word, NewWord, ReviewLog } from './types';
 import { updateWordbookCount } from './wordbookDao';
 
+// 搜索单词（支持模糊搜索）
+export async function searchWords(keyword: string): Promise<Word[]> {
+  const db = getDatabase();
+  const searchKeyword = `%${keyword}%`;
+  
+  const rows = await db.getAllAsync<any>(
+    `SELECT * FROM words 
+     WHERE word LIKE ? OR definition LIKE ? 
+     ORDER BY created_at DESC`,
+    [searchKeyword, searchKeyword]
+  );
+  
+  return rows.map(mapToWord);
+}
+
+// 在指定词库中搜索单词
+export async function searchWordsInWordbook(wordbookId: number, keyword: string): Promise<Word[]> {
+  const db = getDatabase();
+  const searchKeyword = `%${keyword}%`;
+  
+  const rows = await db.getAllAsync<any>(
+    `SELECT w.* FROM words w
+     INNER JOIN wordbook_words ww ON w.id = ww.word_id
+     WHERE ww.wordbook_id = ? 
+     AND (w.word LIKE ? OR w.definition LIKE ?)
+     ORDER BY w.created_at DESC`,
+    [wordbookId, searchKeyword, searchKeyword]
+  );
+  
+  return rows.map(mapToWord);
+}
+
 // 获取所有单词
 export async function getAllWords(): Promise<Word[]> {
   const db = getDatabase();

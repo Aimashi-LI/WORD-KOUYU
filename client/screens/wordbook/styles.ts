@@ -37,6 +37,29 @@ export const createStyles = (theme: Theme) => {
       borderRadius: 20,
       backgroundColor: theme.backgroundTertiary,
     },
+    // 搜索框
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.lg,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      marginBottom: Spacing.md,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    searchIcon: {
+      marginRight: Spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      paddingVertical: 0,
+    },
+    searchResultHint: {
+      marginBottom: Spacing.md,
+    },
     // 统计卡片
     statsCard: {
       padding: Spacing.lg,
