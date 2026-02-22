@@ -179,14 +179,21 @@ export default function CameraScanScreen() {
       }
 
       // 直接使用后端返回的完整单词信息（包含音标、词性、释义）
-      const wordsWithDetails: RecognizedWord[] = ocrResult.words.map((item: any) => ({
-        word: item.word,
-        phonetic: item.phonetic,
-        partOfSpeech: item.partOfSpeech,
-        definition: item.definition,
-      }));
+      console.log('[Camera] ocrResult.words 原始数据:', JSON.stringify(ocrResult.words, null, 2));
+      const wordsWithDetails: RecognizedWord[] = ocrResult.words.map((item: any, idx: number) => {
+        console.log(`[Camera] 映射单词 ${idx}:`, JSON.stringify(item));
+        const mapped = {
+          word: item.word,
+          phonetic: item.phonetic,
+          partOfSpeech: item.partOfSpeech,
+          definition: item.definition,
+        };
+        console.log(`[Camera] 映射结果 ${idx}:`, JSON.stringify(mapped));
+        return mapped;
+      });
 
       console.log('[Camera] 识别到', wordsWithDetails.length, '个单词');
+      console.log('[Camera] 单词详情:', JSON.stringify(wordsWithDetails, null, 2));
       setRecognizedWords(wordsWithDetails);
       setShowResults(true);
 
@@ -322,35 +329,40 @@ export default function CameraScanScreen() {
 
             <ScrollView style={styles.resultsList}>
               {recognizedWords.length > 0 ? (
-                recognizedWords.map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.wordItem}
-                    onPress={() => handleSelectWord(item)}
-                  >
-                    <View style={styles.wordItemHeader}>
-                      <Text style={{ fontSize: 20, fontWeight: '600', color: '#44403C' }}>
-                        {item.word || 'Unknown'}
-                      </Text>
-                      <FontAwesome6 name="chevron-right" size={16} color="#A8A29E" />
-                    </View>
-                    {item.phonetic && (
-                      <Text style={{ fontSize: 16, color: '#78716C' }}>
-                        {item.phonetic}
-                      </Text>
-                    )}
-                    {item.partOfSpeech && (
-                      <Text style={{ fontSize: 12, color: '#A8A29E' }}>
-                        {item.partOfSpeech}
-                      </Text>
-                    )}
-                    {item.definition && (
-                      <Text style={{ fontSize: 16, color: '#78716C' }}>
-                        {item.definition}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                ))
+                recognizedWords.map((item, index) => {
+                  console.log('[Render] 渲染单词', index, ': word=', item.word, ' phonetic=', item.phonetic, ' partOfSpeech=', item.partOfSpeech, ' definition=', item.definition);
+                  const wordText = item.word && item.word.length > 0 ? item.word : 'Unknown';
+                  console.log('[Render] 最终显示的文字:', wordText);
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.wordItem}
+                      onPress={() => handleSelectWord(item)}
+                    >
+                      <View style={styles.wordItemHeader}>
+                        <Text style={styles.wordTitle}>
+                          {wordText}
+                        </Text>
+                        <FontAwesome6 name="chevron-right" size={16} color="#A8A29E" />
+                      </View>
+                      {item.phonetic && (
+                        <Text style={{ fontSize: 16, color: '#78716C' }}>
+                          {item.phonetic}
+                        </Text>
+                      )}
+                      {item.partOfSpeech && (
+                        <Text style={{ fontSize: 12, color: '#A8A29E' }}>
+                          {item.partOfSpeech}
+                        </Text>
+                      )}
+                      {item.definition && (
+                        <Text style={{ fontSize: 16, color: '#78716C' }}>
+                          {item.definition}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
               ) : (
                 <Text style={{ fontSize: 16, color: '#78716C', textAlign: 'center', padding: 20 }}>
                   暂无识别结果

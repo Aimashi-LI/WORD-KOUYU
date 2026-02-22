@@ -240,9 +240,16 @@ export const createStyles = (theme: Theme) => {
     },
     wordItemHeader: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'flex-start',
       alignItems: 'center',
       marginBottom: Spacing.sm,
+    },
+    wordTitle: {
+      flex: 1,
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: '#000000',
+      lineHeight: 30,
     },
     rescanButton: {
       flexDirection: 'row',

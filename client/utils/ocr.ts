@@ -91,6 +91,12 @@ export const recognizeText = async (imageUri: string) => {
 
     if (__DEV__) {
       console.log('[OCR] 后端返回结果:', result);
+      console.log('[OCR] 返回的 words 数组:', result.words);
+      if (result.words && result.words.length > 0) {
+        result.words.forEach((w: any, i: number) => {
+          console.log(`[OCR] 单词 ${i}:`, JSON.stringify(w));
+        });
+      }
     }
 
     if (!result.success) {
