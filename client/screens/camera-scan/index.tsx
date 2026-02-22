@@ -279,65 +279,67 @@ export default function CameraScanScreen() {
   return (
     <Screen backgroundColor="#000" statusBarStyle="light">
       <View style={styles.container}>
-        <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
-          {/* 扫描框外的遮罩 */}
-          <View style={styles.maskContainer}>
-            {/* 上方遮罩 */}
-            <View style={[styles.mask, styles.maskTop]} />
-            {/* 下方遮罩 */}
-            <View style={[styles.mask, styles.maskBottom]} />
-            {/* 左侧遮罩 */}
-            <View style={[styles.mask, styles.maskLeft]} />
-            {/* 右侧遮罩 */}
-            <View style={[styles.mask, styles.maskRight]} />
-          </View>
+        {/* 相机视图 - 不包含子元素 */}
+        <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
 
-          {/* 扫描框 */}
-          <View
-            ref={scanBoxRef}
-            style={styles.scanBox}
-            onLayout={(event) => {
-              const { x, y, width, height } = event.nativeEvent.layout;
-              setScanBoxLayout({ x, y, width, height });
-            }}
-          >
-            <View style={styles.scanCorner} />
-            <View style={[styles.scanCorner, styles.topRight]} />
-            <View style={[styles.scanCorner, styles.bottomLeft]} />
-            <View style={[styles.scanCorner, styles.bottomRight]} />
-          </View>
+        {/* UI 叠加层 - 使用绝对定位 */}
+        {/* 扫描框外的遮罩 */}
+        <View style={styles.maskContainer}>
+          {/* 上方遮罩 */}
+          <View style={[styles.mask, styles.maskTop]} />
+          {/* 下方遮罩 */}
+          <View style={[styles.mask, styles.maskBottom]} />
+          {/* 左侧遮罩 */}
+          <View style={[styles.mask, styles.maskLeft]} />
+          {/* 右侧遮罩 */}
+          <View style={[styles.mask, styles.maskRight]} />
+        </View>
 
-          {/* 提示 */}
-          <ThemedView level="tertiary" style={styles.hintContainer}>
-            <ThemedText variant="body" color="#fff">
-              请将单词卡片放在扫描框内
-            </ThemedText>
-          </ThemedView>
+        {/* 扫描框 */}
+        <View
+          ref={scanBoxRef}
+          style={styles.scanBox}
+          onLayout={(event) => {
+            const { x, y, width, height } = event.nativeEvent.layout;
+            setScanBoxLayout({ x, y, width, height });
+          }}
+        >
+          <View style={styles.scanCorner} />
+          <View style={[styles.scanCorner, styles.topRight]} />
+          <View style={[styles.scanCorner, styles.bottomLeft]} />
+          <View style={[styles.scanCorner, styles.bottomRight]} />
+        </View>
 
-          {/* 切换摄像头按钮 */}
-          <TouchableOpacity
-            style={styles.flipButton}
-            onPress={toggleCameraFacing}
-          >
-            <FontAwesome6 name="camera-rotate" size={24} color="#fff" />
-          </TouchableOpacity>
+        {/* 提示 */}
+        <ThemedView level="tertiary" style={styles.hintContainer}>
+          <ThemedText variant="body" color="#fff">
+            请将单词卡片放在扫描框内
+          </ThemedText>
+        </ThemedView>
 
-          {/* 拍照按钮 */}
-          <TouchableOpacity
-            style={styles.captureButton}
-            onPress={handleCapture}
-          >
-            <View style={styles.captureButtonInner} />
-          </TouchableOpacity>
+        {/* 切换摄像头按钮 */}
+        <TouchableOpacity
+          style={styles.flipButton}
+          onPress={toggleCameraFacing}
+        >
+          <FontAwesome6 name="camera-rotate" size={24} color="#fff" />
+        </TouchableOpacity>
 
-          {/* 取消按钮 */}
-          <TouchableOpacity
-            style={styles.cancelButtonTop}
-            onPress={() => router.back()}
-          >
-            <FontAwesome6 name="xmark" size={32} color="#fff" />
-          </TouchableOpacity>
-        </CameraView>
+        {/* 拍照按钮 */}
+        <TouchableOpacity
+          style={styles.captureButton}
+          onPress={handleCapture}
+        >
+          <View style={styles.captureButtonInner} />
+        </TouchableOpacity>
+
+        {/* 取消按钮 */}
+        <TouchableOpacity
+          style={styles.cancelButtonTop}
+          onPress={() => router.back()}
+        >
+          <FontAwesome6 name="xmark" size={32} color="#fff" />
+        </TouchableOpacity>
 
         {scanning && (
           <View style={styles.scanningOverlay}>
