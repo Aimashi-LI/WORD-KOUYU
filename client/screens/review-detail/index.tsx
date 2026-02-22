@@ -235,19 +235,40 @@ export default function ReviewScreen() {
 
     const scheduledTime = new Date(word.next_review).getTime();
     const currentTime = Date.now();
+    const lastReviewTime = new Date(word.last_review).getTime();
     const timeDiffHours = (currentTime - scheduledTime) / (1000 * 60 * 60);
+    const reviewIntervalHours = (scheduledTime - lastReviewTime) / (1000 * 60 * 60);
 
     console.log('[Review] 预定复习时间:', new Date(scheduledTime).toLocaleString('zh-CN'));
     console.log('[Review] 当前时间:', new Date(currentTime).toLocaleString('zh-CN'));
     console.log('[Review] 时间差（小时）:', timeDiffHours.toFixed(2));
+    console.log('[Review] 复习间隔（小时）:', reviewIntervalHours.toFixed(2));
 
-    // 提前复习（提前时间 < 6小时）
-    if (timeDiffHours < -6) {
-      const earlyHours = Math.abs(timeDiffHours).toFixed(1);
-      console.log('[Review] 检测到提前复习，提前小时数:', earlyHours);
+    // 判断是否是第一个复习节点（复习间隔 < 24小时）
+    const isFirstReviewNode = reviewIntervalHours < 24;
+    console.log('[Review] 是否是第一个复习节点:', isFirstReviewNode);
+
+    // 设置触发阈值
+    let earlyThresholdMinutes = 30;  // 默认：提前30分钟
+    let lateThresholdMinutes = 30;   // 默认：延后30分钟
+
+    // 如果是第一个复习节点，使用更宽松的阈值
+    if (isFirstReviewNode) {
+      earlyThresholdMinutes = 1;     // 第一个复习节点：提前1分钟
+      lateThresholdMinutes = 5;      // 第一个复习节点：延后5分钟
+      console.log('[Review] 第一个复习节点，使用宽松阈值: 提前', earlyThresholdMinutes, '分钟, 延后', lateThresholdMinutes, '分钟');
+    }
+
+    const timeDiffMinutes = timeDiffHours * 60;
+    console.log('[Review] 时间差（分钟）:', timeDiffMinutes.toFixed(2));
+
+    // 提前复习（提前时间超过阈值）
+    if (timeDiffMinutes < -earlyThresholdMinutes) {
+      const earlyMinutes = Math.abs(timeDiffMinutes).toFixed(0);
+      console.log('[Review] 检测到提前复习，提前分钟数:', earlyMinutes);
       Alert.alert(
         '提前复习提醒',
-        `您提前了 ${earlyHours} 小时进行复习。\n\n根据认知心理学研究，过早复习会影响记忆效果，建议按推算时间进行复习。如果继续复习，掌握率的计算将适当调低。`,
+        `您提前了 ${earlyMinutes} 分钟进行复习。\n\n根据认知心理学研究，过早复习会影响记忆效果，建议按推算时间进行复习。如果继续复习，掌握率的计算将适当调低。`,
         [
           { text: '返回', onPress: () => router.back(), style: 'cancel' },
           { text: '继续复习', style: 'default' }
@@ -255,13 +276,13 @@ export default function ReviewScreen() {
       );
     }
 
-    // 延后复习（延后时间 > 6小时）
-    if (timeDiffHours > 6) {
-      const lateHours = timeDiffHours.toFixed(1);
-      console.log('[Review] 检测到延后复习，延后小时数:', lateHours);
+    // 延后复习（延后时间超过阈值）
+    if (timeDiffMinutes > lateThresholdMinutes) {
+      const lateMinutes = timeDiffMinutes.toFixed(0);
+      console.log('[Review] 检测到延后复习，延后分钟数:', lateMinutes);
       Alert.alert(
         '延后复习提醒',
-        `您延后了 ${lateHours} 小时进行复习。\n\n由于已超过推算的复习时间，单词的遗忘程度可能很大。根据遗忘曲线，掌握率的计算将适当调低。`,
+        `您延后了 ${lateMinutes} 分钟进行复习。\n\n由于已超过推算的复习时间，单词的遗忘程度可能很大。根据遗忘曲线，掌握率的计算将适当调低。`,
         [
           { text: '返回', onPress: () => router.back(), style: 'cancel' },
           { text: '继续复习', style: 'default' }
