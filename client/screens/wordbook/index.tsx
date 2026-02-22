@@ -10,7 +10,7 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getAllWords, getWordStats, deleteWord } from '@/database/wordDao';
-import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordbook, getWordsInWordbook, getWordbookStats, getWordbookNamesByWordId } from '@/database/wordbookDao';
+import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordbook, getWordsInWordbook, getWordbookStats, getWordbookNamesByWordId, recalculateAllWordbookCounts } from '@/database/wordbookDao';
 import { initDatabase, getDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
 import { useCallback } from 'react';
@@ -94,6 +94,9 @@ export default function WordbookScreen() {
     try {
       await initDatabase();
       
+      // 重新计算所有词库的单词数，修复数据错误
+      await recalculateAllWordbookCounts();
+      
       // 加载词库列表（只在初始化时加载一次）
       if (wordbooks.length === 0) {
         const bookList = await getAllWordbooks();
@@ -142,6 +145,9 @@ export default function WordbookScreen() {
         // 只有当最后一次切换的 ID 与当前 ID 一致时才更新
         if (lastWordbookIdRef.current === wordbookId) {
           try {
+            // 重新计算所有词库的单词数，修复数据错误
+            await recalculateAllWordbookCounts();
+            
             const updatedBooks = await getAllWordbooks();
             // 去重：根据 ID 去重，确保每个词库只出现一次
             const uniqueBooks = Array.from(

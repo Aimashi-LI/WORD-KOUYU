@@ -169,6 +169,23 @@ export async function updateWordbookCount(wordbookId: number): Promise<void> {
   );
 }
 
+// 重新计算所有词库的单词数（修复数据）
+export async function recalculateAllWordbookCounts(): Promise<void> {
+  const db = getDatabase();
+  const wordbooks = await db.getAllAsync<any>('SELECT id FROM wordbooks');
+  
+  await db.withTransactionAsync(async () => {
+    for (const book of wordbooks) {
+      await db.runAsync(
+        `UPDATE wordbooks 
+         SET word_count = (SELECT COUNT(*) FROM wordbook_words WHERE wordbook_id = ?)
+         WHERE id = ?`,
+        [book.id, book.id]
+      );
+    }
+  });
+}
+
 function mapToWordbook(row: any): Wordbook {
   return {
     id: row.id,
