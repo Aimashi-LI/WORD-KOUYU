@@ -35,6 +35,32 @@ export const createStyles = (theme: Theme) => {
     sectionTitle: {
       marginBottom: Spacing.md,
     },
+    contactInfo: {
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.md,
+    },
+    contactLabel: {
+      marginBottom: Spacing.md,
+      lineHeight: 22,
+    },
+    emailContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+    },
+    emailIcon: {
+      marginRight: Spacing.md,
+    },
+    emailText: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '600',
+    },
     legalSection: {
       marginBottom: Spacing.lg,
     },

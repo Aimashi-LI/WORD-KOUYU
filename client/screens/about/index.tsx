@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import * as Linking from 'expo-linking';
+import { View, ScrollView, TouchableOpacity, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -168,26 +167,6 @@ export default function AboutScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [selectedDoc, setSelectedDoc] = useState<{ title: string; content: string } | null>(null);
 
-  const handleSendEmail = async () => {
-    try {
-      const emailUrl = `mailto:${CONTACT_EMAIL}?subject=编码记忆法-反馈与建议`;
-      const supported = await Linking.canOpenURL(emailUrl);
-      if (supported) {
-        await Linking.openURL(emailUrl);
-      } else {
-        Alert.alert(
-          '无法打开',
-          '无法打开邮件应用，请检查设备是否支持邮件功能。'
-        );
-      }
-    } catch (error) {
-      Alert.alert(
-        '错误',
-        '打开邮件应用失败，请稍后重试。'
-      );
-    }
-  };
-
   const showLegalDoc = (title: string, content: string) => {
     setSelectedDoc({ title, content });
   };
@@ -300,16 +279,17 @@ export default function AboutScreen() {
             联系我们
           </ThemedText>
 
-          <TouchableOpacity
-            style={styles.linkItem}
-            onPress={handleSendEmail}
-          >
-            <View style={styles.linkContent}>
-              <FontAwesome6 name="envelope" size={20} color={theme.primary} style={styles.linkIcon} />
-              <ThemedText variant="body" color={theme.textPrimary}>发送邮件</ThemedText>
+          <View style={styles.contactInfo}>
+            <ThemedText variant="body" color={theme.textSecondary} style={styles.contactLabel}>
+              如有任何疑问或建议，欢迎通过以下邮箱联系我们：
+            </ThemedText>
+            <View style={styles.emailContainer}>
+              <FontAwesome6 name="envelope" size={20} color={theme.primary} style={styles.emailIcon} />
+              <ThemedText variant="body" color={theme.primary} style={styles.emailText}>
+                {CONTACT_EMAIL}
+              </ThemedText>
             </View>
-            <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} style={styles.linkArrow} />
-          </TouchableOpacity>
+          </View>
         </View>
 
         {/* 开源许可 */}
