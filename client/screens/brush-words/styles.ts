@@ -329,5 +329,56 @@ export const createStyles = (theme: Theme) => {
       borderWidth: 1,
       borderColor: theme.primary,
     },
+    // 分享弹窗样式
+    shareModalContent: {
+      width: '100%',
+      maxWidth: 400,
+      backgroundColor: theme.backgroundRoot,
+      borderRadius: BorderRadius['2xl'],
+      overflow: 'hidden',
+    },
+    shareModalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: Spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
+    },
+    shareOptionsContainer: {
+      padding: Spacing.md,
+    },
+    shareOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      backgroundColor: theme.backgroundTertiary,
+      marginBottom: Spacing.md,
+    },
+    shareOptionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: BorderRadius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: Spacing.md,
+    },
+    shareOptionInfo: {
+      flex: 1,
+    },
+    shareOptionTitle: {
+      marginBottom: 4,
+      fontWeight: '600',
+    },
+    shareOptionDesc: {
+      fontSize: 12,
+    },
+    shareCancelButton: {
+      padding: Spacing.md,
+      alignItems: 'center',
+      borderTopWidth: 1,
+      borderTopColor: theme.borderLight,
+    },
   });
 };

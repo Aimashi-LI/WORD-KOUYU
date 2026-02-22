@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
 import Animated, {
   useAnimatedStyle,
@@ -193,10 +194,12 @@ export default function BrushWordsScreen() {
   const [showOverlapAlert, setShowOverlapAlert] = useState(false);
   const [overlapInfo, setOverlapInfo] = useState<{ overlapCount: number; existingWordbookName: string } | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // 滑动相关
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<Animated.ScrollView>(null);
+  const cardRef = useRef<View>(null);
   const CARD_WIDTH = SCREEN_WIDTH - 40; // 20 * 2 padding
   const CARD_SPACING = 20;
 
@@ -204,9 +207,6 @@ export default function BrushWordsScreen() {
   const snapOffsets = useMemo(() => {
     return words.map((_, index) => index * (CARD_WIDTH + CARD_SPACING));
   }, [words.length, CARD_WIDTH, CARD_SPACING]);
-
-  // 卡片引用，用于截图分享
-  const cardRef = useRef<View>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -488,11 +488,18 @@ export default function BrushWordsScreen() {
     setCurrentIndex(Math.max(0, Math.min(newIndex, words.length - 1)));
   };
 
-  // 分享单词卡片
-  const handleShare = async () => {
+  // 分享单词卡片 - 显示选项弹窗
+  const handleShare = () => {
+    if (!currentWord) return;
+    setShowShareModal(true);
+  };
+
+  // 图片分享
+  const handleShareImage = async () => {
     if (!currentWord || !cardRef.current) return;
 
     try {
+      setShowShareModal(false);
       setIsSharing(true);
 
       // 捕获卡片视图为图片
@@ -507,12 +514,74 @@ export default function BrushWordsScreen() {
           dialogTitle: `分享单词：${currentWord.word}`,
           mimeType: 'image/png',
         });
+        Alert.alert('成功', '图片分享成功');
       } else {
         Alert.alert('提示', '您的设备不支持分享功能');
       }
     } catch (error) {
       console.error('分享失败:', error);
       Alert.alert('错误', '分享失败，请重试');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  // 文本分享
+  const handleShareText = async () => {
+    if (!currentWord) return;
+
+    try {
+      setShowShareModal(false);
+      setIsSharing(true);
+
+      // 构建分享文本
+      const shareText = `【单词学习】${currentWord.word}\n` +
+        `${currentWord.phonetic ? currentWord.phonetic : ''}\n` +
+        `${currentWord.partOfSpeech ? currentWord.partOfSpeech : ''}\n` +
+        `释义：${currentWord.definition}\n` +
+        `${currentWord.mnemonic ? '助记：' + currentWord.mnemonic : ''}\n` +
+        `${currentWord.sentence ? '例句：' + currentWord.sentence : ''}\n` +
+        `\n来自单词学习助手`;
+
+      // 检查设备是否支持分享
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(shareText, {
+          dialogTitle: `分享单词：${currentWord.word}`,
+          mimeType: 'text/plain',
+        });
+        Alert.alert('成功', '文本分享成功');
+      } else {
+        Alert.alert('提示', '您的设备不支持分享功能');
+      }
+    } catch (error) {
+      console.error('分享失败:', error);
+      Alert.alert('错误', '分享失败，请重试');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  // 复制到剪贴板
+  const handleCopyToClipboard = async () => {
+    if (!currentWord) return;
+
+    try {
+      setShowShareModal(false);
+      setIsSharing(true);
+
+      // 构建复制文本
+      const copyText = `【单词学习】${currentWord.word}\n` +
+        `${currentWord.phonetic ? currentWord.phonetic : ''}\n` +
+        `${currentWord.partOfSpeech ? currentWord.partOfSpeech : ''}\n` +
+        `释义：${currentWord.definition}\n` +
+        `${currentWord.mnemonic ? '助记：' + currentWord.mnemonic : ''}\n` +
+        `${currentWord.sentence ? '例句：' + currentWord.sentence : ''}`;
+
+      await Clipboard.setStringAsync(copyText);
+      Alert.alert('成功', '已复制到剪贴板');
+    } catch (error) {
+      console.error('复制失败:', error);
+      Alert.alert('错误', '复制失败，请重试');
     } finally {
       setIsSharing(false);
     }
@@ -790,6 +859,99 @@ export default function BrushWordsScreen() {
             </TouchableOpacity>
           </TouchableOpacity>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* 分享选项弹窗 */}
+      <Modal
+        visible={showShareModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowShareModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.alertOverlay}
+          activeOpacity={1}
+          onPress={() => setShowShareModal(false)}
+        >
+          <ThemedView level="default" style={styles.shareModalContent}>
+            <View style={styles.shareModalHeader}>
+              <ThemedText variant="h3" color={theme.textPrimary}>分享单词</ThemedText>
+              <TouchableOpacity onPress={() => setShowShareModal(false)}>
+                <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.shareOptionsContainer}>
+              {/* 图片分享 */}
+              <TouchableOpacity
+                style={styles.shareOption}
+                onPress={handleShareImage}
+                disabled={isSharing}
+              >
+                <View style={[styles.shareOptionIcon, { backgroundColor: theme.primary + '20' }]}>
+                  <FontAwesome6 name="image" size={24} color={theme.primary} />
+                </View>
+                <View style={styles.shareOptionInfo}>
+                  <ThemedText variant="body" color={theme.textPrimary} style={styles.shareOptionTitle}>
+                    分享图片
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted} style={styles.shareOptionDesc}>
+                    生成精美的单词卡片图片
+                  </ThemedText>
+                </View>
+                <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
+              </TouchableOpacity>
+
+              {/* 文本分享 */}
+              <TouchableOpacity
+                style={styles.shareOption}
+                onPress={handleShareText}
+                disabled={isSharing}
+              >
+                <View style={[styles.shareOptionIcon, { backgroundColor: theme.accent + '20' }]}>
+                  <FontAwesome6 name="align-left" size={24} color={theme.accent} />
+                </View>
+                <View style={styles.shareOptionInfo}>
+                  <ThemedText variant="body" color={theme.textPrimary} style={styles.shareOptionTitle}>
+                    分享文本
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted} style={styles.shareOptionDesc}>
+                    分享单词的详细信息
+                  </ThemedText>
+                </View>
+                <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
+              </TouchableOpacity>
+
+              {/* 复制到剪贴板 */}
+              <TouchableOpacity
+                style={styles.shareOption}
+                onPress={handleCopyToClipboard}
+                disabled={isSharing}
+              >
+                <View style={[styles.shareOptionIcon, { backgroundColor: theme.success + '20' }]}>
+                  <FontAwesome6 name="clipboard" size={24} color={theme.success} />
+                </View>
+                <View style={styles.shareOptionInfo}>
+                  <ThemedText variant="body" color={theme.textPrimary} style={styles.shareOptionTitle}>
+                    复制到剪贴板
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted} style={styles.shareOptionDesc}>
+                    快速复制单词信息
+                  </ThemedText>
+                </View>
+                <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 取消按钮 */}
+            <TouchableOpacity
+              style={[styles.shareCancelButton, { backgroundColor: theme.backgroundTertiary }]}
+              onPress={() => setShowShareModal(false)}
+            >
+              <ThemedText variant="body" color={theme.textPrimary}>取消</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        </TouchableOpacity>
       </Modal>
     </Screen>
   );
