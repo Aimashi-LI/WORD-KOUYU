@@ -347,11 +347,12 @@ export default function AboutScreen() {
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <TouchableOpacity
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
-            activeOpacity={1}
-            onPress={() => setSelectedDoc(null)}
-          >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <TouchableOpacity
+              style={{ flex: 1 }}
+              activeOpacity={1}
+              onPress={() => setSelectedDoc(null)}
+            />
             <ThemedView level="default" style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <ThemedText variant="h3" color={theme.textPrimary}>
@@ -362,7 +363,7 @@ export default function AboutScreen() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={styles.modalBody}>
+              <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalBodyContent}>
                 <ThemedText variant="body" color={theme.textSecondary} style={styles.docText}>
                   {selectedDoc?.content}
                 </ThemedText>
@@ -379,7 +380,7 @@ export default function AboutScreen() {
                 </TouchableOpacity>
               </View>
             </ThemedView>
-          </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </Screen>

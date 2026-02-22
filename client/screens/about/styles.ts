@@ -89,9 +89,11 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.xl,
     },
     modalContent: {
-      flex: 1,
-      margin: Spacing.lg,
-      marginTop: Spacing['3xl'],
+      position: 'absolute',
+      top: Spacing['3xl'],
+      left: Spacing.lg,
+      right: Spacing.lg,
+      bottom: Spacing.lg,
       borderRadius: BorderRadius.xl,
       overflow: 'hidden',
     },
@@ -105,6 +107,8 @@ export const createStyles = (theme: Theme) => {
     },
     modalBody: {
       flex: 1,
+    },
+    modalBodyContent: {
       padding: Spacing.lg,
     },
     docText: {
