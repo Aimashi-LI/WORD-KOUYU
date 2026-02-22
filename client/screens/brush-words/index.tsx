@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Dimensions, Text } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
+import ViewShot from 'react-native-view-shot';
 import Animated, {
   useAnimatedStyle,
   withSpring,
@@ -201,6 +202,7 @@ export default function BrushWordsScreen() {
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<Animated.ScrollView>(null);
   const cardRef = useRef<View>(null);
+  const shareCardRef = useRef<ViewShot>(null);
   const CARD_WIDTH = SCREEN_WIDTH - 40; // 20 * 2 padding
   const CARD_SPACING = 20;
 
@@ -495,9 +497,9 @@ export default function BrushWordsScreen() {
     setShowShareModal(true);
   };
 
-  // 图片分享 - 使用静态模板图片
+  // 图片分享 - 动态生成卡片图片
   const handleShareImage = async () => {
-    if (!currentWord) return;
+    if (!currentWord || !shareCardRef.current) return;
 
     try {
       setShowShareModal(false);
@@ -505,27 +507,17 @@ export default function BrushWordsScreen() {
 
       console.log('[Share] 开始图片分享...');
 
-      // 使用 Asset.fromModule 加载静态图片资源
-      const asset = Asset.fromModule(require('@/assets/images/share-template.png'));
-      
-      // 如果资源还没有下载，先下载
-      if (!asset.localUri) {
-        console.log('[Share] 下载图片资源...');
-        await asset.downloadAsync();
-      }
+      // 使用 ViewShot 捕获卡片
+      const uri = await (shareCardRef.current as any).capture();
 
-      console.log('[Share] 图片 URI:', asset.localUri);
-
-      if (!asset.localUri) {
-        throw new Error('无法获取图片 URI');
-      }
+      console.log('[Share] 捕获的图片 URI:', uri);
 
       // 检查设备是否支持分享
       const isAvailable = await Sharing.isAvailableAsync();
       console.log('[Share] 设备支持分享:', isAvailable);
 
       if (isAvailable) {
-        await Sharing.shareAsync(asset.localUri, {
+        await Sharing.shareAsync(uri, {
           dialogTitle: `分享单词：${currentWord.word}`,
           mimeType: 'image/png',
         });
@@ -537,67 +529,6 @@ export default function BrushWordsScreen() {
     } catch (error) {
       console.error('分享失败:', error);
       Alert.alert('错误', `分享失败：${error instanceof Error ? error.message : '未知错误'}`);
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
-  // 文本分享
-  const handleShareText = async () => {
-    if (!currentWord) return;
-
-    try {
-      setShowShareModal(false);
-      setIsSharing(true);
-
-      // 构建分享文本
-      const shareText = `【单词学习】${currentWord.word}\n` +
-        `${currentWord.phonetic ? currentWord.phonetic : ''}\n` +
-        `${currentWord.partOfSpeech ? currentWord.partOfSpeech : ''}\n` +
-        `释义：${currentWord.definition}\n` +
-        `${currentWord.mnemonic ? '助记：' + currentWord.mnemonic : ''}\n` +
-        `${currentWord.sentence ? '例句：' + currentWord.sentence : ''}\n` +
-        `\n来自单词学习助手`;
-
-      // 检查设备是否支持分享
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(shareText, {
-          dialogTitle: `分享单词：${currentWord.word}`,
-          mimeType: 'text/plain',
-        });
-        Alert.alert('成功', '文本分享成功');
-      } else {
-        Alert.alert('提示', '您的设备不支持分享功能');
-      }
-    } catch (error) {
-      console.error('分享失败:', error);
-      Alert.alert('错误', '分享失败，请重试');
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
-  // 复制到剪贴板
-  const handleCopyToClipboard = async () => {
-    if (!currentWord) return;
-
-    try {
-      setShowShareModal(false);
-      setIsSharing(true);
-
-      // 构建复制文本
-      const copyText = `【单词学习】${currentWord.word}\n` +
-        `${currentWord.phonetic ? currentWord.phonetic : ''}\n` +
-        `${currentWord.partOfSpeech ? currentWord.partOfSpeech : ''}\n` +
-        `释义：${currentWord.definition}\n` +
-        `${currentWord.mnemonic ? '助记：' + currentWord.mnemonic : ''}\n` +
-        `${currentWord.sentence ? '例句：' + currentWord.sentence : ''}`;
-
-      await Clipboard.setStringAsync(copyText);
-      Alert.alert('成功', '已复制到剪贴板');
-    } catch (error) {
-      console.error('复制失败:', error);
-      Alert.alert('错误', '复制失败，请重试');
     } finally {
       setIsSharing(false);
     }
@@ -877,6 +808,52 @@ export default function BrushWordsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* 分享卡片（隐藏，仅用于截图） */}
+      {currentWord && (
+        <View style={{ position: 'absolute', left: -9999, top: 0 }}>
+          <ViewShot ref={shareCardRef} options={{ format: 'png', quality: 1 }}>
+            <View style={styles.shareCardContainer}>
+              {/* 单词信息 */}
+              <View style={styles.shareCardHeader}>
+                <Text style={styles.shareWord}>{currentWord.word}</Text>
+                {currentWord.partOfSpeech && (
+                  <Text style={styles.sharePartOfSpeech}>{currentWord.partOfSpeech}</Text>
+                )}
+              </View>
+
+              {/* 音标 */}
+              {currentWord.phonetic && (
+                <Text style={styles.sharePhonetic}>{currentWord.phonetic}</Text>
+              )}
+
+              {/* 释义 */}
+              <Text style={styles.shareDefinition}>{currentWord.definition}</Text>
+
+              {/* 助记 */}
+              {currentWord.mnemonic && (
+                <View style={styles.shareSection}>
+                  <Text style={styles.shareSectionTitle}>助记</Text>
+                  <Text style={styles.shareSectionContent}>{currentWord.mnemonic}</Text>
+                </View>
+              )}
+
+              {/* 例句 */}
+              {currentWord.sentence && (
+                <View style={styles.shareSection}>
+                  <Text style={styles.shareSectionTitle}>例句</Text>
+                  <Text style={styles.shareSectionContent}>{currentWord.sentence}</Text>
+                </View>
+              )}
+
+              {/* 底部信息 */}
+              <View style={styles.shareCardFooter}>
+                <Text style={styles.shareFooterText}>来自单词学习助手</Text>
+              </View>
+            </View>
+          </ViewShot>
+        </View>
+      )}
+
       {/* 分享选项弹窗 */}
       <Modal
         visible={showShareModal}
@@ -884,7 +861,7 @@ export default function BrushWordsScreen() {
         animationType="fade"
         onRequestClose={() => setShowShareModal(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.alertOverlay}
           activeOpacity={1}
           onPress={() => setShowShareModal(false)}
@@ -913,46 +890,6 @@ export default function BrushWordsScreen() {
                   </ThemedText>
                   <ThemedText variant="caption" color={theme.textMuted} style={styles.shareOptionDesc}>
                     分享精美的单词学习卡片
-                  </ThemedText>
-                </View>
-                <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
-              </TouchableOpacity>
-
-              {/* 文本分享 */}
-              <TouchableOpacity
-                style={styles.shareOption}
-                onPress={handleShareText}
-                disabled={isSharing}
-              >
-                <View style={[styles.shareOptionIcon, { backgroundColor: theme.accent + '20' }]}>
-                  <FontAwesome6 name="align-left" size={24} color={theme.accent} />
-                </View>
-                <View style={styles.shareOptionInfo}>
-                  <ThemedText variant="body" color={theme.textPrimary} style={styles.shareOptionTitle}>
-                    分享文本
-                  </ThemedText>
-                  <ThemedText variant="caption" color={theme.textMuted} style={styles.shareOptionDesc}>
-                    分享单词的详细信息
-                  </ThemedText>
-                </View>
-                <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
-              </TouchableOpacity>
-
-              {/* 复制到剪贴板 */}
-              <TouchableOpacity
-                style={styles.shareOption}
-                onPress={handleCopyToClipboard}
-                disabled={isSharing}
-              >
-                <View style={[styles.shareOptionIcon, { backgroundColor: theme.success + '20' }]}>
-                  <FontAwesome6 name="clipboard" size={24} color={theme.success} />
-                </View>
-                <View style={styles.shareOptionInfo}>
-                  <ThemedText variant="body" color={theme.textPrimary} style={styles.shareOptionTitle}>
-                    复制到剪贴板
-                  </ThemedText>
-                  <ThemedText variant="caption" color={theme.textMuted} style={styles.shareOptionDesc}>
-                    快速复制单词信息
                   </ThemedText>
                 </View>
                 <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />

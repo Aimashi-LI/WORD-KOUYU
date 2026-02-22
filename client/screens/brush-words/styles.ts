@@ -1,5 +1,7 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export const createStyles = (theme: Theme) => {
   return StyleSheet.create({
@@ -379,6 +381,80 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       borderTopWidth: 1,
       borderTopColor: theme.borderLight,
+    },
+    // 分享卡片样式（白色背景，深色字体）
+    shareCardContainer: {
+      width: SCREEN_WIDTH - 40,
+      backgroundColor: '#FFFFFF',
+      padding: Spacing.xl,
+      borderRadius: BorderRadius.xl,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    shareCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      marginBottom: Spacing.md,
+    },
+    shareWord: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: '#1F2937',
+      textAlign: 'center',
+    },
+    sharePartOfSpeech: {
+      fontSize: 14,
+      color: '#6366F1',
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+      borderRadius: 8,
+    },
+    sharePhonetic: {
+      fontSize: 16,
+      color: '#6B7280',
+      textAlign: 'center',
+      marginBottom: Spacing.lg,
+    },
+    shareDefinition: {
+      fontSize: 18,
+      color: '#374151',
+      lineHeight: 26,
+      textAlign: 'center',
+      marginBottom: Spacing.lg,
+    },
+    shareSection: {
+      marginTop: Spacing.md,
+      paddingTop: Spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: '#E5E7EB',
+    },
+    shareSectionTitle: {
+      fontSize: 12,
+      color: '#9CA3AF',
+      marginBottom: Spacing.sm,
+      textTransform: 'uppercase',
+    },
+    shareSectionContent: {
+      fontSize: 14,
+      color: '#4B5563',
+      lineHeight: 20,
+    },
+    shareCardFooter: {
+      marginTop: Spacing.xl,
+      paddingTop: Spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: '#E5E7EB',
+      alignItems: 'center',
+    },
+    shareFooterText: {
+      fontSize: 12,
+      color: '#9CA3AF',
     },
   });
 };

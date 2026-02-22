@@ -313,28 +313,20 @@ export default function WordbookScreen() {
 
         {/* 添加按钮组 */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push(currentWordbookId ? `/add-word?wordbookId=${currentWordbookId}` : '/add-word')}
           >
             <FontAwesome6 name="plus" size={24} color={theme.buttonPrimaryText} />
             <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>手动添加</ThemedText>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push(currentWordbookId ? `/import-words?wordbookId=${currentWordbookId}` : '/import-words')}
           >
             <FontAwesome6 name="file-import" size={24} color={theme.buttonPrimaryText} />
             <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>批量导入</ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => router.push(currentWordbookId ? `/camera-scan?wordbookId=${currentWordbookId}` : '/camera-scan')}
-          >
-            <FontAwesome6 name="camera" size={24} color={theme.buttonPrimaryText} />
-            <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>拍照识别</ThemedText>
           </TouchableOpacity>
         </View>
 
