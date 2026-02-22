@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -171,6 +172,15 @@ export default function AboutScreen() {
     setSelectedDoc({ title, content });
   };
 
+  const handleCopyEmail = async () => {
+    try {
+      await Clipboard.setStringAsync(CONTACT_EMAIL);
+      Alert.alert('已复制', '邮箱地址已复制到剪贴板');
+    } catch (error) {
+      Alert.alert('复制失败', '无法复制邮箱地址，请稍后重试');
+    }
+  };
+
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -283,12 +293,19 @@ export default function AboutScreen() {
             <ThemedText variant="body" color={theme.textSecondary} style={styles.contactLabel}>
               如有任何疑问或建议，欢迎通过以下邮箱联系我们：
             </ThemedText>
-            <View style={styles.emailContainer}>
+            <TouchableOpacity
+              style={styles.emailContainer}
+              onLongPress={handleCopyEmail}
+              activeOpacity={0.7}
+            >
               <FontAwesome6 name="envelope" size={20} color={theme.primary} style={styles.emailIcon} />
               <ThemedText variant="body" color={theme.primary} style={styles.emailText}>
                 {CONTACT_EMAIL}
               </ThemedText>
-            </View>
+            </TouchableOpacity>
+            <ThemedText variant="caption" color={theme.textMuted} style={styles.copyHint}>
+              长按邮箱地址可复制
+            </ThemedText>
           </View>
         </View>
 

@@ -61,6 +61,12 @@ export const createStyles = (theme: Theme) => {
       fontSize: 16,
       fontWeight: '600',
     },
+    copyHint: {
+      marginTop: Spacing.sm,
+      textAlign: 'center',
+      fontStyle: 'italic',
+      opacity: 0.7,
+    },
     legalSection: {
       marginBottom: Spacing.lg,
     },
