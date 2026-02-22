@@ -379,7 +379,37 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   // 每次调用都检查是否需要迁移
   await migrateDatabase();
 
+  // 清空单词表（删除所有测试数据）
+  await clearAllWords();
+
   return db;
+}
+
+// 清空所有单词数据
+async function clearAllWords(): Promise<void> {
+  if (!db) return;
+
+  try {
+    // 删除关联表中的记录
+    await db.runAsync('DELETE FROM wordbook_words');
+    console.log('已删除 wordbook_words 表的所有记录');
+
+    // 删除复习日志
+    await db.runAsync('DELETE FROM review_logs');
+    console.log('已删除 review_logs 表的所有记录');
+
+    // 删除所有单词
+    await db.runAsync('DELETE FROM words');
+    console.log('已删除 words 表的所有记录');
+
+    // 更新所有词库的单词数为 0
+    await db.runAsync('UPDATE wordbooks SET word_count = 0');
+    console.log('已更新所有词库的单词数为 0');
+
+    console.log('✅ 所有单词数据已清空');
+  } catch (error) {
+    console.error('清空单词表失败:', error);
+  }
 }
 
 export function getDatabase(): SQLite.SQLiteDatabase {
