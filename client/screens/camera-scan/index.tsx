@@ -173,65 +173,18 @@ export default function CameraScanScreen() {
         throw new Error(ocrResult.error || 'OCR 识别失败');
       }
 
-      // 从识别结果中提取英文单词
-      const extractedWords = extractValidWords(ocrResult);
-      console.log('[Camera] 提取到的单词:', extractedWords);
-
-      if (extractedWords.length === 0) {
-        Alert.alert(
-          '识别失败',
-          '未能识别到有效的英文单词，请确保图片清晰且包含单词卡片',
-          [
-            { text: '重拍', onPress: () => setScanning(false) },
-            { text: '取消', onPress: () => setScanning(false) }
-          ]
-        );
-        return;
+      // 检查后端是否返回了完整的单词信息
+      if (!ocrResult.words || ocrResult.words.length === 0) {
+        throw new Error('OCR 识别未返回单词信息');
       }
 
-      // 调用后端 API 获取单词详情（音标、词性、释义）
-      console.log('[Camera] 获取', extractedWords.length, '个单词的详情...');
-
-      const wordsWithDetails: RecognizedWord[] = [];
-
-      // 批量获取单词详情
-      for (const word of extractedWords) {
-        try {
-          /**
-           * 服务端文件：server/src/index.ts
-           * 接口：GET /api/v1/words/lookup
-           * Query 参数：word: string (英文单词)
-           * Response:
-           * {
-           *   success: true,
-           *   word: "单词",
-           *   phonetic: "音标",
-           *   partOfSpeech: "词性",
-           *   definition: "释义"
-           * }
-           */
-          const response = await fetch(
-            `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/words/lookup?word=${encodeURIComponent(word)}`
-          );
-          const result = await response.json();
-
-          if (result.success) {
-            wordsWithDetails.push({
-              word: result.word || word,
-              phonetic: result.phonetic,
-              partOfSpeech: result.partOfSpeech,
-              definition: result.definition,
-            });
-          } else {
-            // 即使获取详情失败，也添加单词
-            wordsWithDetails.push({ word });
-          }
-        } catch (lookupError) {
-          console.error('[Camera] 获取单词详情失败:', lookupError);
-          // 即使获取详情失败，也添加单词
-          wordsWithDetails.push({ word });
-        }
-      }
+      // 直接使用后端返回的完整单词信息（包含音标、词性、释义）
+      const wordsWithDetails: RecognizedWord[] = ocrResult.words.map((item: any) => ({
+        word: item.word,
+        phonetic: item.phonetic,
+        partOfSpeech: item.partOfSpeech,
+        definition: item.definition,
+      }));
 
       console.log('[Camera] 识别到', wordsWithDetails.length, '个单词');
       setRecognizedWords(wordsWithDetails);

@@ -106,6 +106,7 @@ export const recognizeText = async (imageUri: string) => {
       text: allText,
       lines,
       confidence: 95, // 图像预处理后，准确率可达 90-95%
+      words: result.words, // 直接返回后端的完整单词信息（包含音标、词性、释义）
     };
   } catch (error: any) {
     console.error('[OCR] 识别失败:', error);
