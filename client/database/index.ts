@@ -379,8 +379,8 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   // 每次调用都检查是否需要迁移
   await migrateDatabase();
 
-  // 清空单词表（删除所有测试数据）
-  await clearAllWords();
+  // 清空单词表（删除所有测试数据）- 已禁用，用户需要导入单词
+  // await clearAllWords();
 
   return db;
 }

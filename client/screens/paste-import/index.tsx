@@ -23,24 +23,50 @@ export default function PasteImportScreen() {
 
   // 解析导入行
   const parseImportLine = (line: string): NewWord | null => {
-    // 支持格式：word pos definition 或 word,definition
+    if (!line.trim()) return null;
+
+    // 去掉开头的序号（如 "1. " 或 "1、"）
+    let cleanedLine = line.replace(/^\d+[\.\、]\s*/, '');
+
+    // 去掉加粗标记（如 "**abandon**" -> "abandon"）
+    cleanedLine = cleanedLine.replace(/\*\*/g, '');
+
+    // 按分隔符分割（支持 - 或 :）
     let parts: string[];
 
-    if (line.includes(',')) {
-      parts = line.split(',').map(p => p.trim());
-    } else if (line.includes('|')) {
-      parts = line.split('|').map(p => p.trim());
+    if (cleanedLine.includes(' - ')) {
+      parts = cleanedLine.split(' - ');
+    } else if (cleanedLine.includes('：')) {
+      parts = cleanedLine.split('：');
+    } else if (cleanedLine.includes(':')) {
+      parts = cleanedLine.split(':');
     } else {
-      parts = line.split(/\s+/).filter(p => p);
+      parts = cleanedLine.split(/\s+/).filter(p => p);
     }
 
     if (parts.length < 2) return null;
 
-    const wordText = parts[0].replace(/[^a-z]/gi, '');
-    if (!wordText) return null;
+    // parts[0] 应该是单词，parts[1] 是词性+释义
+    const wordText = parts[0].trim();
+    if (!wordText || !/^[a-zA-Z]+$/.test(wordText)) return null;
 
-    const pos = parts[1] || '';
-    const definition = parts[2] || parts[1] || '';
+    // 提取词性和释义
+    let pos = '';
+    let definition = '';
+
+    const posDefinition = parts[1].trim();
+
+    // 匹配词性（n. v. adj. adv. 等）
+    const posMatch = posDefinition.match(/^(n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|art\.|num\.|int\.|vt\.|vi\.|n\.&adj\.|v\.&n\.)\s*/i);
+    if (posMatch) {
+      pos = posMatch[1];
+      definition = posDefinition.substring(posMatch[0].length).trim();
+    } else {
+      // 没有明确的词性标记，整段作为释义
+      definition = posDefinition;
+    }
+
+    if (!definition) return null;
 
     return {
       word: wordText,
@@ -148,12 +174,12 @@ export default function PasteImportScreen() {
                 支持的格式
               </ThemedText>
               <ThemedText variant="caption" color={theme.textSecondary}>
-                每行一个单词，用逗号、空格或竖线分隔
+                格式：单词 - 词性 释义（支持序号和加粗）
               </ThemedText>
             </View>
           </View>
           <ThemedText variant="caption" color={theme.textMuted} style={styles.exampleText}>
-            示例：apple n.苹果, fruit
+            示例：1. **abandon** - v. 放弃，抛弃
           </ThemedText>
         </ThemedView>
 
