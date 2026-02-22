@@ -109,6 +109,7 @@ export default function WordbookScreen() {
       
       // 加载词库列表（只在初始化时加载一次）
       if (wordbooks.length === 0) {
+        console.log('[loadData] 开始加载词库列表...');
         const bookList = await getAllWordbooks();
         console.log('[loadData] 获取到词库列表，数量:', bookList.length);
         console.log('[loadData] 词库ID:', bookList.map(b => b.id));
@@ -463,6 +464,7 @@ export default function WordbookScreen() {
               contentContainerStyle={styles.wordbookScrollContent}
             >
               <TouchableOpacity 
+                key="all"
                 style={[styles.wordbookChip, currentWordbookId === null && styles.wordbookChipActive]}
                 onPress={() => { setCurrentWordbookId(null); loadData(); }}
               >
@@ -471,7 +473,14 @@ export default function WordbookScreen() {
                 </ThemedText>
               </TouchableOpacity>
               
-              {wordbooks.map((book) => (
+              {wordbooks.map((book, index) => {
+                // 检查是否有重复的 ID
+                const duplicateIndex = wordbooks.findIndex((b, i) => b.id === book.id && i !== index);
+                if (duplicateIndex !== -1) {
+                  console.error(`[词库渲染] 发现重复 ID: ${book.id}，当前索引: ${index}，重复索引: ${duplicateIndex}`);
+                }
+                
+                return (
                 <TouchableOpacity 
                   key={book.id}
                   style={[styles.wordbookChip, currentWordbookId === book.id && styles.wordbookChipActive]}
@@ -482,7 +491,8 @@ export default function WordbookScreen() {
                     {book.name} ({book.word_count})
                   </ThemedText>
                 </TouchableOpacity>
-              ))}
+              );
+              })}
           </ScrollView>
         </View>
         </View>
@@ -577,7 +587,14 @@ export default function WordbookScreen() {
             </ThemedText>
           </View>
         ) : (
-          words.map((word) => (
+          words.map((word, index) => {
+            // 检查是否有重复的 ID
+            const duplicateIndex = words.findIndex((w, i) => w.id === word.id && i !== index);
+            if (duplicateIndex !== -1) {
+              console.error(`[单词渲染] 发现重复 ID: ${word.id}，当前索引: ${index}，重复索引: ${duplicateIndex}`);
+            }
+            
+            return (
             <TouchableOpacity 
               key={word.id} 
               style={[
@@ -635,14 +652,22 @@ export default function WordbookScreen() {
               {/* 显示词库名称 - 只在全部单词视图中显示 */}
               {currentWordbookId === null && word.wordbooks && word.wordbooks.length > 0 && (
                 <View style={styles.wordbookTags}>
-                  {word.wordbooks.map((book: any) => (
-                    <View key={book.id} style={styles.wordbookTag}>
-                      <FontAwesome6 name="folder" size={12} color={theme.primary} />
-                      <ThemedText variant="caption" color={theme.primary} style={styles.wordbookTagText}>
-                        {book.name}
-                      </ThemedText>
-                    </View>
-                  ))}
+                  {word.wordbooks.map((book: any, bookIndex: number) => {
+                    // 检查词库标签是否有重复的 ID
+                    const bookDuplicateIndex = word.wordbooks.findIndex((b: any, i: number) => b.id === book.id && i !== bookIndex);
+                    if (bookDuplicateIndex !== -1) {
+                      console.error(`[词库标签渲染] 单词 ${word.id} 发现重复词库 ID: ${book.id}，当前索引: ${bookIndex}，重复索引: ${bookDuplicateIndex}`);
+                    }
+                    
+                    return (
+                      <View key={book.id} style={styles.wordbookTag}>
+                        <FontAwesome6 name="folder" size={12} color={theme.primary} />
+                        <ThemedText variant="caption" color={theme.primary} style={styles.wordbookTagText}>
+                          {book.name}
+                        </ThemedText>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
               
@@ -658,7 +683,8 @@ export default function WordbookScreen() {
                 </View>
               )}
             </TouchableOpacity>
-          ))
+            );
+          })
         )}
       </ScrollView>
 
@@ -986,7 +1012,14 @@ export default function WordbookScreen() {
                   <ThemedText color={theme.textMuted} style={styles.searchLoadingText}>搜索中...</ThemedText>
                 </View>
               ) : searchResults.length > 0 ? (
-                searchResults.map((word) => (
+                searchResults.map((word, index) => {
+                  // 检查是否有重复的 ID
+                  const duplicateIndex = searchResults.findIndex((w, i) => w.id === word.id && i !== index);
+                  if (duplicateIndex !== -1) {
+                    console.error(`[搜索结果渲染] 发现重复 ID: ${word.id}，当前索引: ${index}，重复索引: ${duplicateIndex}`);
+                  }
+                  
+                  return (
                   <TouchableOpacity
                     key={word.id}
                     style={styles.searchResultItem}
@@ -1013,7 +1046,8 @@ export default function WordbookScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
-                ))
+                  );
+                })
               ) : searchText.length > 0 ? (
                 <View style={styles.searchEmptyContainer}>
                   <FontAwesome6 name="magnifying-glass" size={48} color={theme.textMuted} />
