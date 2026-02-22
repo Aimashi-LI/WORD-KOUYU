@@ -840,12 +840,23 @@ export default function BrushWordsScreen() {
         <View style={{ position: 'absolute', left: -9999, top: 0 }}>
           <ViewShot ref={shareCardRef} options={{ format: 'png', quality: 1 }}>
             <View style={styles.shareCardContainer}>
-              {/* 单词信息 */}
-              <View style={styles.shareCardHeader}>
-                <Text style={styles.shareWord}>{currentWord.word}</Text>
-                {currentWord.partOfSpeech && (
-                  <Text style={styles.sharePartOfSpeech}>{currentWord.partOfSpeech}</Text>
-                )}
+              {/* 单词和词性 - 同排显示 */}
+              <View style={styles.shareWordPartOfSpeechRow}>
+                <View style={styles.shareWordInfoLeft}>
+                  <Text style={styles.shareWord}>{currentWord.word}</Text>
+                  {currentWord.partOfSpeech && (
+                    <Text style={styles.sharePartOfSpeech}>{currentWord.partOfSpeech}</Text>
+                  )}
+                </View>
+                {/* 状态标签 */}
+                <View style={styles.shareStatusTags}>
+                  {currentWord.is_mastered === 1 && (
+                    <View style={styles.shareMasteredTag}>
+                      <FontAwesome6 name="circle-check" size={14} color="#059669" />
+                      <Text style={styles.shareMasteredTagText}>已掌握</Text>
+                    </View>
+                  )}
+                </View>
               </View>
 
               {/* 音标 */}
@@ -854,22 +865,41 @@ export default function BrushWordsScreen() {
               )}
 
               {/* 释义 */}
-              <Text style={styles.shareDefinition}>{currentWord.definition}</Text>
+              <View style={styles.shareDefinitionSection}>
+                <Text style={styles.shareDefinition}>
+                  <Text style={styles.shareLabel}>释义：</Text>
+                  {currentWord.definition}
+                </Text>
+              </View>
+
+              {/* 拆分 */}
+              {currentWord.split && (
+                <View style={styles.shareSplitSection}>
+                  <FontAwesome6 name="scissors" size={16} color="#8B5CF6" />
+                  <Text style={styles.shareSplitText}>
+                    <Text style={styles.shareLabel}>拆分：</Text>
+                    {formatSplitStringForDisplay(currentWord.split)}
+                  </Text>
+                </View>
+              )}
 
               {/* 助记 */}
               {currentWord.mnemonic && (
-                <View style={styles.shareSection}>
-                  <Text style={styles.shareSectionTitle}>助记</Text>
-                  <Text style={styles.shareSectionContent}>{currentWord.mnemonic}</Text>
+                <View style={styles.shareMnemonicSection}>
+                  <FontAwesome6 name="lightbulb" size={16} color="#8B5CF6" />
+                  <Text style={styles.shareMnemonicText}>
+                    <Text style={styles.shareLabel}>助记：</Text>
+                    {currentWord.mnemonic}
+                  </Text>
                 </View>
               )}
 
               {/* 例句 */}
               {currentWord.sentence && (
-                <View style={styles.shareSection}>
-                  <Text style={styles.shareSectionTitle}>例句</Text>
-                  <Text style={styles.shareSectionContent}>{currentWord.sentence}</Text>
-                </View>
+                <Text style={styles.shareSentence}>
+                  <Text style={styles.shareLabel}>例句：</Text>
+                  {currentWord.sentence}
+                </Text>
               )}
 
               {/* 底部信息 */}
