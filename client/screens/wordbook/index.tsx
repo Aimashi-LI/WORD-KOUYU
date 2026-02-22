@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useThemeSwitch } from '@/hooks/useThemeSwitch';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -17,6 +18,7 @@ import { isWordIncomplete } from '@/utils';
 
 export default function WordbookScreen() {
   const { theme, isDark } = useTheme();
+  const { themeChoice, toggleTheme } = useThemeSwitch();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   
@@ -249,12 +251,24 @@ export default function WordbookScreen() {
         {/* 顶部导航栏 */}
         <View style={styles.topBar}>
           <ThemedText variant="h2" color={theme.textPrimary}>单词本</ThemedText>
-          <TouchableOpacity 
-            style={styles.aboutButton}
-            onPress={() => router.push('/about')}
-          >
-            <FontAwesome6 name="circle-info" size={24} color={theme.textMuted} />
-          </TouchableOpacity>
+          <View style={styles.topBarRight}>
+            <TouchableOpacity
+              style={styles.topBarButton}
+              onPress={toggleTheme}
+            >
+              <FontAwesome6
+                name={isDark ? "sun" : "moon"}
+                size={24}
+                color={theme.textMuted}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.topBarButton}
+              onPress={() => router.push('/about')}
+            >
+              <FontAwesome6 name="circle-info" size={24} color={theme.textMuted} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* 顶部统计卡片 */}

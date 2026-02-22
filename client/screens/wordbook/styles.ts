@@ -16,6 +16,19 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       marginBottom: Spacing.lg,
     },
+    topBarRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
+    topBarButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 20,
+      backgroundColor: theme.backgroundTertiary,
+    },
     aboutButton: {
       width: 40,
       height: 40,

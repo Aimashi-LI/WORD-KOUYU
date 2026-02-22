@@ -6,6 +6,7 @@ import { LogBox } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ColorSchemeProvider } from '@/hooks/useColorScheme';
+import { ThemeSwitchProvider } from '@/hooks/useThemeSwitch';
 
 LogBox.ignoreLogs([
   "TurboModuleRegistry.getEnforcing(...): 'RNMapsAirModule' could not be found",
@@ -18,9 +19,10 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ColorSchemeProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <StatusBar style="dark"></StatusBar>
-          <Stack screenOptions={{
+        <ThemeSwitchProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <StatusBar style="dark"></StatusBar>
+            <Stack screenOptions={{
             // 设置所有页面的切换动画为从右侧滑入，适用于iOS 和 Android
             animation: 'slide_from_right',
             gestureEnabled: true,
@@ -95,6 +97,7 @@ export default function RootLayout() {
           </Stack>
           <Toast />
         </GestureHandlerRootView>
+      </ThemeSwitchProvider>
       </ColorSchemeProvider>
     </AuthProvider>
   );
