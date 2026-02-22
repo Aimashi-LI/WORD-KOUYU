@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import ocrRouter from "./routes/ocr";
+import searchRouter from "./routes/search";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -17,6 +18,9 @@ app.get('/api/v1/health', (req, res) => {
 
 // OCR 路由
 app.use('/api/v1/ocr', ocrRouter);
+
+// 搜索路由
+app.use('/api/v1/search', searchRouter);
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}/`);

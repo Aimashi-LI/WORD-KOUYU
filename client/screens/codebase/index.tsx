@@ -10,6 +10,7 @@ import {
   Platform
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/theme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -33,61 +34,46 @@ interface CodeGroupProps {
   selectedIds: Set<number>;
   onToggleSelection: (id: number) => void;
   onEdit: (code: Code) => void;
+  theme: Theme;
+  styles: ReturnType<typeof createStyles>;
 }
 
-function CodeGroup({ letter, codes, selectedIds, onToggleSelection, onEdit }: CodeGroupProps) {
+function CodeGroup({ letter, codes, selectedIds, onToggleSelection, onEdit, theme, styles }: CodeGroupProps) {
   return (
-    <View style={{ marginBottom: 32 }}>
-      <ThemedView level="tertiary" style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#f5f5f5' }}>
-        <ThemedText variant="h2" style={{ color: '#d97706' }}>{letter.toUpperCase()}</ThemedText>
+    <View style={styles.groupContainer}>
+      <ThemedView level="tertiary" style={styles.groupHeader}>
+        <ThemedText variant="h2" style={{ color: theme.primary }}>{letter.toUpperCase()}</ThemedText>
       </ThemedView>
       {codes.map(code => (
         <TouchableOpacity
           key={code.id}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 16,
-            paddingVertical: 16,
-            backgroundColor: '#fff',
-            borderBottomWidth: 1,
-            borderBottomColor: '#e5e7eb'
-          }}
+          style={[
+            styles.codeItem,
+            selectedIds.has(code.id) && { backgroundColor: theme.backgroundTertiary }
+          ]}
           onLongPress={() => onToggleSelection(code.id)}
           delayLongPress={500}
         >
           <TouchableOpacity
             style={[
-              {
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-                borderWidth: 2,
-                borderColor: '#d1d5db',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 16
-              },
-              selectedIds.has(code.id) && {
-                backgroundColor: '#d97706',
-                borderColor: '#d97706'
-              }
+              styles.selectBox,
+              selectedIds.has(code.id) && styles.selectBoxSelected
             ]}
             onPress={() => onToggleSelection(code.id)}
           >
             {selectedIds.has(code.id) && (
-              <FontAwesome6 name="check" size={12} color="#fff" />
+              <FontAwesome6 name="check" size={12} color={theme.buttonPrimaryText} />
             )}
           </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <ThemedText variant="h3" style={{ marginBottom: 2 }}>{code.letter}</ThemedText>
-            <ThemedText variant="body" style={{ color: '#6b7280' }}>{code.chinese}</ThemedText>
+          <View style={styles.codeContent}>
+            <ThemedText variant="h3" style={styles.letter}>{code.letter}</ThemedText>
+            <ThemedText variant="body" style={{ color: theme.textSecondary }}>{code.chinese}</ThemedText>
           </View>
           <TouchableOpacity
-            style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}
+            style={styles.editButton}
             onPress={() => onEdit(code)}
           >
-            <FontAwesome6 name="pencil" size={16} color="#9ca3af" />
+            <FontAwesome6 name="pencil" size={16} color={theme.textMuted} />
           </TouchableOpacity>
         </TouchableOpacity>
       ))}
@@ -339,6 +325,8 @@ export default function CodebaseScreen() {
                 selectedIds={selectedIds}
                 onToggleSelection={toggleSelection}
                 onEdit={handleEdit}
+                theme={theme}
+                styles={styles}
               />
             )}
             contentContainerStyle={styles.listContent}

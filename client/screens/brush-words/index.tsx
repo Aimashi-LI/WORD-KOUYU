@@ -2,6 +2,9 @@ import React, { useState, useMemo, useRef } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { Asset } from 'expo-asset';
 import Animated, {
   useAnimatedStyle,
   withSpring,
@@ -13,7 +16,6 @@ import Animated, {
   Extrapolation,
   SharedValue
 } from 'react-native-reanimated';
-import * as Sharing from 'expo-sharing';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -501,24 +503,40 @@ export default function BrushWordsScreen() {
       setShowShareModal(false);
       setIsSharing(true);
 
-      // 使用静态模板图片
-      const templateImage = require('@/assets/images/share-template.png');
+      console.log('[Share] 开始图片分享...');
+
+      // 使用 Asset.fromModule 加载静态图片资源
+      const asset = Asset.fromModule(require('@/assets/images/share-template.png'));
       
-      console.log('[Share] 使用模板图片分享');
+      // 如果资源还没有下载，先下载
+      if (!asset.localUri) {
+        console.log('[Share] 下载图片资源...');
+        await asset.downloadAsync();
+      }
+
+      console.log('[Share] 图片 URI:', asset.localUri);
+
+      if (!asset.localUri) {
+        throw new Error('无法获取图片 URI');
+      }
 
       // 检查设备是否支持分享
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(templateImage, {
+      const isAvailable = await Sharing.isAvailableAsync();
+      console.log('[Share] 设备支持分享:', isAvailable);
+
+      if (isAvailable) {
+        await Sharing.shareAsync(asset.localUri, {
           dialogTitle: `分享单词：${currentWord.word}`,
           mimeType: 'image/png',
         });
+        console.log('[Share] 分享成功');
         Alert.alert('成功', '图片分享成功');
       } else {
         Alert.alert('提示', '您的设备不支持分享功能');
       }
     } catch (error) {
       console.error('分享失败:', error);
-      Alert.alert('错误', '分享失败，请重试');
+      Alert.alert('错误', `分享失败：${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setIsSharing(false);
     }

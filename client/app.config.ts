@@ -69,6 +69,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         }
       ],
       "expo-sqlite",
+      "expo-asset",
       [
         "expo-document-picker",
         {
