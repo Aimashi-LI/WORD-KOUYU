@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { View, TouchableOpacity, Alert, ActivityIndicator, useWindowDimensions, ScrollView } from 'react-native';
+import { View, TouchableOpacity, Alert, ActivityIndicator, useWindowDimensions, ScrollView, Text } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -321,35 +321,41 @@ export default function CameraScanScreen() {
             </View>
 
             <ScrollView style={styles.resultsList}>
-              {recognizedWords.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.wordItem}
-                  onPress={() => handleSelectWord(item)}
-                >
-                  <View style={styles.wordItemHeader}>
-                    <ThemedText variant="h4" color={theme.textPrimary}>
-                      {item.word}
-                    </ThemedText>
-                    <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
-                  </View>
-                  {item.phonetic && (
-                    <ThemedText variant="body" color={theme.textSecondary}>
-                      {item.phonetic}
-                    </ThemedText>
-                  )}
-                  {item.partOfSpeech && (
-                    <ThemedText variant="caption" color={theme.textMuted}>
-                      {item.partOfSpeech}
-                    </ThemedText>
-                  )}
-                  {item.definition && (
-                    <ThemedText variant="body" color={theme.textSecondary}>
-                      {item.definition}
-                    </ThemedText>
-                  )}
-                </TouchableOpacity>
-              ))}
+              {recognizedWords.length > 0 ? (
+                recognizedWords.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.wordItem}
+                    onPress={() => handleSelectWord(item)}
+                  >
+                    <View style={styles.wordItemHeader}>
+                      <Text style={{ fontSize: 20, fontWeight: '600', color: '#44403C' }}>
+                        {item.word || 'Unknown'}
+                      </Text>
+                      <FontAwesome6 name="chevron-right" size={16} color="#A8A29E" />
+                    </View>
+                    {item.phonetic && (
+                      <Text style={{ fontSize: 16, color: '#78716C' }}>
+                        {item.phonetic}
+                      </Text>
+                    )}
+                    {item.partOfSpeech && (
+                      <Text style={{ fontSize: 12, color: '#A8A29E' }}>
+                        {item.partOfSpeech}
+                      </Text>
+                    )}
+                    {item.definition && (
+                      <Text style={{ fontSize: 16, color: '#78716C' }}>
+                        {item.definition}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={{ fontSize: 16, color: '#78716C', textAlign: 'center', padding: 20 }}>
+                  暂无识别结果
+                </Text>
+              )}
             </ScrollView>
 
             <TouchableOpacity
