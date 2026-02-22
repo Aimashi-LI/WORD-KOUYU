@@ -9,7 +9,8 @@ export const HIGH_FREQUENCY_WORDS = [
     word: "ability",
     phonetic: "/əˈbɪləti/",
     definition: "能力，才能",
-    example: "She has the ability to solve complex problems.",
+    example_en: "She has the ability to solve complex problems.",
+    example_cn: "她有能力解决复杂问题。",
     split: "a-bi-li-ty",
     mnemonic: "a(阿) + bi(比) + li(利) + ty(体) = 阿比的利体能力强",
     partOfSpeech: "n."
@@ -18,7 +19,8 @@ export const HIGH_FREQUENCY_WORDS = [
     word: "able",
     phonetic: "/ˈeɪbl/",
     definition: "能够的，有能力的",
-    example: "He is able to speak three languages.",
+    example_en: "He is able to speak three languages.",
+    example_cn: "他能够说三种语言。",
     split: "a-ble",
     mnemonic: "a(阿) + ble(百) = 阿能说百种语言",
     partOfSpeech: "adj."
@@ -27,7 +29,8 @@ export const HIGH_FREQUENCY_WORDS = [
     word: "about",
     phonetic: "/əˈbaʊt/",
     definition: "关于，大约",
-    example: "Tell me about your family.",
+    example_en: "Tell me about your family.",
+    example_cn: "告诉我关于你家庭的情况。",
     split: "a-bout",
     mnemonic: "a(阿) + bout(bout) = 阿在谈论bout",
     partOfSpeech: "prep."
@@ -36,7 +39,8 @@ export const HIGH_FREQUENCY_WORDS = [
     word: "above",
     phonetic: "/əˈbʌv/",
     definition: "在...上方",
-    example: "The bird flew above the trees.",
+    example_en: "The bird flew above the trees.",
+    example_cn: "鸟儿飞到了树梢之上。",
     split: "a-bove",
     mnemonic: "a(阿) + bove(love) = 阿在爱上面",
     partOfSpeech: "prep."
@@ -45,7 +49,8 @@ export const HIGH_FREQUENCY_WORDS = [
     word: "accept",
     phonetic: "/əkˈsept/",
     definition: "接受",
-    example: "I accept your invitation.",
+    example_en: "I accept your invitation.",
+    example_cn: "我接受你的邀请。",
     split: "ac-cept",
     mnemonic: "ac(阿克) + cept(sept) = 阿克接受sept",
     partOfSpeech: "v."
@@ -956,6 +961,16 @@ export async function importHighFrequencyWords(): Promise<number> {
         console.log(`[importHighFrequencyWords] 单词 "${wordData.word}" 已存在，跳过`);
         wordId = existingWord.id;
       } else {
+        // 处理例句：支持中英文对照格式（example_en + example_cn）和旧格式（example）
+        let sentence = '';
+        if ('example_en' in wordData && 'example_cn' in wordData) {
+          // 新格式：中英文对照
+          sentence = `${wordData.example_en}\n${wordData.example_cn}`;
+        } else if ('example' in wordData) {
+          // 旧格式：单一例句
+          sentence = wordData.example;
+        }
+        
         // 插入新单词
         const insertResult = await db.runAsync(
           `INSERT INTO words (
@@ -969,7 +984,7 @@ export async function importHighFrequencyWords(): Promise<number> {
             wordData.partOfSpeech,
             wordData.split,
             wordData.mnemonic,
-            wordData.example,
+            sentence,
             0.5,  // 默认难度（中等）
             0,    // 初始稳定性
             0,    // 初始平均响应时间

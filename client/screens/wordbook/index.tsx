@@ -43,6 +43,36 @@ export default function WordbookScreen() {
   const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
   const [showBatchActionModal, setShowBatchActionModal] = useState(false);
   const [showMoveToBookModal, setShowMoveToBookModal] = useState(false);
+  
+  // 搜索相关状态
+  const [searchText, setSearchText] = useState('');
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // 搜索功能
+  const handleSearch = async (text: string) => {
+    setSearchText(text);
+    
+    if (!text.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      const db = getDatabase();
+      const results = await db.getAllAsync<any>(
+        `SELECT * FROM words WHERE word LIKE ? OR definition LIKE ? OR split LIKE ? OR mnemonic LIKE ? ORDER BY created_at DESC LIMIT 50`,
+        [`%${text}%`, `%${text}%`, `%${text}%`, `%${text}%`]
+      );
+      setSearchResults(results);
+    } catch (error) {
+      console.error('搜索失败:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -54,13 +84,15 @@ export default function WordbookScreen() {
     try {
       await initDatabase();
       
-      // 加载词库列表
-      const bookList = await getAllWordbooks();
-      setWordbooks(bookList);
-      
-      // 如果有词库且没有当前选中的，默认选中第一个
-      if (bookList.length > 0 && currentWordbookId === null) {
-        setCurrentWordbookId(bookList[0].id);
+      // 加载词库列表（只在初始化时加载一次）
+      if (wordbooks.length === 0) {
+        const bookList = await getAllWordbooks();
+        setWordbooks(bookList);
+        
+        // 如果有词库且没有当前选中的，默认选中第一个
+        if (bookList.length > 0 && currentWordbookId === null) {
+          setCurrentWordbookId(bookList[0].id);
+        }
       }
       
       // 加载统计数据和单词列表
@@ -73,18 +105,7 @@ export default function WordbookScreen() {
           getAllWords()
         ]);
         setStats(wordStats);
-        
-        // 为每个单词添加词库信息
-        const wordsWithBookInfo = await Promise.all(
-          wordList.map(async (word) => {
-            const bookNames = await getWordbookNamesByWordId(word.id);
-            return {
-              ...word,
-              wordbooks: bookNames,
-            };
-          })
-        );
-        setWords(wordsWithBookInfo);
+        setWords(wordList);
       }
     } catch (error) {
       console.error('加载失败:', error);
@@ -96,13 +117,6 @@ export default function WordbookScreen() {
 
   const loadWordbookData = async (wordbookId: number) => {
     try {
-      const wordbook = await getWordbookWithCount(wordbookId);
-      if (!wordbook) return;
-      
-      // 更新词库列表（更新单词数）
-      const updatedBooks = await getAllWordbooks();
-      setWordbooks(updatedBooks);
-      
       // 加载统计数据
       const wordStats = await getWordbookStats(wordbookId);
       setStats(wordStats);
@@ -110,6 +124,12 @@ export default function WordbookScreen() {
       // 加载词库中的单词
       const wordList = await getWordsInWordbook(wordbookId);
       setWords(wordList);
+      
+      // 延迟更新词库列表（避免频繁刷新）
+      setTimeout(async () => {
+        const updatedBooks = await getAllWordbooks();
+        setWordbooks(updatedBooks);
+      }, 300);
     } catch (error) {
       console.error('加载词库数据失败:', error);
     }
@@ -306,6 +326,12 @@ export default function WordbookScreen() {
               onPress={() => router.push('/about')}
             >
               <FontAwesome6 name="circle-info" size={24} color={theme.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.topBarButton}
+              onPress={() => setShowSearchModal(true)}
+            >
+              <FontAwesome6 name="magnifying-glass" size={24} color={theme.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -806,6 +832,114 @@ export default function WordbookScreen() {
             </TouchableOpacity>
           </TouchableOpacity>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* 全局搜索 Modal */}
+      <Modal
+        visible={showSearchModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowSearchModal(false);
+          setSearchText('');
+          setSearchResults([]);
+        }}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            setShowSearchModal(false);
+            setSearchText('');
+            setSearchResults([]);
+          }}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            style={styles.modalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <ThemedText variant="h3" color={theme.textPrimary}>全局搜索</ThemedText>
+              <TouchableOpacity onPress={() => {
+                setShowSearchModal(false);
+                setSearchText('');
+                setSearchResults([]);
+              }}>
+                <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+            
+            {/* 搜索输入框 */}
+            <View style={styles.searchInputContainer}>
+              <FontAwesome6 name="magnifying-glass" size={20} color={theme.textMuted} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.textPrimary }]}
+                value={searchText}
+                onChangeText={handleSearch}
+                placeholder="搜索单词、释义、拆分、助记"
+                placeholderTextColor={theme.textMuted}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchText.length > 0 && (
+                <TouchableOpacity onPress={() => {
+                  setSearchText('');
+                  setSearchResults([]);
+                }}>
+                  <FontAwesome6 name="circle-xmark" size={20} color={theme.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            {/* 搜索结果 */}
+            <ScrollView style={styles.searchResultsContainer}>
+              {isSearching ? (
+                <View style={styles.searchLoadingContainer}>
+                  <ActivityIndicator size="large" color={theme.primary} />
+                  <ThemedText color={theme.textMuted} style={styles.searchLoadingText}>搜索中...</ThemedText>
+                </View>
+              ) : searchResults.length > 0 ? (
+                searchResults.map((word) => (
+                  <TouchableOpacity
+                    key={word.id}
+                    style={styles.searchResultItem}
+                    onPress={() => {
+                      setShowSearchModal(false);
+                      router.push('/word-detail', { id: word.id.toString() });
+                    }}
+                  >
+                    <View style={styles.searchResultHeader}>
+                      <ThemedText variant="h3" color={theme.primary}>{word.word}</ThemedText>
+                      {word.phonetic && (
+                        <ThemedText variant="caption" color={theme.textMuted}>{word.phonetic}</ThemedText>
+                      )}
+                    </View>
+                    <ThemedText variant="body" color={theme.textSecondary} numberOfLines={2}>
+                      {word.definition}
+                    </ThemedText>
+                    {word.mnemonic && (
+                      <View style={styles.mnemonicContainer}>
+                        <FontAwesome6 name="lightbulb" size={14} color={theme.accent} />
+                        <ThemedText variant="caption" color={theme.textSecondary} style={styles.mnemonicText}>
+                          {word.mnemonic}
+                        </ThemedText>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))
+              ) : searchText.length > 0 ? (
+                <View style={styles.searchEmptyContainer}>
+                  <FontAwesome6 name="magnifying-glass" size={48} color={theme.textMuted} />
+                  <ThemedText variant="body" color={theme.textMuted} style={styles.searchEmptyText}>
+                    未找到匹配的单词
+                  </ThemedText>
+                </View>
+              ) : null}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </Screen>
   );

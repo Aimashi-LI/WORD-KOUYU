@@ -415,5 +415,54 @@ export const createStyles = (theme: Theme) => {
       paddingVertical: Spacing.sm,
       fontSize: 16,
     },
+    // 搜索相关样式
+    searchInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    searchInput: {
+      flex: 1,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.sm,
+      fontSize: 16,
+    },
+    searchResultsContainer: {
+      flex: 1,
+    },
+    searchLoadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: Spacing.md,
+    },
+    searchLoadingText: {
+      marginTop: Spacing.md,
+    },
+    searchResultItem: {
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
+    },
+    searchResultHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginBottom: Spacing.xs,
+    },
+    searchEmptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: Spacing.md,
+    },
+    searchEmptyText: {
+      marginTop: Spacing.md,
+    },
   });
 };
