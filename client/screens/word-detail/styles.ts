@@ -145,5 +145,37 @@ export const createStyles = (theme: Theme) => {
     cancelButton: {
       opacity: 1,
     },
+    keyboardModalOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'transparent',
+    },
+    keyboardCloseArea: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    keyboardDragHandle: {
+      width: 40,
+      height: 4,
+      backgroundColor: theme.border,
+      borderRadius: 2,
+      marginBottom: Spacing.md,
+    },
+    keyboardContainer: {
+      backgroundColor: theme.backgroundRoot,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: Spacing.xl,
+      paddingBottom: Spacing['2xl'],
+      paddingTop: Spacing.md,
+    },
+    keyboardHideButton: {
+      marginTop: Spacing.md,
+      paddingVertical: Spacing.md,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
   });
 };

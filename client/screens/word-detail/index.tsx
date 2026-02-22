@@ -10,6 +10,7 @@ import { createStyles } from './styles';
 import { getWordById, updateWord, deleteWord, addReviewLog, getRecentReviewLogs } from '@/database/wordDao';
 import { initDatabase } from '@/database';
 import { Word, NewWord } from '@/database/types';
+import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
 
 type EditMode = 'none' | 'edit';
 
@@ -30,6 +31,7 @@ export default function WordDetailScreen() {
   const [editForm, setEditForm] = useState<Partial<NewWord>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
 
   React.useEffect(() => {
     loadWordDetail();
@@ -308,8 +310,10 @@ export default function WordDetailScreen() {
                   style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]}
                   value={editForm.phonetic}
                   onChangeText={(text) => setEditForm({ ...editForm, phonetic: text })}
-                  placeholder="请输入音标"
+                  placeholder="点击输入音标"
                   placeholderTextColor={theme.textMuted}
+                  onFocus={() => setShowPhoneticKeyboard(true)}
+                  onBlur={() => setShowPhoneticKeyboard(false)}
                 />
 
                 <ThemedText variant="caption" color={theme.textMuted} style={styles.label}>
@@ -398,6 +402,40 @@ export default function WordDetailScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* 音标键盘 */}
+      <Modal
+        visible={showPhoneticKeyboard}
+        transparent
+        animationType="slide"
+      >
+        <View style={styles.keyboardModalOverlay}>
+          <TouchableOpacity
+            style={styles.keyboardCloseArea}
+            activeOpacity={1}
+            onPress={() => setShowPhoneticKeyboard(false)}
+          >
+            <View style={styles.keyboardDragHandle} />
+          </TouchableOpacity>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={0}
+          >
+            <View style={styles.keyboardContainer}>
+              <PhoneticKeyboard
+                onKeyPress={(symbol) => setEditForm({ ...editForm, phonetic: (editForm.phonetic || '') + symbol })}
+                onDelete={() => setEditForm({ ...editForm, phonetic: (editForm.phonetic || '').slice(0, -1) })}
+              />
+              <TouchableOpacity
+                style={styles.keyboardHideButton}
+                onPress={() => setShowPhoneticKeyboard(false)}
+              >
+                <ThemedText variant="body" color={theme.buttonPrimaryText}>完成</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </Screen>
   );
