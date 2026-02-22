@@ -323,6 +323,14 @@ export default function WordbookScreen() {
 
           <TouchableOpacity
             style={styles.actionButton}
+            onPress={() => router.push(currentWordbookId ? `/paste-import?wordbookId=${currentWordbookId}` : '/paste-import')}
+          >
+            <FontAwesome6 name="clipboard" size={24} color={theme.buttonPrimaryText} />
+            <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>文本粘贴</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => router.push(currentWordbookId ? `/import-words?wordbookId=${currentWordbookId}` : '/import-words')}
           >
             <FontAwesome6 name="file-import" size={24} color={theme.buttonPrimaryText} />

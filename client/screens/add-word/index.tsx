@@ -189,8 +189,6 @@ export default function AddWordScreen() {
   
   // UI 状态
   const [loading, setLoading] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importText, setImportText] = useState('');
 
   // 加载编码库
   useEffect(() => {
@@ -457,89 +455,6 @@ export default function AddWordScreen() {
     }
   };
 
-  // 处理批量导入
-  const handleImport = async () => {
-    if (!importText.trim()) {
-      Alert.alert('提示', '请输入导入内容');
-      return;
-    }
-
-    const lines = importText.split('\n').filter(line => line.trim());
-    let successCount = 0;
-    let failedCount = 0;
-    const importedWordIds: number[] = [];
-
-    for (const line of lines) {
-      try {
-        const wordData = parseImportLine(line);
-        if (wordData) {
-          const wordId = await createWord(wordData);
-          importedWordIds.push(wordId);
-          successCount++;
-        } else {
-          failedCount++;
-        }
-      } catch (error) {
-        console.error('导入失败:', line, error);
-        failedCount++;
-      }
-    }
-
-    // 如果有词库ID，将导入的单词添加到词库
-    if (wordbookId && importedWordIds.length > 0) {
-      try {
-        for (const wordId of importedWordIds) {
-          await addWordToWordbook(parseInt(wordbookId), wordId);
-        }
-      } catch (error) {
-        console.error('添加到词库失败:', error);
-      }
-    }
-
-    Alert.alert(
-      '导入完成',
-      `成功: ${successCount}，失败: ${failedCount}`,
-      [
-        { text: '确定', onPress: () => {
-          setShowImportModal(false);
-          setImportText('');
-          router.back();
-        }}
-      ]
-    );
-  };
-
-  // 解析导入行
-  const parseImportLine = (line: string): NewWord | null => {
-    // 支持格式：word pos definition 或 word,definition
-    let parts: string[];
-    
-    if (line.includes(',')) {
-      parts = line.split(',').map(p => p.trim());
-    } else if (line.includes('|')) {
-      parts = line.split('|').map(p => p.trim());
-    } else {
-      parts = line.split(/\s+/).filter(p => p);
-    }
-
-    if (parts.length < 2) return null;
-
-    const wordText = parts[0].replace(/[^a-z]/gi, '');
-    if (!wordText) return null;
-
-    const pos = parts[1] || '';
-    const definition = parts[2] || parts[1] || '';
-
-    return {
-      word: wordText,
-      phonetic: undefined,
-      definition: definition,
-      partOfSpeech: pos,
-      split: undefined,
-      sentence: undefined
-    };
-  };
-
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -549,9 +464,7 @@ export default function AddWordScreen() {
             <FontAwesome6 name="arrow-left" size={24} color={theme.textPrimary} />
           </TouchableOpacity>
           <ThemedText variant="h2" color={theme.textPrimary}>添加单词</ThemedText>
-          <TouchableOpacity onPress={() => setShowImportModal(true)} style={styles.importButton}>
-            <FontAwesome6 name="file-import" size={20} color={theme.primary} />
-          </TouchableOpacity>
+          <View style={styles.placeholder} />
         </View>
 
         {/* 单词输入 */}
@@ -771,64 +684,6 @@ export default function AddWordScreen() {
           * 为必填项 • 拆分功能可帮助记忆单词
         </ThemedText>
       </ScrollView>
-
-      {/* 批量导入弹窗 */}
-      <Modal
-        visible={showImportModal}
-        transparent
-        animationType="slide"
-      >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <ThemedText variant="h3" color={theme.textPrimary}>批量导入</ThemedText>
-                <TouchableOpacity onPress={() => setShowImportModal(false)}>
-                  <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
-                </TouchableOpacity>
-              </View>
-
-              <ThemedText variant="body" color={theme.textSecondary} style={styles.importHint}>
-                支持格式：每行一个单词，单词和释义用逗号、空格或竖线分隔
-              </ThemedText>
-              <ThemedText variant="caption" color={theme.textMuted} style={styles.importExample}>
-                示例：apple n.苹果, fruit
-              </ThemedText>
-
-              <TextInput
-                style={styles.importTextarea}
-                placeholder="请输入单词列表，每行一个单词"
-                placeholderTextColor={theme.textMuted}
-                value={importText}
-                onChangeText={setImportText}
-                multiline
-                numberOfLines={10}
-              />
-
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.modalCancelButton}
-                  onPress={() => {
-                    setShowImportModal(false);
-                    setImportText('');
-                  }}
-                >
-                  <ThemedText variant="body" color={theme.textSecondary}>取消</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.modalConfirmButton}
-                  onPress={handleImport}
-                >
-                  <ThemedText variant="body" color={theme.buttonPrimaryText}>导入</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
 
       {/* 音标键盘 */}
       <Modal

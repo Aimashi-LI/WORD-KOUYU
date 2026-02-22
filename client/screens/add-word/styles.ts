@@ -21,6 +21,9 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
       alignItems: 'center',
     },
+    placeholder: {
+      width: 40,
+    },
     importButton: {
       width: 40,
       height: 40,

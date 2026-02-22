@@ -44,6 +44,13 @@ export default function RootLayout() {
               }} 
             />
             <Stack.Screen 
+              name="paste-import" 
+              options={{ 
+                title: "文本粘贴",
+                presentation: 'card'
+              }} 
+            />
+            <Stack.Screen 
               name="word-detail" 
               options={{ 
                 title: "单词详情",
