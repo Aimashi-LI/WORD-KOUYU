@@ -107,6 +107,9 @@ export const createStyles = (theme: Theme) => {
       flex: 1,
       padding: Spacing.lg,
     },
+    docText: {
+      lineHeight: 24,
+    },
     modalFooter: {
       padding: Spacing.lg,
       borderTopWidth: 1,

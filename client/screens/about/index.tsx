@@ -11,57 +11,185 @@ import { createStyles } from './styles';
 // 从 package.json 读取版本号
 const APP_VERSION = '1.0.0';
 const APP_NAME = '编码记忆法';
-const DEVELOPER = '开发者';
-const CONTACT_EMAIL = 'contact@example.com'; // 请替换为您的联系邮箱
+const DEVELOPER = '小浣熊';
+const CONTACT_EMAIL = '2487717060@qq.com';
 
-// 法律文档链接（可以使用在线链接，或者直接在应用内展示）
+// 法律文档内容（简化版，用于应用内展示）
 const LEGAL_DOCS = {
-  privacyPolicy: 'https://example.com/privacy', // 请替换为实际的在线文档链接
-  termsOfService: 'https://example.com/terms',
-  permissions: 'https://example.com/permissions',
+  privacyPolicy: `# 隐私政策
+
+**最后更新日期：2025年1月**
+
+## 引言
+欢迎使用"编码记忆法"（以下简称"本应用"）。我们非常重视您的隐私权和数据安全。
+
+本应用是一款完全离线的单词学习工具，所有数据均存储在您的设备本地，我们不会收集、存储或传输您的任何个人信息到云端服务器。
+
+## 信息收集
+本应用**不会主动收集**您的任何个人信息，包括：
+- ❌ 个人身份信息（姓名、电话、邮箱等）
+- ❌ 设备信息（IMEI、MAC地址等）
+- ❌ 地理位置
+- ❌ 照片/图像
+- ❌ 录音
+- ❌ 通讯录
+- ❌ 使用日志
+
+## 本地存储的数据
+以下数据仅存储在您的设备本地 SQLite 数据库中：
+- 单词数据、音标、释义、助记等学习内容
+- 学习进度、复习计划、掌握状态
+- 自定义编码库
+- 应用设置（如主题、通知等）
+
+## 信息使用
+由于本应用不收集您的个人信息，所有本地数据仅用于：
+- 提供单词学习功能
+- 跟踪您的学习进度
+- 提供智能复习提醒
+- 保存您的个性化设置
+
+## 数据共享
+我们**不会**将您的数据共享给任何第三方。
+
+## 您的权利
+您对本地的所有数据拥有完全的控制权，可以：
+- ✅ 查看所有存储的单词数据
+- ✅ 编辑或删除任何单词
+- ✅ 导出所有数据
+- ✅ 清空应用数据
+
+## 联系我们
+如有疑问，请通过邮件联系我们：${CONTACT_EMAIL}`,
+
+  termsOfService: `# 用户协议
+
+**最后更新日期：2025年1月**
+
+## 协议的接受
+使用本应用即表示您已阅读、理解并同意受本协议条款的约束。
+
+## 应用描述
+"编码记忆法"是一款基于艾宾浩斯记忆法和编码拆分技术的单词学习应用，主要功能包括：
+- 单词本管理
+- 智能复习
+- 刷单词模式
+- 数据导入导出
+
+## 用户权利与义务
+### 用户权利
+- ✅ 自由使用本应用提供的所有功能
+- ✅ 对本地数据拥有完全控制权
+- ✅ 导出和备份您的学习数据
+- ✅ 获得应用更新和技术支持
+
+### 用户义务
+1. **合法使用**
+   - 仅将本应用用于个人学习和记忆训练
+   - 不得将本应用用于任何非法或违反法律法规的目的
+
+2. **数据责任**
+   - 您对添加到应用的所有单词数据负责
+   - 确保导入的内容不侵犯第三方的知识产权
+   - 妥善保管导出的数据文件，避免泄露给他人
+
+3. **禁止行为**
+   - 不得逆向工程、反编译或反汇编本应用
+   - 不得破解、修改或复制本应用的代码
+   - 不得删除或修改应用中的版权声明
+   - 不得将本应用用于商业用途（未经授权）
+
+4. **内容规范**
+   - 不得添加违法违规、暴力色情、政治敏感等内容
+   - 不得添加侵犯他人商标、专利、著作权的内容
+   - 遵守当地法律法规和公序良俗
+
+## 知识产权
+本应用的所有知识产权归开发者所有。
+
+## 免责声明
+- 本应用以"现状"和"可用"的基础提供，不提供任何明示或暗示的保证
+- 我们不保证应用永不出现故障、错误或不中断
+- 学习效果因人而异，我们不保证使用本应用一定能达到预期的学习效果
+
+## 联系我们
+如有疑问，请通过邮件联系我们：${CONTACT_EMAIL}`,
+
+  permissions: `# 应用权限说明
+
+**最后更新日期：2025年1月**
+
+## 引言
+本应用是一款完全离线的单词学习工具。我们遵循"最小权限原则"，仅在必要时才请求系统权限。
+
+## Android 权限说明
+### 存储权限（可选）
+**用途说明**：
+- 导出词库数据为 CSV/JSON 文件到设备存储
+- 从设备存储导入词库文件
+
+**请求时机**：仅在您点击"导出词库"或"导入词库"功能时请求
+
+**是否必需**：❌ 否（可选权限）
+
+### 其他权限
+- ❌ 网络权限：不使用（应用完全离线运行）
+- ❌ 相机权限：不使用
+- ❌ 麦克风权限：不使用
+- ❌ 位置权限：不使用
+- ❌ 通讯录权限：不使用
+
+## iOS 权限说明
+### 照片库权限（可选）
+**用途说明**：
+- 选择保存导出文件的存储位置
+- 选择要导入的词库文件
+
+**是否必需**：❌ 否（可选权限）
+
+### 其他权限
+- ❌ 相机权限：不使用
+- ❌ 麦克风权限：不使用
+- ❌ 位置权限：不使用
+
+## 权限请求原则
+我们承诺：
+- ✅ 仅申请必要的最小权限
+- ✅ 明确说明权限用途
+- ✅ 不在后台滥用权限
+- ✅ 不收集与功能无关的数据
+
+## 联系我们
+如有疑问，请通过邮件联系我们：${CONTACT_EMAIL}`
 };
 
 export default function AboutScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<{ title: string; content: string } | null>(null);
 
-  const handleOpenLink = async (url: string, docName: string) => {
+  const handleSendEmail = async () => {
     try {
-      const supported = await Linking.canOpenURL(url);
+      const emailUrl = `mailto:${CONTACT_EMAIL}?subject=编码记忆法-反馈与建议`;
+      const supported = await Linking.canOpenURL(emailUrl);
       if (supported) {
-        await Linking.openURL(url);
+        await Linking.openURL(emailUrl);
       } else {
         Alert.alert(
           '无法打开',
-          `无法打开${docName}，请检查网络连接或链接是否正确。`
+          '无法打开邮件应用，请检查设备是否支持邮件功能。'
         );
       }
     } catch (error) {
       Alert.alert(
         '错误',
-        `打开${docName}失败，请稍后重试。`
+        '打开邮件应用失败，请稍后重试。'
       );
     }
   };
 
-  const showLegalDoc = (docName: string) => {
-    setSelectedDoc(docName);
-  };
-
-  const getDocContent = (docName: string) => {
-    // 这里返回文档的摘要内容
-    // 实际使用时，可以从文档文件中读取完整内容
-    switch (docName) {
-      case '隐私政策':
-        return '本应用完全离线运行，所有数据存储在本地，我们不会收集、存储或传输您的任何个人信息到云端服务器。\n\n详细信息请访问我们的在线文档。';
-      case '用户协议':
-        return '欢迎使用编码记忆法！本应用是一款基于艾宾浩斯记忆法和编码拆分技术的单词学习应用。\n\n详细信息请访问我们的在线文档。';
-      case '应用权限说明':
-        return '本应用仅使用必要的最小权限。仅在使用导出/导入功能时可能需要存储权限。\n\n详细信息请访问我们的在线文档。';
-      default:
-        return '';
-    }
+  const showLegalDoc = (title: string, content: string) => {
+    setSelectedDoc({ title, content });
   };
 
   return (
@@ -89,7 +217,7 @@ export default function AboutScreen() {
 
           <TouchableOpacity
             style={styles.linkItem}
-            onPress={() => handleOpenLink(LEGAL_DOCS.privacyPolicy, '隐私政策')}
+            onPress={() => showLegalDoc('隐私政策', LEGAL_DOCS.privacyPolicy)}
           >
             <View style={styles.linkContent}>
               <FontAwesome6 name="shield-halved" size={20} color={theme.primary} style={styles.linkIcon} />
@@ -100,7 +228,7 @@ export default function AboutScreen() {
 
           <TouchableOpacity
             style={styles.linkItem}
-            onPress={() => handleOpenLink(LEGAL_DOCS.termsOfService, '用户协议')}
+            onPress={() => showLegalDoc('用户协议', LEGAL_DOCS.termsOfService)}
           >
             <View style={styles.linkContent}>
               <FontAwesome6 name="file-contract" size={20} color={theme.primary} style={styles.linkIcon} />
@@ -111,7 +239,7 @@ export default function AboutScreen() {
 
           <TouchableOpacity
             style={styles.linkItem}
-            onPress={() => handleOpenLink(LEGAL_DOCS.permissions, '应用权限说明')}
+            onPress={() => showLegalDoc('应用权限说明', LEGAL_DOCS.permissions)}
           >
             <View style={styles.linkContent}>
               <FontAwesome6 name="unlock-keyhole" size={20} color={theme.primary} style={styles.linkIcon} />
@@ -174,28 +302,11 @@ export default function AboutScreen() {
 
           <TouchableOpacity
             style={styles.linkItem}
-            onPress={() => handleOpenLink(`mailto:${CONTACT_EMAIL}`, '邮箱')}
+            onPress={handleSendEmail}
           >
             <View style={styles.linkContent}>
               <FontAwesome6 name="envelope" size={20} color={theme.primary} style={styles.linkIcon} />
               <ThemedText variant="body" color={theme.textPrimary}>发送邮件</ThemedText>
-            </View>
-            <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} style={styles.linkArrow} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.linkItem}
-            onPress={() => {
-              Alert.alert(
-                '反馈与建议',
-                '如果您有任何问题或建议，欢迎通过邮件联系我们：\n\n' + CONTACT_EMAIL,
-                [{ text: '确定' }]
-              );
-            }}
-          >
-            <View style={styles.linkContent}>
-              <FontAwesome6 name="comment-dots" size={20} color={theme.primary} style={styles.linkIcon} />
-              <ThemedText variant="body" color={theme.textPrimary}>反馈与建议</ThemedText>
             </View>
             <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} style={styles.linkArrow} />
           </TouchableOpacity>
@@ -225,7 +336,7 @@ export default function AboutScreen() {
         </View>
       </ScrollView>
 
-      {/* 法律文档预览 Modal */}
+      {/* 法律文档展示 Modal */}
       <Modal
         visible={selectedDoc !== null}
         transparent
@@ -244,7 +355,7 @@ export default function AboutScreen() {
             <ThemedView level="default" style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <ThemedText variant="h3" color={theme.textPrimary}>
-                  {selectedDoc}
+                  {selectedDoc?.title}
                 </ThemedText>
                 <TouchableOpacity onPress={() => setSelectedDoc(null)}>
                   <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
@@ -252,26 +363,18 @@ export default function AboutScreen() {
               </View>
 
               <ScrollView style={styles.modalBody}>
-                <ThemedText variant="body" color={theme.textSecondary}>
-                  {selectedDoc && getDocContent(selectedDoc)}
+                <ThemedText variant="body" color={theme.textSecondary} style={styles.docText}>
+                  {selectedDoc?.content}
                 </ThemedText>
               </ScrollView>
 
               <View style={styles.modalFooter}>
                 <TouchableOpacity
                   style={styles.modalButton}
-                  onPress={() => {
-                    if (selectedDoc === '隐私政策') {
-                      handleOpenLink(LEGAL_DOCS.privacyPolicy, '隐私政策');
-                    } else if (selectedDoc === '用户协议') {
-                      handleOpenLink(LEGAL_DOCS.termsOfService, '用户协议');
-                    } else if (selectedDoc === '应用权限说明') {
-                      handleOpenLink(LEGAL_DOCS.permissions, '应用权限说明');
-                    }
-                  }}
+                  onPress={() => setSelectedDoc(null)}
                 >
                   <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>
-                    查看完整文档
+                    关闭
                   </ThemedText>
                 </TouchableOpacity>
               </View>
