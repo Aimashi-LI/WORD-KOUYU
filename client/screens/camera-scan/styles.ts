@@ -194,7 +194,7 @@ export const createStyles = (theme: Theme) => {
     },
     resultsContainer: {
       width: '100%',
-      maxHeight: '80%',
+      height: '80%',
       backgroundColor: '#fff',
       borderRadius: BorderRadius.xl,
       overflow: 'hidden',
