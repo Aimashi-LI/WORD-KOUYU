@@ -5,6 +5,7 @@
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { extractValidWords } from './ocr-common';
+import RnTesseractOcr from 'react-native-tesseract-ocr';
 
 // 通用工具函数
 export * from './ocr-common';
@@ -39,7 +40,6 @@ export const recognizeText = async (imageUri: string) => {
     }
 
     // 执行识别
-    const RnTesseractOcr = require('react-native-tesseract-ocr');
     const text = await RnTesseractOcr.recognize(imageUri, 'ENG', {
       level: 'BASE', // 识别精度: BASE (快速), BEST (高精度)
     });
