@@ -5,6 +5,7 @@ export const createStyles = (theme: Theme) => {
   return StyleSheet.create({
     container: {
       flex: 1,
+      position: 'relative',
     },
     camera: {
       flex: 1,
@@ -15,35 +16,35 @@ export const createStyles = (theme: Theme) => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'transparent',
+      zIndex: 10,
     },
     mask: {
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
       position: 'absolute',
     },
     maskTop: {
       top: 0,
       left: 0,
       right: 0,
-      height: '30%', // 与扫描框顶部位置一致
+      height: '30%',
     },
     maskBottom: {
       bottom: 0,
       left: 0,
       right: 0,
-      height: '45%', // 与扫描框底部位置一致
+      height: '45%',
     },
     maskLeft: {
       top: '30%',
       bottom: '45%',
       left: 0,
-      width: '15%', // 与扫描框左侧位置一致
+      width: '15%',
     },
     maskRight: {
       top: '30%',
       bottom: '45%',
       right: 0,
-      width: '15%', // 与扫描框右侧位置一致
+      width: '15%',
     },
     scanBox: {
       position: 'absolute',
@@ -51,6 +52,7 @@ export const createStyles = (theme: Theme) => {
       left: '15%',
       width: '70%',
       height: '25%',
+      zIndex: 15,
     },
     scanCorner: {
       position: 'absolute',
@@ -91,6 +93,7 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.lg,
       backgroundColor: 'rgba(0, 0, 0, 0.7)',
       alignItems: 'center',
+      zIndex: 15,
     },
     flipButton: {
       position: 'absolute',
@@ -103,6 +106,7 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: 'rgba(255, 255, 255, 0.3)',
       justifyContent: 'center',
       alignItems: 'center',
+      zIndex: 20,
     },
     captureButton: {
       position: 'absolute',
@@ -115,6 +119,7 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: '#fff',
       justifyContent: 'center',
       alignItems: 'center',
+      zIndex: 20,
     },
     captureButtonInner: {
       width: 60,
@@ -127,6 +132,7 @@ export const createStyles = (theme: Theme) => {
       top: 50,
       right: 20,
       padding: Spacing.md,
+      zIndex: 20,
     },
     loadingContainer: {
       flex: 1,
@@ -169,6 +175,7 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: 'rgba(0, 0, 0, 0.7)',
       justifyContent: 'center',
       alignItems: 'center',
+      zIndex: 100,
     },
     scanningText: {
       marginTop: Spacing.lg,
@@ -183,6 +190,7 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
       alignItems: 'center',
       padding: Spacing.xl,
+      zIndex: 100,
     },
     resultsContainer: {
       width: '100%',
