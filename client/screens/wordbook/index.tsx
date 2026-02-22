@@ -35,6 +35,10 @@ export default function WordbookScreen() {
   
   // 用于跟踪最后一次词库切换的 ID，避免多次更新词库列表
   const lastWordbookIdRef = useRef<number | null>(null);
+  // 用于跟踪是否正在更新词库列表
+  const isUpdatingRef = useRef(false);
+  // 用于记录最后更新时每个词库的单词数
+  const lastWordCountsRef = useRef<Map<number, number>>(new Map());
   
   // 编辑词库相关状态
   const [editingWordbook, setEditingWordbook] = useState<Wordbook | null>(null);
@@ -116,6 +120,11 @@ export default function WordbookScreen() {
         console.log('[loadData] 去重后词库数量:', uniqueBooks.length);
         console.log('[loadData] 去重后词库ID:', uniqueBooks.map(b => b.id));
         
+        // 记录初始单词数
+        uniqueBooks.forEach(book => {
+          lastWordCountsRef.current.set(book.id, book.word_count);
+        });
+        
         setWordbooks(uniqueBooks);
         
         // 如果有词库且没有当前选中的，默认选中第一个
@@ -147,20 +156,22 @@ export default function WordbookScreen() {
 
   const loadWordbookData = async (wordbookId: number) => {
     try {
-      // 只加载词库中的单词列表，不修改全局统计
+      // 只加载词库中的单词列表
       const wordList = await getWordsInWordbook(wordbookId);
       setWords(wordList);
       
       // 延迟更新词库列表（确保单词数正确）
       // 使用 ref 跟踪最后一次词库切换，避免快速切换时多次更新
       lastWordbookIdRef.current = wordbookId;
+      
       setTimeout(async () => {
         // 只有当最后一次切换的 ID 与当前 ID 一致时才更新
-        if (lastWordbookIdRef.current === wordbookId) {
+        if (lastWordbookIdRef.current === wordbookId && !isUpdatingRef.current) {
           try {
             console.log('[loadWordbookData] 开始更新词库列表，当前ID:', wordbookId);
+            isUpdatingRef.current = true;
             
-            // 重新计算所有词库的单词数，修复数据错误
+            // 重新计算所有词库的单词数
             await recalculateAllWordbookCounts();
             
             const updatedBooks = await getAllWordbooks();
@@ -173,16 +184,35 @@ export default function WordbookScreen() {
             );
             console.log('[loadWordbookData] 去重后词库数量:', uniqueBooks.length);
             
-            // 检查是否有重复的 ID
-            const idSet = new Set(uniqueBooks.map(b => b.id));
-            if (idSet.size !== uniqueBooks.length) {
-              console.error('[loadWordbookData] 发现重复的词库ID！');
-            }
+            // 检查单词数是否有变化，只有变化时才更新
+            const hasChanges = uniqueBooks.some(book => {
+              const lastCount = lastWordCountsRef.current.get(book.id);
+              return lastCount !== book.word_count;
+            });
             
-            setWordbooks(uniqueBooks);
+            if (hasChanges) {
+              console.log('[loadWordbookData] 检测到单词数变化，更新词库列表');
+              
+              // 更新最后记录的单词数
+              uniqueBooks.forEach(book => {
+                lastWordCountsRef.current.set(book.id, book.word_count);
+              });
+              
+              setWordbooks(uniqueBooks);
+            } else {
+              console.log('[loadWordbookData] 单词数无变化，跳过更新');
+            }
           } catch (error) {
             console.error('更新词库列表失败:', error);
+          } finally {
+            isUpdatingRef.current = false;
           }
+        } else {
+          console.log('[loadWordbookData] 跳过更新，原因:', {
+            currentRef: lastWordbookIdRef.current,
+            wordbookId,
+            isUpdating: isUpdatingRef.current
+          });
         }
       }, 300);
     } catch (error) {
