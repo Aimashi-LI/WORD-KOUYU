@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Stack } from 'expo-router';
+import { Stack, useGlobalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { LogBox } from 'react-native';
+import { LogBox, Alert, Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ColorSchemeProvider } from '@/hooks/useColorScheme';
 import { ThemeSwitchProvider } from '@/hooks/useThemeSwitch';
+import { getAllWords, deleteWords } from '@/database/wordDao';
 
 LogBox.ignoreLogs([
   "TurboModuleRegistry.getEnforcing(...): 'RNMapsAirModule' could not be found",
@@ -16,6 +17,45 @@ LogBox.ignoreLogs([
 ]);
 
 export default function RootLayout() {
+  const params = useGlobalSearchParams();
+
+  // 开发模式：自动删除所有单词（仅在 URL 中包含 action=deleteAllWords 时执行）
+  useEffect(() => {
+    if (params.action === 'deleteAllWords') {
+      const executeDelete = async () => {
+        try {
+          const words = await getAllWords();
+          if (words.length === 0) {
+            Alert.alert('提示', '数据库中没有单词');
+            return;
+          }
+
+          const ids = words.map(w => w.id);
+          await deleteWords(ids);
+
+          const onConfirm = () => {
+            if (Platform.OS === 'web') {
+              window.location.reload();
+            }
+          };
+
+          Alert.alert(
+            '删除成功',
+            `已删除 ${ids.length} 个单词`,
+            [
+              { text: '确定', onPress: onConfirm }
+            ]
+          );
+        } catch (error) {
+          console.error('删除失败:', error);
+          Alert.alert('删除失败', '请查看控制台了解详情');
+        }
+      };
+
+      executeDelete();
+    }
+  }, [params.action]);
+
   return (
     <AuthProvider>
       <ColorSchemeProvider>
