@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { View, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
@@ -33,6 +33,9 @@ export default function WordbookScreen() {
   const [newWordbookName, setNewWordbookName] = useState('');
   const [newWordbookDesc, setNewWordbookDesc] = useState('');
   
+  // 用于跟踪最后一次词库切换的 ID，避免多次更新词库列表
+  const lastWordbookIdRef = useRef<number | null>(null);
+  
   // 编辑词库相关状态
   const [editingWordbook, setEditingWordbook] = useState<Wordbook | null>(null);
   const [showEditWordbookModal, setShowEditWordbookModal] = useState(false);
@@ -61,12 +64,18 @@ export default function WordbookScreen() {
     
     setIsSearching(true);
     try {
+      await initDatabase();
       const db = getDatabase();
+      // 使用 DISTINCT 去重，避免同一个单词出现多次
       const results = await db.getAllAsync<any>(
-        `SELECT * FROM words WHERE word LIKE ? OR definition LIKE ? OR split LIKE ? OR mnemonic LIKE ? ORDER BY created_at DESC LIMIT 50`,
+        `SELECT DISTINCT * FROM words WHERE word LIKE ? OR definition LIKE ? OR split LIKE ? OR mnemonic LIKE ? ORDER BY created_at DESC LIMIT 50`,
         [`%${text}%`, `%${text}%`, `%${text}%`, `%${text}%`]
       );
-      setSearchResults(results);
+      // JavaScript 层面再次去重，确保没有重复的 ID
+      const uniqueResults = Array.from(
+        new Map(results.map(word => [word.id, word])).values()
+      );
+      setSearchResults(uniqueResults);
     } catch (error) {
       console.error('搜索失败:', error);
     } finally {
@@ -88,11 +97,15 @@ export default function WordbookScreen() {
       // 加载词库列表（只在初始化时加载一次）
       if (wordbooks.length === 0) {
         const bookList = await getAllWordbooks();
-        setWordbooks(bookList);
+        // 去重：根据 ID 去重，确保每个词库只出现一次
+        const uniqueBooks = Array.from(
+          new Map(bookList.map(book => [book.id, book])).values()
+        );
+        setWordbooks(uniqueBooks);
         
         // 如果有词库且没有当前选中的，默认选中第一个
-        if (bookList.length > 0 && currentWordbookId === null) {
-          setCurrentWordbookId(bookList[0].id);
+        if (uniqueBooks.length > 0 && currentWordbookId === null) {
+          setCurrentWordbookId(uniqueBooks[0].id);
         }
       }
       
@@ -123,9 +136,22 @@ export default function WordbookScreen() {
       setWords(wordList);
       
       // 延迟更新词库列表（确保单词数正确）
+      // 使用 ref 跟踪最后一次词库切换，避免快速切换时多次更新
+      lastWordbookIdRef.current = wordbookId;
       setTimeout(async () => {
-        const updatedBooks = await getAllWordbooks();
-        setWordbooks(updatedBooks);
+        // 只有当最后一次切换的 ID 与当前 ID 一致时才更新
+        if (lastWordbookIdRef.current === wordbookId) {
+          try {
+            const updatedBooks = await getAllWordbooks();
+            // 去重：根据 ID 去重，确保每个词库只出现一次
+            const uniqueBooks = Array.from(
+              new Map(updatedBooks.map(book => [book.id, book])).values()
+            );
+            setWordbooks(uniqueBooks);
+          } catch (error) {
+            console.error('更新词库列表失败:', error);
+          }
+        }
       }, 300);
     } catch (error) {
       console.error('加载词库数据失败:', error);
