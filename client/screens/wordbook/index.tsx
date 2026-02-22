@@ -128,9 +128,10 @@ export default function WordbookScreen() {
       const globalStats = await getWordStats();
       setStats(globalStats);
       
-      // 加载单词列表
+      // 加载单词列表（初始化时不调用 loadWordbookData，避免重复设置词库列表）
       if (currentWordbookId) {
-        await loadWordbookData(currentWordbookId);
+        const wordList = await getWordsInWordbook(currentWordbookId);
+        setWords(wordList);
       } else {
         // 如果没有词库，加载全部单词
         const wordList = await getAllWords();
