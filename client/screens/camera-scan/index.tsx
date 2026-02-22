@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { View, TouchableOpacity, Alert, ActivityIndicator, useWindowDimensions, ScrollView } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -9,7 +9,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { createStyles } from './styles';
-import { recognizeText, checkOCREnvironment } from '@/utils/ocr';
+import { recognizeText, extractValidWords } from '@/utils/ocr';
 
 interface RecognizedWord {
   word: string;
@@ -31,38 +31,9 @@ export default function CameraScanScreen() {
   const [scanning, setScanning] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [recognizedWords, setRecognizedWords] = useState<RecognizedWord[]>([]);
-  const [ocrEnvChecked, setOcrEnvChecked] = useState(false);
-  const [ocrEnvSupported, setOcrEnvSupported] = useState(true);
-  const [ocrEnvMessage, setOcrEnvMessage] = useState('');
   const cameraRef = useRef<any>(null);
   const scanBoxRef = useRef<View>(null);
   const [scanBoxLayout, setScanBoxLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
-
-  // 检查 OCR 环境
-  useEffect(() => {
-    const env = checkOCREnvironment();
-
-    if (__DEV__) {
-      console.log('[Camera] OCR 环境:', env);
-    }
-
-    setOcrEnvChecked(true);
-    setOcrEnvSupported(env.supported);
-    setOcrEnvMessage(env.message + (env.instructions ? '\n\n' + env.instructions : ''));
-
-    if (!env.supported) {
-      Alert.alert(
-        'OCR 功能不可用',
-        env.message,
-        [
-          {
-            text: '我知道了',
-            onPress: () => { }
-          }
-        ]
-      );
-    }
-  }, []);
 
   if (!permission) {
     return (
@@ -99,36 +70,6 @@ export default function CameraScanScreen() {
             </ThemedText>
           </TouchableOpacity>
         </View>
-      </Screen>
-    );
-  }
-
-  // 如果 OCR 环境不支持，显示提示页面
-  if (ocrEnvChecked && !ocrEnvSupported) {
-    return (
-      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
-        <ScrollView contentContainerStyle={styles.errorContainer}>
-          <View style={styles.errorIconContainer}>
-            <FontAwesome6 name="triangle-exclamation" size={64} color="#FF9800" />
-          </View>
-
-          <ThemedText variant="h3" color={theme.textPrimary} style={styles.errorTitle}>
-            OCR 功能不可用
-          </ThemedText>
-
-          <ThemedText variant="body" color={theme.textSecondary} style={styles.errorText}>
-            {ocrEnvMessage}
-          </ThemedText>
-
-          <TouchableOpacity
-            style={styles.errorButton}
-            onPress={() => router.back()}
-          >
-            <ThemedText variant="body" color={theme.buttonPrimaryText}>
-              返回
-            </ThemedText>
-          </TouchableOpacity>
-        </ScrollView>
       </Screen>
     );
   }
@@ -221,21 +162,22 @@ export default function CameraScanScreen() {
         imageUri = photo.uri;
       }
 
-      // 使用后端 OCR API 识别
-      console.log('[Camera] 开始后端 OCR 识别...');
+      // 使用本地 OCR 识别
+      console.log('[Camera] 开始本地 OCR 识别...');
 
       const ocrResult = await recognizeText(imageUri);
 
       console.log('[Camera] OCR 识别结果:', ocrResult);
 
-      if (!ocrResult.success) {
+      if (!ocrResult.success || !ocrResult.text) {
         throw new Error(ocrResult.error || 'OCR 识别失败');
       }
 
-      // 从识别结果中提取单词
-      const recognizedWords = ocrResult.words || [];
+      // 从识别结果中提取英文单词
+      const extractedWords = extractValidWords(ocrResult);
+      console.log('[Camera] 提取到的单词:', extractedWords);
 
-      if (recognizedWords.length === 0) {
+      if (extractedWords.length === 0) {
         Alert.alert(
           '识别失败',
           '未能识别到有效的英文单词，请确保图片清晰且包含单词卡片',
@@ -247,27 +189,59 @@ export default function CameraScanScreen() {
         return;
       }
 
-      console.log('[Camera] 识别到', recognizedWords.length, '个单词');
-      setRecognizedWords(recognizedWords);
+      // 调用后端 API 获取单词详情（音标、词性、释义）
+      console.log('[Camera] 获取', extractedWords.length, '个单词的详情...');
+
+      const wordsWithDetails: RecognizedWord[] = [];
+
+      // 批量获取单词详情
+      for (const word of extractedWords) {
+        try {
+          /**
+           * 服务端文件：server/src/index.ts
+           * 接口：GET /api/v1/words/lookup
+           * Query 参数：word: string (英文单词)
+           * Response:
+           * {
+           *   success: true,
+           *   word: "单词",
+           *   phonetic: "音标",
+           *   partOfSpeech: "词性",
+           *   definition: "释义"
+           * }
+           */
+          const response = await fetch(
+            `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/words/lookup?word=${encodeURIComponent(word)}`
+          );
+          const result = await response.json();
+
+          if (result.success) {
+            wordsWithDetails.push({
+              word: result.word || word,
+              phonetic: result.phonetic,
+              partOfSpeech: result.partOfSpeech,
+              definition: result.definition,
+            });
+          } else {
+            // 即使获取详情失败，也添加单词
+            wordsWithDetails.push({ word });
+          }
+        } catch (lookupError) {
+          console.error('[Camera] 获取单词详情失败:', lookupError);
+          // 即使获取详情失败，也添加单词
+          wordsWithDetails.push({ word });
+        }
+      }
+
+      console.log('[Camera] 识别到', wordsWithDetails.length, '个单词');
+      setRecognizedWords(wordsWithDetails);
       setShowResults(true);
 
     } catch (error: any) {
       console.error('[Camera] 识别错误:', error);
-
-      let errorMessage = error.message || '识别过程中出现错误，请重试';
-
-      // 针对本地 OCR 的特殊错误处理
-      if (errorMessage.includes('ML Kit') || errorMessage.includes('module') || errorMessage.includes('模块')) {
-        errorMessage = 'ML Kit OCR 模块未加载\n\n请确保已进行原生构建（EAS Build 或 Expo Dev Client）\n\n如果是 Expo Go，请使用真机测试或重新构建应用';
-      } else if (errorMessage.includes('Web')) {
-        errorMessage = 'Web 环境暂不支持本地 OCR\n\n请使用 Expo Go 或真机测试';
-      } else if (errorMessage.includes('语言包')) {
-        errorMessage = '语言包未下载\n\n请检查网络连接并重试';
-      }
-
       Alert.alert(
         '识别失败',
-        errorMessage,
+        error.message || '识别过程中出现错误，请重试',
         [
           { text: '重拍', onPress: () => setScanning(false) },
           { text: '取消', onPress: () => setScanning(false) }

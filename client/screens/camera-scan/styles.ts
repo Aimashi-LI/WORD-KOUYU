@@ -247,34 +247,5 @@ export const createStyles = (theme: Theme) => {
       marginTop: Spacing.sm,
       marginBottom: Spacing.md,
     },
-    errorContainer: {
-      flex: 1,
-      padding: Spacing.xl,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    errorIconContainer: {
-      marginBottom: Spacing.xl,
-    },
-    errorTitle: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: Spacing.lg,
-      textAlign: 'center',
-    },
-    errorText: {
-      fontSize: 14,
-      lineHeight: 24,
-      marginBottom: Spacing['2xl'],
-      textAlign: 'left',
-    },
-    errorButton: {
-      backgroundColor: theme.primary,
-      paddingHorizontal: Spacing['2xl'],
-      paddingVertical: Spacing.lg,
-      borderRadius: BorderRadius.lg,
-      minWidth: 120,
-      alignItems: 'center',
-    },
   });
 };
