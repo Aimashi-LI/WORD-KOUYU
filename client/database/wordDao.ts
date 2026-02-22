@@ -191,6 +191,51 @@ export async function deleteWord(id: number): Promise<void> {
   console.log('[deleteWord] 删除完成');
 }
 
+// 批量删除单词
+export async function deleteWords(ids: number[]): Promise<void> {
+  const db = getDatabase();
+  
+  // 1. 先获取所有单词关联的词库（去重）
+  const placeholders = ids.map(() => '?').join(',');
+  const wordbookRows = await db.getAllAsync<{ wordbook_id: number }>(
+    `SELECT DISTINCT wordbook_id FROM wordbook_words WHERE word_id IN (${placeholders})`,
+    ids
+  );
+  
+  const wordbookIds = wordbookRows.map(row => row.wordbook_id);
+  
+  console.log('[deleteWords] 单词 IDs:', ids);
+  console.log('[deleteWords] 关联的词库 ID:', wordbookIds);
+  
+  await db.withTransactionAsync(async () => {
+    // 2. 批量删除关联表中的记录
+    await db.runAsync(
+      `DELETE FROM wordbook_words WHERE word_id IN (${placeholders})`,
+      ids
+    );
+    
+    // 3. 批量删除单词
+    await db.runAsync(
+      `DELETE FROM words WHERE id IN (${placeholders})`,
+      ids
+    );
+    
+    // 4. 批量删除复习日志
+    await db.runAsync(
+      `DELETE FROM review_logs WHERE word_id IN (${placeholders})`,
+      ids
+    );
+  });
+  
+  // 5. 更新所有关联词库的单词数
+  for (const wordbookId of wordbookIds) {
+    await updateWordbookCount(wordbookId);
+    console.log('[deleteWords] 已更新词库 ID:', wordbookId, '的单词数');
+  }
+  
+  console.log('[deleteWords] 批量删除完成，共删除', ids.length, '个单词');
+}
+
 // 获取待复习单词
 export async function getReviewWords(limit: number = 20): Promise<Word[]> {
   const db = getDatabase();

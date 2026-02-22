@@ -6,6 +6,7 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { getAllWords, deleteWords } from '@/database/wordDao';
 import { createStyles } from './styles';
 
 // 从 package.json 读取版本号
@@ -181,6 +182,39 @@ export default function AboutScreen() {
     }
   };
 
+  const handleDeleteTestWords = async () => {
+    try {
+      const words = await getAllWords();
+      if (words.length === 0) {
+        Alert.alert('提示', '当前没有单词数据');
+        return;
+      }
+
+      Alert.alert(
+        '确认删除',
+        `当前共有 ${words.length} 个单词，确定要全部删除吗？`,
+        [
+          { text: '取消', style: 'cancel' },
+          {
+            text: '确定删除',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const ids = words.map(w => w.id);
+                await deleteWords(ids);
+                Alert.alert('成功', `已删除 ${ids.length} 个单词`);
+              } catch (error) {
+                Alert.alert('删除失败', error instanceof Error ? error.message : '未知错误');
+              }
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      Alert.alert('查询失败', error instanceof Error ? error.message : '未知错误');
+    }
+  };
+
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -307,6 +341,25 @@ export default function AboutScreen() {
               长按邮箱地址可复制
             </ThemedText>
           </View>
+        </View>
+
+        {/* 开发者选项 */}
+        <View style={styles.section}>
+          <ThemedText variant="h3" color={theme.textPrimary} style={styles.sectionTitle}>
+            开发者选项
+          </ThemedText>
+          <TouchableOpacity
+            style={styles.developerOption}
+            onPress={handleDeleteTestWords}
+          >
+            <FontAwesome6 name="trash-can" size={20} color={theme.error} style={styles.optionIcon} />
+            <ThemedText variant="body" color={theme.error} style={styles.optionText}>
+              删除所有单词数据
+            </ThemedText>
+          </TouchableOpacity>
+          <ThemedText variant="caption" color={theme.textMuted} style={styles.developerHint}>
+            用于清理测试数据，请谨慎操作
+          </ThemedText>
         </View>
 
         {/* 开源许可 */}

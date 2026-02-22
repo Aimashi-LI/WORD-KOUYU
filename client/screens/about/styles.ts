@@ -67,6 +67,28 @@ export const createStyles = (theme: Theme) => {
       fontStyle: 'italic',
       opacity: 0.7,
     },
+    developerOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.sm,
+    },
+    optionIcon: {
+      marginRight: Spacing.md,
+    },
+    optionText: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    developerHint: {
+      marginTop: Spacing.sm,
+      fontStyle: 'italic',
+      opacity: 0.6,
+    },
     legalSection: {
       marginBottom: Spacing.lg,
     },
