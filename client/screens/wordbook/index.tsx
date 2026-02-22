@@ -15,6 +15,7 @@ import { initDatabase, getDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
 import { useCallback } from 'react';
 import { isWordIncomplete } from '@/utils';
+import { sortAndFilterSearchResults } from '@/utils/similarity';
 
 export default function WordbookScreen() {
   const { theme, isDark } = useTheme();
@@ -70,18 +71,50 @@ export default function WordbookScreen() {
     try {
       await initDatabase();
       const db = getDatabase();
-      // 使用 DISTINCT 去重，避免同一个单词出现多次
-      const results = await db.getAllAsync<any>(
-        `SELECT DISTINCT * FROM words WHERE word LIKE ? OR definition LIKE ? OR split LIKE ? OR mnemonic LIKE ? ORDER BY created_at DESC LIMIT 50`,
+      
+      // 第一步：尝试精确匹配
+      const exactResults = await db.getAllAsync<any>(
+        `SELECT DISTINCT * FROM words WHERE word = ? COLLATE NOCASE`,
+        [text.trim()]
+      );
+      
+      if (exactResults.length > 0) {
+        // 有精确匹配结果，直接返回
+        setSearchResults(exactResults);
+        return;
+      }
+      
+      // 第二步：尝试前缀匹配（单词以查询开头）
+      const prefixResults = await db.getAllAsync<any>(
+        `SELECT DISTINCT * FROM words WHERE word LIKE ? COLLATE NOCASE ORDER BY created_at DESC LIMIT 50`,
+        [`${text.trim()}%`]
+      );
+      
+      if (prefixResults.length > 0) {
+        // 有前缀匹配结果，使用相似度算法排序后返回
+        const sortedResults = sortAndFilterSearchResults(prefixResults, text.trim());
+        setSearchResults(sortedResults);
+        return;
+      }
+      
+      // 第三步：模糊匹配（包含查询词）
+      const fuzzyResults = await db.getAllAsync<any>(
+        `SELECT DISTINCT * FROM words WHERE word LIKE ? OR definition LIKE ? OR split LIKE ? OR mnemonic LIKE ? COLLATE NOCASE ORDER BY created_at DESC LIMIT 100`,
         [`%${text}%`, `%${text}%`, `%${text}%`, `%${text}%`]
       );
+      
+      // 使用相似度算法对模糊匹配结果进行排序
+      const sortedResults = sortAndFilterSearchResults(fuzzyResults, text.trim());
+      
       // JavaScript 层面再次去重，确保没有重复的 ID
       const uniqueResults = Array.from(
-        new Map(results.map(word => [word.id, word])).values()
+        new Map(sortedResults.map(word => [word.id, word])).values()
       );
+      
       setSearchResults(uniqueResults);
     } catch (error) {
       console.error('搜索失败:', error);
+      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
@@ -1019,6 +1052,18 @@ export default function WordbookScreen() {
                     console.error(`[搜索结果渲染] 发现重复 ID: ${word.id}，当前索引: ${index}，重复索引: ${duplicateIndex}`);
                   }
                   
+                  // 获取匹配类型
+                  const matchType = (word.matchType || 'fuzzy') as 'exact' | 'prefix' | 'contains' | 'fuzzy';
+                  
+                  // 匹配类型标签文本
+                  const matchTypeTextMap: Record<string, string> = {
+                    exact: '精确',
+                    prefix: '前缀',
+                    contains: '包含',
+                    fuzzy: '相似'
+                  };
+                  const matchTypeText = matchTypeTextMap[matchType] || '相似';
+                  
                   return (
                   <TouchableOpacity
                     key={word.id}
@@ -1033,6 +1078,17 @@ export default function WordbookScreen() {
                       {word.phonetic && (
                         <ThemedText variant="caption" color={theme.textMuted}>{word.phonetic}</ThemedText>
                       )}
+                      {/* 匹配类型标签 */}
+                      <View style={[
+                        styles.searchMatchTypeTag,
+                        matchType === 'exact' && styles.searchMatchTypeTagExact,
+                        matchType === 'prefix' && styles.searchMatchTypeTagPrefix,
+                        matchType === 'fuzzy' && styles.searchMatchTypeTagFuzzy
+                      ]}>
+                        <ThemedText variant="caption" color={theme.textMuted} style={styles.searchMatchTypeText}>
+                          {matchTypeText}
+                        </ThemedText>
+                      </View>
                     </View>
                     <ThemedText variant="body" color={theme.textSecondary} numberOfLines={2}>
                       {word.definition}

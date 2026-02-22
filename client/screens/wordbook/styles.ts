@@ -455,6 +455,25 @@ export const createStyles = (theme: Theme) => {
       gap: Spacing.sm,
       marginBottom: Spacing.xs,
     },
+    searchMatchTypeTag: {
+      paddingHorizontal: Spacing.xs,
+      paddingVertical: 2,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: `${theme.primary}15`,
+    },
+    searchMatchTypeTagExact: {
+      backgroundColor: `${theme.success}20`,
+    },
+    searchMatchTypeTagPrefix: {
+      backgroundColor: `${theme.primary}15`,
+    },
+    searchMatchTypeTagFuzzy: {
+      backgroundColor: `${theme.warning}15`,
+    },
+    searchMatchTypeText: {
+      fontSize: 10,
+      color: theme.textMuted,
+    },
     searchEmptyContainer: {
       flex: 1,
       justifyContent: 'center',
