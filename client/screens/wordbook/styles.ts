@@ -464,5 +464,19 @@ export const createStyles = (theme: Theme) => {
     searchEmptyText: {
       marginTop: Spacing.md,
     },
+    // 搜索 Modal 专用样式 - 居中显示
+    searchModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.lg,
+    },
+    searchModalContent: {
+      backgroundColor: theme.backgroundRoot,
+      borderRadius: BorderRadius['2xl'],
+      width: '100%',
+      maxHeight: '70%',
+    },
   });
 };

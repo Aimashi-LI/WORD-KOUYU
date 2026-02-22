@@ -957,7 +957,7 @@ export default function WordbookScreen() {
         }}
       >
         <TouchableOpacity 
-          style={styles.modalOverlay}
+          style={styles.searchModalOverlay}
           activeOpacity={1}
           onPress={() => {
             setShowSearchModal(false);
@@ -967,7 +967,7 @@ export default function WordbookScreen() {
         >
           <TouchableOpacity 
             activeOpacity={1}
-            style={styles.modalContent}
+            style={styles.searchModalContent}
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.modalHeader}>
