@@ -41,11 +41,6 @@ export default function WordbookScreen() {
   // 用于记录最后更新时每个词库的单词数
   const lastWordCountsRef = useRef<Map<number, number>>(new Map());
   
-  // 编辑词库相关状态
-  const [editingWordbook, setEditingWordbook] = useState<Wordbook | null>(null);
-  const [showEditWordbookModal, setShowEditWordbookModal] = useState(false);
-  const [editingWordbookName, setEditingWordbookName] = useState('');
-  
   // 批量选择相关状态
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
@@ -281,38 +276,77 @@ export default function WordbookScreen() {
     await loadWordbookData(wordbookId);
   };
 
-  // 打开编辑词库 Modal
+  // 长按词库显示操作选项
   const openEditWordbookModal = (wordbook: Wordbook) => {
-    setEditingWordbook(wordbook);
-    setEditingWordbookName(wordbook.name);
-    setShowEditWordbookModal(true);
+    Alert.alert(
+      `${wordbook.name}`,
+      `共 ${wordbook.word_count} 个单词`,
+      [
+        {
+          text: '取消',
+          style: 'cancel'
+        },
+        {
+          text: '删除词库',
+          style: 'destructive',
+          onPress: () => handleDeleteWordbook(wordbook)
+        }
+      ]
+    );
   };
 
-  // 保存编辑词库
-  const handleSaveEditWordbook = async () => {
-    if (!editingWordbook || !editingWordbookName.trim()) {
-      Alert.alert('提示', '请输入词库名称');
-      return;
-    }
+  // 删除词库
+  const handleDeleteWordbook = async (wordbook: Wordbook) => {
+    Alert.alert(
+      '确认删除',
+      `确定要删除词库"${wordbook.name}"吗？\n\n这将删除词库本身，但不会删除其中的单词。`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await initDatabase();
+              const db = getDatabase();
 
-    try {
-      await initDatabase();
-      const db = getDatabase();
-      
-      await db.runAsync(
-        'UPDATE wordbooks SET name = ? WHERE id = ?',
-        [editingWordbookName.trim(), editingWordbook.id]
-      );
-      
-      setEditingWordbook(null);
-      setEditingWordbookName('');
-      setShowEditWordbookModal(false);
-      await loadData();
-      Alert.alert('成功', '词库名称已修改');
-    } catch (error) {
-      console.error('编辑词库失败:', error);
-      Alert.alert('错误', '编辑词库失败');
-    }
+              // 查询该词库中的单词数
+              const countRow = await db.getFirstAsync<{ count: number }>(
+                'SELECT COUNT(*) as count FROM wordbook_words WHERE wordbook_id = ?',
+                [wordbook.id]
+              );
+
+              const wordCount = countRow?.count || 0;
+
+              // 删除词库关联
+              await db.runAsync(
+                'DELETE FROM wordbook_words WHERE wordbook_id = ?',
+                [wordbook.id]
+              );
+
+              // 删除词库
+              await db.runAsync(
+                'DELETE FROM wordbooks WHERE id = ?',
+                [wordbook.id]
+              );
+
+              // 如果删除的是当前词库，切换到"全部单词"
+              if (currentWordbookId === wordbook.id) {
+                setCurrentWordbookId(null);
+              }
+
+              // 重新加载数据
+              await loadData();
+
+              Alert.alert('成功', `已删除词库"${wordbook.name}"及其 ${wordCount} 个单词的关联关系`);
+            } catch (error) {
+              console.error('删除词库失败:', error);
+              Alert.alert('错误', '删除词库失败');
+            }
+          }
+        }
+      ]
+    );
   };
 
   // 批量选择相关函数
@@ -911,66 +945,6 @@ export default function WordbookScreen() {
                   onPress={handleCreateWordbook}
                 >
                   <ThemedText variant="body" color={theme.buttonPrimaryText}>创建</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* 编辑词库 Modal */}
-      <Modal
-        visible={showEditWordbookModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowEditWordbookModal(false)}
-      >
-        <KeyboardAvoidingView 
-          style={{ flex: 1 }} 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <TouchableOpacity 
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setShowEditWordbookModal(false)}
-          >
-            <TouchableOpacity 
-              activeOpacity={1}
-              style={styles.modalContent}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View style={styles.modalHeader}>
-                <ThemedText variant="h3" color={theme.textPrimary}>编辑词库</ThemedText>
-                <TouchableOpacity onPress={() => setShowEditWordbookModal(false)}>
-                  <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
-                </TouchableOpacity>
-              </View>
-              
-              <ScrollView style={styles.modalBody}>
-                <View style={styles.formField}>
-                  <ThemedText variant="body" color={theme.textPrimary} style={styles.formLabel}>词库名称</ThemedText>
-                  <TextInput
-                    style={[styles.formInput, { color: theme.textPrimary, borderColor: theme.border }]}
-                    value={editingWordbookName}
-                    onChangeText={setEditingWordbookName}
-                    placeholder="请输入词库名称"
-                    placeholderTextColor={theme.textMuted}
-                  />
-                </View>
-              </ScrollView>
-              
-              <View style={styles.modalFooter}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.backgroundTertiary }]}
-                  onPress={() => setShowEditWordbookModal(false)}
-                >
-                  <ThemedText variant="body" color={theme.textPrimary}>取消</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.submitButton, { backgroundColor: theme.primary }]}
-                  onPress={handleSaveEditWordbook}
-                >
-                  <ThemedText variant="body" color={theme.buttonPrimaryText}>保存</ThemedText>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
