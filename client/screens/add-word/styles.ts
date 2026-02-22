@@ -46,6 +46,14 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.xs,
       fontWeight: '500',
     },
+    autoCompleteToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    autoCompleteLabel: {
+      fontSize: 12,
+    },
     input: {
       backgroundColor: theme.backgroundDefault,
       borderRadius: BorderRadius.md,
