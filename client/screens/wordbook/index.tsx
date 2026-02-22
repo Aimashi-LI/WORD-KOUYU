@@ -81,6 +81,7 @@ export default function WordbookScreen() {
   );
 
   const loadData = async () => {
+    setLoading(true);
     try {
       await initDatabase();
       
@@ -95,16 +96,16 @@ export default function WordbookScreen() {
         }
       }
       
-      // 加载统计数据和单词列表
+      // 加载全局统计（始终显示所有词库的总和）
+      const globalStats = await getWordStats();
+      setStats(globalStats);
+      
+      // 加载单词列表
       if (currentWordbookId) {
         await loadWordbookData(currentWordbookId);
       } else {
-        // 如果没有词库，加载全部单词的统计
-        const [wordStats, wordList] = await Promise.all([
-          getWordStats(),
-          getAllWords()
-        ]);
-        setStats(wordStats);
+        // 如果没有词库，加载全部单词
+        const wordList = await getAllWords();
         setWords(wordList);
       }
     } catch (error) {
@@ -117,15 +118,11 @@ export default function WordbookScreen() {
 
   const loadWordbookData = async (wordbookId: number) => {
     try {
-      // 加载统计数据
-      const wordStats = await getWordbookStats(wordbookId);
-      setStats(wordStats);
-      
-      // 加载词库中的单词
+      // 只加载词库中的单词列表，不修改全局统计
       const wordList = await getWordsInWordbook(wordbookId);
       setWords(wordList);
       
-      // 延迟更新词库列表（避免频繁刷新）
+      // 延迟更新词库列表（确保单词数正确）
       setTimeout(async () => {
         const updatedBooks = await getAllWordbooks();
         setWordbooks(updatedBooks);
