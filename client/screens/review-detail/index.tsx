@@ -224,15 +224,27 @@ export default function ReviewScreen() {
 
   // 检查复习时机并提醒用户
   const checkReviewTiming = (word: Word) => {
-    if (!word.next_review || !word.last_review) return;
+    console.log('[Review] 检查复习时机，单词:', word.word);
+    console.log('[Review] next_review:', word.next_review);
+    console.log('[Review] last_review:', word.last_review);
+
+    if (!word.next_review || !word.last_review) {
+      console.log('[Review] 单词缺少复习时间信息，跳过检查');
+      return;
+    }
 
     const scheduledTime = new Date(word.next_review).getTime();
     const currentTime = Date.now();
     const timeDiffHours = (currentTime - scheduledTime) / (1000 * 60 * 60);
 
+    console.log('[Review] 预定复习时间:', new Date(scheduledTime).toLocaleString('zh-CN'));
+    console.log('[Review] 当前时间:', new Date(currentTime).toLocaleString('zh-CN'));
+    console.log('[Review] 时间差（小时）:', timeDiffHours.toFixed(2));
+
     // 提前复习（提前时间 < 6小时）
     if (timeDiffHours < -6) {
       const earlyHours = Math.abs(timeDiffHours).toFixed(1);
+      console.log('[Review] 检测到提前复习，提前小时数:', earlyHours);
       Alert.alert(
         '提前复习提醒',
         `您提前了 ${earlyHours} 小时进行复习。\n\n根据认知心理学研究，过早复习会影响记忆效果，建议按推算时间进行复习。如果继续复习，掌握率的计算将适当调低。`,
@@ -246,6 +258,7 @@ export default function ReviewScreen() {
     // 延后复习（延后时间 > 6小时）
     if (timeDiffHours > 6) {
       const lateHours = timeDiffHours.toFixed(1);
+      console.log('[Review] 检测到延后复习，延后小时数:', lateHours);
       Alert.alert(
         '延后复习提醒',
         `您延后了 ${lateHours} 小时进行复习。\n\n由于已超过推算的复习时间，单词的遗忘程度可能很大。根据遗忘曲线，掌握率的计算将适当调低。`,
