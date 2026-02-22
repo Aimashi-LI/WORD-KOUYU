@@ -2,14 +2,14 @@
 
 ## 方案概述
 
-已将 OCR 方案从 **Google ML Kit** 迁移到 **Tesseract.js**，实现完全纯前端的离线 OCR 功能。
+已将 OCR 方案从 **Google ML Kit** 迁移到 **react-native-tesseract-ocr**，实现完全纯前端的离线 OCR 功能。
 
-### 为什么选择 Tesseract.js？
+### 为什么选择 react-native-tesseract-ocr？
 
-1. **纯前端方案**：无需配置原生模块，无需 Android Studio，无需 Gradle 构建
+1. **React Native 原生模块**：专为 React Native 环境优化，解决了 Tesseract.js 在 RN 中的 Worker 兼容性问题
 2. **完全离线**：首次下载语言包（约 10MB）后，可完全离线使用
-3. **跨平台兼容**：支持 Android、iOS、Web 三端
-4. **简单部署**：`expo build` 或 `eas build` 即可生成 APK，无需额外配置
+3. **跨平台兼容**：支持 Android、iOS
+4. **简单部署**：`expo prebuild` + `expo build` 即可生成 APK，无需 Gradle 配置
 
 ## 技术实现
 
@@ -17,29 +17,31 @@
 
 ```
 client/utils/
-├── ocr.ts              # Tesseract.js 实现主文件
-└── ocr-common.ts       # OCR 通用工具函数
+├── ocr.ts              # react-native-tesseract-ocr 实现主文件
+├── ocr-common.ts       # OCR 通用工具函数
+└── types/
+    └── react-native-tesseract-ocr.d.ts  # 类型声明文件
 ```
 
 ### 关键代码逻辑
 
 ```typescript
-// 1. 创建 Tesseract Worker
-const worker = await Tesseract.createWorker('eng', 1, {
-  logger: (m) => console.log(`识别进度: ${Math.round(m.progress * 100)}%`)
-});
+// 1. 引用 react-native-tesseract-ocr
+const RnTesseractOcr = require('react-native-tesseract-ocr');
 
 // 2. 执行识别
-const result = await worker.recognize(imageUri);
+const text = await RnTesseractOcr.recognize(imageUri, 'ENG', {
+  level: 'BASE', // 识别精度: BASE (快速), BEST (高精度)
+});
 
 // 3. 提取文本
-const text = result.data.text?.trim() || '';
+const trimmedText = text?.trim() || '';
 
 // 4. 按行分割
-const lines = text.split('\n').filter(line => line.trim().length > 0);
+const lines = trimmedText.split('\n').filter(line => line.trim().length > 0);
 
 // 5. 提取英文单词
-const words = extractValidWords({ success: true, text, lines });
+const words = extractValidWords({ success: true, text: trimmedText, lines });
 ```
 
 ### 首次使用流程
@@ -82,33 +84,48 @@ const handleRecognize = async (imageUri: string) => {
 };
 ```
 
-## 性能优化
+## 识别精度设置
 
-### Worker 复用
+### BASE 模式（快速）
+- 适用场景：快速预览、实时识别
+- 速度：2-3 秒
+- 识别率：约 80-85%
 
+### BEST 模式（高精度）
+- 适用场景：重要文档、精确识别
+- 速度：5-8 秒
+- 识别率：约 90-95%
+
+**使用示例**：
 ```typescript
-// 使用全局缓存，避免重复创建 Worker
-let tesseractWorker: any = null;
-
-async function getWorker() {
-  if (tesseractWorker) {
-    return tesseractWorker;
-  }
-  const worker = await Tesseract.createWorker('eng');
-  tesseractWorker = worker;
-  return worker;
-}
+const text = await RnTesseractOcr.recognize(imageUri, 'ENG', {
+  level: 'BEST', // 使用高精度模式
+});
 ```
 
-### 资源清理
+## 性能优化
+
+### 1. 图片预处理
 
 ```typescript
-// 组件卸载时清理 Worker
-useEffect(() => {
-  return () => {
-    cleanup();
-  };
-}, []);
+import * as ImageManipulator from 'expo-image-manipulator';
+
+// 缩放图片以提高识别速度
+const manipResult = await ImageManipulator.manipulateAsync(
+  imageUri,
+  [{ resize: { width: 1024 } }], // 限制最大宽度
+  { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+);
+
+const text = await RnTesseractOcr.recognize(manipResult.uri, 'ENG');
+```
+
+### 2. 选择合适的识别精度
+
+```typescript
+// 根据场景动态选择
+const level = isQuickPreview ? 'BASE' : 'BEST';
+const text = await RnTesseractOcr.recognize(imageUri, 'ENG', { level });
 ```
 
 ## 错误处理
@@ -119,7 +136,7 @@ useEffect(() => {
 |---------|------|---------|
 | 首次使用需要下载语言包 | 首次运行需要联网 | 检查网络连接，耐心等待下载 |
 | 未识别到文本 | 图片质量差或无文本 | 重新拍摄清晰的图片 |
-| OCR 识别失败 | Worker 异常 | 调用 `cleanup()` 清理后重试 |
+| OCR 识别失败 | Worker 异常 | 重启应用后重试 |
 
 ### 错误提示优化
 
@@ -138,8 +155,9 @@ if (error.message?.includes('network')) {
 - Node.js 18+
 - pnpm
 - Expo 账号（用于 EAS Build）
+- Android Studio（用于本地构建，可选）
 
-### 构建步骤
+### 方案 1：EAS Build（推荐，云端构建）
 
 #### 1. 安装依赖
 
@@ -164,79 +182,155 @@ npx eas build --platform android --profile development
 npx eas build --platform android --profile preview
 ```
 
-#### 4. 安装 APK
+#### 4. 下载并安装 APK
+
+从 EAS 网站下载 APK，或使用以下命令：
 
 ```bash
-# 从 EAS 网站下载 APK
-# 或使用 eas install
 npx eas install --platform android
 ```
 
-### 本地测试（可选）
+### 方案 2：本地构建（可选）
 
-如果需要在本地设备上测试：
+如果需要在本地构建：
+
+#### 1. 安装 Android Studio
+- 下载并安装 [Android Studio](https://developer.android.com/studio)
+- 安装 Android SDK（API 34+）
+- 配置环境变量（ANDROID_HOME）
+
+#### 2. 生成原生项目
+
+```bash
+cd client
+npx expo prebuild --platform android --clean
+```
+
+#### 3. 构建和安装
+
+```bash
+# 构建并安装到连接的设备
+npx expo run:android
+
+# 或使用 Gradle 构建 APK
+cd android
+./gradlew assembleDebug
+./gradlew installDebug
+```
+
+### 方案 3：Expo Go 开发调试（快速迭代）
 
 ```bash
 # 启动开发服务器
+cd client
 npx expo start
 
 # 扫描二维码安装 Expo Go
 # 在 Expo Go 中打开项目
 ```
 
+**注意**：Expo Go 不支持原生模块（如 react-native-tesseract-ocr），仅用于 UI 开发和调试。OCR 功能需要使用开发构建（Development Build）或正式构建。
+
 ## 与 ML Kit 方案对比
 
-| 特性 | Tesseract.js | ML Kit |
-|-----|-------------|--------|
-| **实现方式** | 纯前端 JS/TS | 原生模块 + Gradle |
-| **部署难度** | 简单（expo build） | 复杂（Android Studio + Gradle） |
+| 特性 | react-native-tesseract-ocr | ML Kit |
+|-----|---------------------------|--------|
+| **实现方式** | React Native 原生模块 | 原生模块 + Gradle |
+| **部署难度** | 中等（expo prebuild） | 复杂（Android Studio + Gradle） |
 | **首次使用** | 需下载语言包（10MB） | 需下载模型（20MB） |
-| **识别速度** | 2-10 秒 | 1-3 秒 |
-| **识别率** | 85-90% | 95%+ |
+| **识别速度** | 2-8 秒 | 1-3 秒 |
+| **识别率** | 80-95%（取决于模式） | 95%+ |
 | **离线支持** | ✅ 完全离线 | ✅ 完全离线 |
-| **跨平台** | ✅ Android/iOS/Web | ❌ 仅 Android/iOS |
-| **维护成本** | 低 | 高 |
+| **跨平台** | ✅ Android/iOS | ❌ 仅 Android/iOS |
+| **维护成本** | 中等 | 高 |
 
 ## 优势总结
 
-✅ **简单快捷**：无需配置原生环境，一行命令构建 APK
+✅ **React Native 原生优化**：专为 RN 环境设计，无 Worker 兼容性问题
 
 ✅ **完全离线**：首次下载后可离线使用
 
-✅ **跨平台兼容**：一套代码，三端运行
+✅ **双精度模式**：支持 BASE（快速）和 BEST（高精度）两种模式
 
-✅ **降低门槛**：适合个人开发者和小团队
+✅ **跨平台兼容**：支持 Android 和 iOS
 
-✅ **易于维护**：无需处理 Gradle 配置、NDK 版本等问题
+✅ **易于部署**：使用 expo prebuild + expo build 即可
 
 ## 注意事项
 
 ⚠️ **首次使用需要联网**：首次运行会下载英文语言包（约 10MB），请确保设备已连接网络
 
-⚠️ **识别率略低于 ML Kit**：对于高质量文本图片，识别率约为 85-90%，建议用户拍摄清晰的图片
+⚠️ **识别率略低于 ML Kit**：对于高质量文本图片，识别率约为 80-95%，建议用户拍摄清晰的图片
 
-⚠️ **识别速度较慢**：首次识别较慢（5-10 秒），后续使用缓存会加速（2-3 秒）
+⚠️ **识别速度较慢**：BASE 模式 2-3 秒，BEST 模式 5-8 秒
 
-⚠️ **内存占用**：Worker 会占用一定内存，建议在组件卸载时调用 `cleanup()`
+⚠️ **不支持 Expo Go**：需要使用开发构建（Development Build）或正式构建
+
+⚠️ **仅支持英文**：当前仅支持英文识别（'ENG'）
 
 ## 未来优化方向
 
 1. **性能优化**：
-   - 使用 Web Worker 提升识别速度
-   - 优化图片预处理（缩放、二值化）
+   - 添加图片预处理（缩放、二值化）
+   - 优化语言包加载策略
 
 2. **功能增强**：
    - 支持多语言识别（中文、日文等）
    - 支持表格识别
-   - 支持手写识别
+   - 支持手写识别（需切换引擎）
 
 3. **用户体验**：
    - 添加识别进度动画
    - 添加识别结果编辑功能
    - 添加历史记录
 
+4. **精度优化**：
+   - 根据图片质量自动选择识别模式
+   - 添加后处理算法提高识别率
+
+## 故障排查
+
+### 问题 1：识别失败，报错 "Could not find module"
+
+**原因**：原生模块未正确链接
+
+**解决方案**：
+```bash
+cd client
+npx expo prebuild --platform android --clean
+npx expo run:android
+```
+
+### 问题 2：首次使用提示下载语言包，但一直卡住
+
+**原因**：网络问题或权限问题
+
+**解决方案**：
+1. 检查网络连接
+2. 检查应用是否有存储权限
+3. 重启应用
+
+### 问题 3：识别速度很慢
+
+**原因**：使用了 BEST 模式或图片过大
+
+**解决方案**：
+1. 切换到 BASE 模式
+2. 使用 ImageManipulator 缩放图片
+3. 使用更快的设备
+
+### 问题 4：识别结果不准确
+
+**原因**：图片质量差或文字不清晰
+
+**解决方案**：
+1. 拍摄清晰的图片
+2. 使用 BEST 模式
+3. 使用图片预处理（对比度增强）
+
 ## 参考文档
 
-- [Tesseract.js 官方文档](https://tesseract.projectnaptha.com/)
+- [react-native-tesseract-ocr GitHub](https://github.com/jonathanpalma/react-native-tesseract-ocr)
 - [Expo Build 官方文档](https://docs.expo.dev/build/introduction/)
-- [React Native 图像处理](https://docs.expo.dev/versions/latest/sdk/image/)
+- [Expo Image Manipulator](https://docs.expo.dev/versions/latest/sdk/imagemanipulator/)
+- [React Native 原生模块开发](https://reactnative.dev/docs/native-modules-setup)

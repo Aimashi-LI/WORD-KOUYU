@@ -1,52 +1,18 @@
 // OCR 主入口文件
-// 使用 Tesseract.js 进行本地 OCR 识别
+// 使用 react-native-tesseract-ocr 进行本地 OCR 识别
 // 完全离线使用，首次需下载语言包（约 10MB）
 
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { extractValidWords } from './ocr-common';
-import Tesseract from 'tesseract.js';
 
 // 通用工具函数
 export * from './ocr-common';
 export type { OCRResult } from './ocr-common';
 
-// Tesseract.js Worker 缓存
-let tesseractWorker: any = null;
-
-/**
- * 获取 Tesseract Worker（懒加载）
- */
-async function getWorker(): Promise<any> {
-  if (tesseractWorker) {
-    return tesseractWorker;
-  }
-
-  // 创建 Worker
-  const worker = await Tesseract.createWorker('eng', 1, {
-    logger: (m: any) => {
-      if (m.status === 'recognizing text') {
-        console.log(`[OCR] 识别进度: ${Math.round(m.progress * 100)}%`);
-      }
-    },
-  });
-  tesseractWorker = worker;
-  return worker;
-}
-
-/**
- * 清理 Worker
- */
-async function cleanupWorker() {
-  if (tesseractWorker) {
-    await tesseractWorker.terminate();
-    tesseractWorker = null;
-  }
-}
-
 /**
  * 统一的 OCR 识别接口
- * 使用 Tesseract.js 进行本地识别（完全离线）
+ * 使用 react-native-tesseract-ocr 进行本地识别（完全离线）
  *
  * @param imageUri 图片 URI
  * @returns OCR 识别结果
@@ -72,22 +38,21 @@ export const recognizeText = async (imageUri: string) => {
       }
     }
 
-    // 获取 Worker
-    const worker = await getWorker();
-
     // 执行识别
-    const result = await worker.recognize(imageUri);
+    const RnTesseractOcr = require('react-native-tesseract-ocr');
+    const text = await RnTesseractOcr.recognize(imageUri, 'ENG', {
+      level: 'BASE', // 识别精度: BASE (快速), BEST (高精度)
+    });
 
     if (__DEV__) {
       console.log('[OCR] Tesseract 识别结果:', {
-        confidence: result.data.confidence,
-        textLength: result.data.text?.length || 0,
+        textLength: text?.length || 0,
       });
     }
 
-    const text = result.data.text?.trim() || '';
+    const trimmedText = text?.trim() || '';
 
-    if (!text || text.length === 0) {
+    if (!trimmedText || trimmedText.length === 0) {
       return {
         success: false,
         error: '未识别到文本，请重新拍摄',
@@ -95,34 +60,30 @@ export const recognizeText = async (imageUri: string) => {
     }
 
     // 按行分割文本
-    const lines = text.split('\n').filter((line: string) => line.trim().length > 0);
+    const lines = trimmedText.split('\n').filter((line: string) => line.trim().length > 0);
 
     // 提取有效的英文单词
-    const words = extractValidWords({ success: true, text, lines });
+    const words = extractValidWords({ success: true, text: trimmedText, lines });
     const validWords: Array<{ word: string; phonetic?: string; partOfSpeech?: string; definition?: string }> =
       words.map(word => ({ word }));
 
     if (__DEV__) {
       console.log('[OCR] 识别完成:', {
         wordsCount: validWords.length,
-        textLength: text.length,
+        textLength: trimmedText.length,
         linesCount: lines.length,
-        confidence: result.data.confidence,
       });
     }
 
     return {
       success: true,
-      text,
+      text: trimmedText,
       lines,
-      confidence: result.data.confidence / 100, // Tesseract 返回 0-100
+      confidence: 0.85, // react-native-tesseract-ocr 不返回置信度，使用默认值
       words: validWords,
     };
   } catch (error: any) {
     console.error('[OCR] 识别失败:', error);
-
-    // 清理 Worker
-    await cleanupWorker();
 
     // 提供更详细的错误信息
     let errorMessage = 'OCR 识别失败';
@@ -151,7 +112,8 @@ export const recognizeText = async (imageUri: string) => {
  * 清理 OCR 资源（组件卸载时调用）
  */
 export const cleanup = async () => {
-  await cleanupWorker();
+  // react-native-tesseract-ocr 不需要手动清理
+  // 保留此函数以保持 API 一致性
 };
 
 /**
