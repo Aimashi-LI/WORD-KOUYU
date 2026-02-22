@@ -66,6 +66,62 @@ async function initDefaultPhonetics(): Promise<void> {
   }
 }
 
+// 初始化预设词库
+async function initDefaultWordbook(): Promise<void> {
+  if (!db) return;
+
+  try {
+    // 检查是否已存在预设词库
+    const existingPreset = await db.getFirstAsync<{ id: number }>(
+      'SELECT id FROM wordbooks WHERE is_preset = 1'
+    );
+
+    let presetWordbookId: number;
+
+    if (existingPreset) {
+      presetWordbookId = existingPreset.id;
+      console.log('Preset wordbook already exists, ID:', presetWordbookId);
+    } else {
+      // 创建预设词库
+      const result = await db.runAsync(
+        'INSERT INTO wordbooks (name, description, word_count, is_preset) VALUES (?, ?, 0, 1)',
+        ['预设词库', '系统预设的词库，用于存储所有未分类的单词']
+      );
+      presetWordbookId = result.lastInsertRowId;
+      console.log('Created preset wordbook, ID:', presetWordbookId);
+    }
+
+    // 将所有未分配到任何词库的单词添加到预设词库
+    const orphanWords = await db.getAllAsync<{ id: number }>(
+      'SELECT w.id FROM words w WHERE NOT EXISTS (SELECT 1 FROM wordbook_words ww WHERE ww.word_id = w.id)'
+    );
+
+    if (orphanWords.length > 0) {
+      for (const word of orphanWords) {
+        try {
+          await db.runAsync(
+            'INSERT OR IGNORE INTO wordbook_words (wordbook_id, word_id) VALUES (?, ?)',
+            [presetWordbookId, word.id]
+          );
+        } catch (error) {
+          // 忽略重复插入
+        }
+      }
+      console.log(`Added ${orphanWords.length} orphan words to preset wordbook`);
+    }
+
+    // 更新预设词库的单词数
+    await db.runAsync(
+      `UPDATE wordbooks 
+       SET word_count = (SELECT COUNT(*) FROM wordbook_words WHERE wordbook_id = ?)
+       WHERE id = ?`,
+      [presetWordbookId, presetWordbookId]
+    );
+  } catch (error) {
+    console.error('Failed to initialize preset wordbook:', error);
+  }
+}
+
 // 获取当前数据库版本
 async function getDatabaseVersion(): Promise<number> {
   if (!db) return 0;
@@ -374,6 +430,9 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     
     // 初始化基础音标数据
     await initDefaultPhonetics();
+
+    // 初始化预设词库
+    await initDefaultWordbook();
   }
 
   // 每次调用都检查是否需要迁移

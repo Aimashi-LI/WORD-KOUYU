@@ -58,28 +58,9 @@ export default function WordbookScreen() {
         setCurrentWordbookId(bookList[0].id);
       }
       
-      // 加载统计数据和单词列表
+      // 加载当前词库的统计数据和单词列表
       if (currentWordbookId) {
         await loadWordbookData(currentWordbookId);
-      } else {
-        // 如果没有词库，加载全部单词的统计
-        const [wordStats, wordList] = await Promise.all([
-          getWordStats(),
-          getAllWords()
-        ]);
-        setStats(wordStats);
-        
-        // 为每个单词添加词库信息
-        const wordsWithBookInfo = await Promise.all(
-          wordList.map(async (word) => {
-            const bookNames = await getWordbookNamesByWordId(word.id);
-            return {
-              ...word,
-              wordbooks: bookNames,
-            };
-          })
-        );
-        setWords(wordsWithBookInfo);
       }
     } catch (error) {
       console.error('加载失败:', error);
@@ -312,15 +293,6 @@ export default function WordbookScreen() {
               style={styles.wordbookScroll}
               contentContainerStyle={styles.wordbookScrollContent}
             >
-              <TouchableOpacity 
-                style={[styles.wordbookChip, currentWordbookId === null && styles.wordbookChipActive]}
-                onPress={() => { setCurrentWordbookId(null); loadData(); }}
-              >
-                <ThemedText variant="smallMedium" color={currentWordbookId === null ? theme.buttonPrimaryText : theme.textPrimary}>
-                  全部单词
-                </ThemedText>
-              </TouchableOpacity>
-              
               {wordbooks.map((book) => (
                 <TouchableOpacity 
                   key={book.id}
@@ -480,20 +452,6 @@ export default function WordbookScreen() {
                   )}
                 </View>
               </View>
-              
-              {/* 显示词库名称 - 只在全部单词视图中显示 */}
-              {currentWordbookId === null && word.wordbooks && word.wordbooks.length > 0 && (
-                <View style={styles.wordbookTags}>
-                  {word.wordbooks.map((book: any) => (
-                    <View key={book.id} style={styles.wordbookTag}>
-                      <FontAwesome6 name="folder" size={12} color={theme.primary} />
-                      <ThemedText variant="caption" color={theme.primary} style={styles.wordbookTagText}>
-                        {book.name}
-                      </ThemedText>
-                    </View>
-                  ))}
-                </View>
-              )}
               
               <ThemedText variant="body" color={theme.textSecondary} numberOfLines={2}>
                 {word.definition}
