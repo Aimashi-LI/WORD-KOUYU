@@ -1,20 +1,20 @@
 export const Colors = {
   light: {
-    textPrimary: "#44403C", // Stone-700 - 暖灰色
-    textSecondary: "#78716C", // Stone-500 - 次要文字
-    textMuted: "#A8A29E", // Stone-400 - 辅助文字
+    textPrimary: "#2D2D2D", // 深灰色 - 主要文字
+    textSecondary: "#666666", // 中灰色 - 次要文字
+    textMuted: "#999999", // 浅灰色 - 辅助文字
     primary: "#B45309", // Amber-600 - 主色调，温暖护眼
     accent: "#D97706", // Amber-500 - 辅助强调色
     success: "#10B981", // Emerald-500
     error: "#EF4444",
     warning: "#F59E0B", // Amber-500
-    backgroundRoot: "#F5F5F4", // Stone-100 - 护眼背景
-    backgroundDefault: "#FAFAF9", // Stone-50 - 卡片背景
-    backgroundTertiary: "#E7E5E4", // Stone-200 - 输入框背景
+    backgroundRoot: "#E8E8E8", // 浅灰色 - 比白色深，比现在浅
+    backgroundDefault: "#F5F5F5", // 更浅的灰色 - 卡片背景
+    backgroundTertiary: "#E0E0E0", // 输入框背景
     buttonPrimaryText: "#FFFFFF",
     tabIconSelected: "#B45309",
-    border: "#D6D3D1", // Stone-300
-    borderLight: "#E7E5E4", // Stone-200
+    border: "#D0D0D0", // 边框颜色
+    borderLight: "#E0E0E0", // 浅边框颜色
   },
   dark: {
     textPrimary: "#FAFAF9", // Stone-50
@@ -25,13 +25,13 @@ export const Colors = {
     success: "#34D399",
     error: "#F87171",
     warning: "#FBBF24",
-    backgroundRoot: "#1C1917", // Stone-900
-    backgroundDefault: "#292524", // Stone-800
-    backgroundTertiary: "#44403C", // Stone-700
-    buttonPrimaryText: "#1C1917",
-    tabIconSelected: "#D97706",
-    border: "#44403C", // Stone-700
-    borderLight: "#292524", // Stone-800
+    backgroundRoot: "#E8E8E8", // 浅灰色 - 比白色深，比现在浅
+    backgroundDefault: "#F5F5F5", // 更浅的灰色 - 卡片背景
+    backgroundTertiary: "#E0E0E0", // 输入框背景
+    buttonPrimaryText: "#2D2D2D", // 按钮文字颜色
+    tabIconSelected: "#B45309",
+    border: "#D0D0D0", // 边框颜色
+    borderLight: "#E0E0E0", // 浅边框颜色
   },
 };
 
