@@ -1,35 +1,52 @@
 // OCR 主入口文件
-// 使用本地 Google ML Kit 进行 OCR 识别
-// 完全离线使用，识别率 95%+
+// 使用 Tesseract.js 进行本地 OCR 识别
+// 完全离线使用，首次需下载语言包（约 10MB）
 
 import { Platform } from 'react-native';
-import MLKit from 'react-native-mlkit-ocr';
+import * as FileSystem from 'expo-file-system/legacy';
 import { extractValidWords } from './ocr-common';
+import Tesseract from 'tesseract.js';
 
 // 通用工具函数
 export * from './ocr-common';
 export type { OCRResult } from './ocr-common';
 
+// Tesseract.js Worker 缓存
+let tesseractWorker: any = null;
+
 /**
- * 检查并下载语言包
- * 首次使用需要联网下载英语语言包（约 5-10MB）
- * 下载后可完全离线使用
+ * 获取 Tesseract Worker（懒加载）
  */
-export const ensureLanguageModelDownloaded = async (): Promise<boolean> => {
-  try {
-    // 检查语言包是否已下载
-    // react-native-mlkit-ocr 使用英文模型
-    // 大多数情况下模型已经随应用打包或自动下载
-    return true;
-  } catch (error: any) {
-    console.error('[OCR] 检查语言包失败:', error);
-    return false;
+async function getWorker(): Promise<any> {
+  if (tesseractWorker) {
+    return tesseractWorker;
   }
-};
+
+  // 创建 Worker
+  const worker = await Tesseract.createWorker('eng', 1, {
+    logger: (m: any) => {
+      if (m.status === 'recognizing text') {
+        console.log(`[OCR] 识别进度: ${Math.round(m.progress * 100)}%`);
+      }
+    },
+  });
+  tesseractWorker = worker;
+  return worker;
+}
+
+/**
+ * 清理 Worker
+ */
+async function cleanupWorker() {
+  if (tesseractWorker) {
+    await tesseractWorker.terminate();
+    tesseractWorker = null;
+  }
+}
 
 /**
  * 统一的 OCR 识别接口
- * 使用本地 Google ML Kit 进行识别（完全离线）
+ * 使用 Tesseract.js 进行本地识别（完全离线）
  *
  * @param imageUri 图片 URI
  * @returns OCR 识别结果
@@ -47,79 +64,65 @@ export const recognizeText = async (imageUri: string) => {
       console.log('[OCR] 开始本地识别:', imageUri);
     }
 
-    // 检查是否在 Web 环境
-    if (Platform.OS === 'web') {
-      throw new Error('Web 环境暂不支持本地 OCR，请使用 Expo Go 或真机测试');
+    // 检查图片是否存在（本地文件）
+    if (imageUri.startsWith('file://')) {
+      const fileInfo = await (FileSystem as any).getInfoAsync(imageUri);
+      if (!fileInfo.exists) {
+        throw new Error('图片不存在');
+      }
     }
 
-    // 确保语言包已下载
-    const modelReady = await ensureLanguageModelDownloaded();
-    if (!modelReady) {
-      throw new Error('语言包未下载，请检查网络连接');
-    }
+    // 获取 Worker
+    const worker = await getWorker();
 
-    // 调用本地 ML Kit OCR
-    const blocks = await MLKit.detectFromUri(imageUri);
+    // 执行识别
+    const result = await worker.recognize(imageUri);
 
     if (__DEV__) {
-      console.log('[OCR] ML Kit 识别结果:', {
-        blocksCount: blocks.length,
+      console.log('[OCR] Tesseract 识别结果:', {
+        confidence: result.data.confidence,
+        textLength: result.data.text?.length || 0,
       });
     }
 
-    if (!blocks || blocks.length === 0) {
+    const text = result.data.text?.trim() || '';
+
+    if (!text || text.length === 0) {
       return {
         success: false,
         error: '未识别到文本，请重新拍摄',
       };
     }
 
-    // 从 blocks 中提取文本和行
-    const lines: string[] = [];
-    const allText: string[] = [];
-
-    blocks.forEach(block => {
-      if (block.text) {
-        allText.push(block.text);
-      }
-      block.lines.forEach(line => {
-        if (line.text) {
-          lines.push(line.text);
-        }
-      });
-    });
-
-    const fullText = allText.join('\n');
-
-    if (!fullText || fullText.trim().length === 0) {
-      return {
-        success: false,
-        error: '未识别到文本，请重新拍摄',
-      };
-    }
+    // 按行分割文本
+    const lines = text.split('\n').filter((line: string) => line.trim().length > 0);
 
     // 提取有效的英文单词
-    const words = extractValidWords({ success: true, text: fullText, lines });
+    const words = extractValidWords({ success: true, text, lines });
     const validWords: Array<{ word: string; phonetic?: string; partOfSpeech?: string; definition?: string }> =
       words.map(word => ({ word }));
 
     if (__DEV__) {
       console.log('[OCR] 识别完成:', {
         wordsCount: validWords.length,
-        textLength: fullText.length,
+        textLength: text.length,
         linesCount: lines.length,
+        confidence: result.data.confidence,
       });
     }
 
     return {
       success: true,
-      text: fullText,
+      text,
       lines,
-      confidence: 0.95, // ML Kit 识别率约 95%
+      confidence: result.data.confidence / 100, // Tesseract 返回 0-100
       words: validWords,
     };
   } catch (error: any) {
     console.error('[OCR] 识别失败:', error);
+
+    // 清理 Worker
+    await cleanupWorker();
 
     // 提供更详细的错误信息
     let errorMessage = 'OCR 识别失败';
@@ -128,9 +131,9 @@ export const recognizeText = async (imageUri: string) => {
       errorMessage = error.message;
     }
 
-    // 如果是模块未加载错误，提示用户
-    if (error.message?.includes('ML Kit') || error.message?.includes('module')) {
-      errorMessage = 'ML Kit 模块未加载，请确保已进行原生构建';
+    // 如果是网络错误，提示用户首次使用需要下载语言包
+    if (error.message?.includes('network') || error.message?.includes('download')) {
+      errorMessage = '首次使用需要下载语言包（约 10MB），请检查网络连接';
     }
 
     if (__DEV__) {
@@ -141,6 +144,26 @@ export const recognizeText = async (imageUri: string) => {
       success: false,
       error: errorMessage,
     };
+  }
+};
+
+/**
+ * 清理 OCR 资源（组件卸载时调用）
+ */
+export const cleanup = async () => {
+  await cleanupWorker();
+};
+
+/**
+ * 检查是否首次使用（需要下载语言包）
+ */
+export const isFirstTimeUse = async (): Promise<boolean> => {
+  try {
+    const cacheDir = `${(FileSystem as any).cacheDirectory}tesseract/`;
+    const langData = await (FileSystem as any).getInfoAsync(`${cacheDir}eng.traineddata`);
+    return !langData.exists;
+  } catch {
+    return true;
   }
 };
 
