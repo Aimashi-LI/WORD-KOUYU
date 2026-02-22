@@ -2,14 +2,15 @@
 // 使用 react-native-tesseract-ocr 进行本地 OCR 识别
 // 完全离线使用，首次需下载语言包（约 10MB）
 
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { extractValidWords } from './ocr-common';
-import RnTesseractOcr from 'react-native-tesseract-ocr';
+import { checkOCREnvironment } from './ocr-env';
 
 // 通用工具函数
 export * from './ocr-common';
 export type { OCRResult } from './ocr-common';
+export { checkOCREnvironment } from './ocr-env';
 
 /**
  * 统一的 OCR 识别接口
@@ -31,6 +32,21 @@ export const recognizeText = async (imageUri: string) => {
       console.log('[OCR] 开始本地识别:', imageUri);
     }
 
+    // 检查环境
+    const env = checkOCREnvironment();
+    if (!env.supported) {
+      if (__DEV__) {
+        console.error('[OCR] 环境不支持:', env.message);
+        if (env.instructions) {
+          console.error(env.instructions);
+        }
+      }
+      return {
+        success: false,
+        error: env.message + (env.instructions ? '\n\n' + env.instructions : ''),
+      };
+    }
+
     // 检查图片是否存在（本地文件）
     if (imageUri.startsWith('file://')) {
       const fileInfo = await (FileSystem as any).getInfoAsync(imageUri);
@@ -39,8 +55,11 @@ export const recognizeText = async (imageUri: string) => {
       }
     }
 
+    // 从 NativeModules 获取 TesseractOcr
+    const TesseractOcr = NativeModules.TesseractOcr;
+
     // 执行识别
-    const text = await RnTesseractOcr.recognize(imageUri, 'ENG', {
+    const text = await TesseractOcr.recognize(imageUri, 'ENG', {
       level: 'BASE', // 识别精度: BASE (快速), BEST (高精度)
     });
 

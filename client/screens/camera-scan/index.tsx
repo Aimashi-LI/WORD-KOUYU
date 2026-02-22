@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { View, TouchableOpacity, Alert, ActivityIndicator, useWindowDimensions, ScrollView } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -9,7 +9,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { createStyles } from './styles';
-import { recognizeText } from '@/utils/ocr';
+import { recognizeText, checkOCREnvironment } from '@/utils/ocr';
 
 interface RecognizedWord {
   word: string;
@@ -31,9 +31,38 @@ export default function CameraScanScreen() {
   const [scanning, setScanning] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [recognizedWords, setRecognizedWords] = useState<RecognizedWord[]>([]);
+  const [ocrEnvChecked, setOcrEnvChecked] = useState(false);
+  const [ocrEnvSupported, setOcrEnvSupported] = useState(true);
+  const [ocrEnvMessage, setOcrEnvMessage] = useState('');
   const cameraRef = useRef<any>(null);
   const scanBoxRef = useRef<View>(null);
   const [scanBoxLayout, setScanBoxLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  // 检查 OCR 环境
+  useEffect(() => {
+    const env = checkOCREnvironment();
+
+    if (__DEV__) {
+      console.log('[Camera] OCR 环境:', env);
+    }
+
+    setOcrEnvChecked(true);
+    setOcrEnvSupported(env.supported);
+    setOcrEnvMessage(env.message + (env.instructions ? '\n\n' + env.instructions : ''));
+
+    if (!env.supported) {
+      Alert.alert(
+        'OCR 功能不可用',
+        env.message,
+        [
+          {
+            text: '我知道了',
+            onPress: () => { }
+          }
+        ]
+      );
+    }
+  }, []);
 
   if (!permission) {
     return (
@@ -70,6 +99,36 @@ export default function CameraScanScreen() {
             </ThemedText>
           </TouchableOpacity>
         </View>
+      </Screen>
+    );
+  }
+
+  // 如果 OCR 环境不支持，显示提示页面
+  if (ocrEnvChecked && !ocrEnvSupported) {
+    return (
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+        <ScrollView contentContainerStyle={styles.errorContainer}>
+          <View style={styles.errorIconContainer}>
+            <FontAwesome6 name="triangle-exclamation" size={64} color="#FF9800" />
+          </View>
+
+          <ThemedText variant="h3" color={theme.textPrimary} style={styles.errorTitle}>
+            OCR 功能不可用
+          </ThemedText>
+
+          <ThemedText variant="body" color={theme.textSecondary} style={styles.errorText}>
+            {ocrEnvMessage}
+          </ThemedText>
+
+          <TouchableOpacity
+            style={styles.errorButton}
+            onPress={() => router.back()}
+          >
+            <ThemedText variant="body" color={theme.buttonPrimaryText}>
+              返回
+            </ThemedText>
+          </TouchableOpacity>
+        </ScrollView>
       </Screen>
     );
   }
