@@ -14,7 +14,6 @@ import Animated, {
   SharedValue
 } from 'react-native-reanimated';
 import * as Sharing from 'expo-sharing';
-import { captureRef } from 'react-native-view-shot';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -494,23 +493,22 @@ export default function BrushWordsScreen() {
     setShowShareModal(true);
   };
 
-  // 图片分享
+  // 图片分享 - 使用静态模板图片
   const handleShareImage = async () => {
-    if (!currentWord || !cardRef.current) return;
+    if (!currentWord) return;
 
     try {
       setShowShareModal(false);
       setIsSharing(true);
 
-      // 捕获卡片视图为图片
-      const uri = await captureRef(cardRef, {
-        format: 'png',
-        quality: 1,
-      });
+      // 使用静态模板图片
+      const templateImage = require('@/assets/images/share-template.png');
+      
+      console.log('[Share] 使用模板图片分享');
 
       // 检查设备是否支持分享
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
+        await Sharing.shareAsync(templateImage, {
           dialogTitle: `分享单词：${currentWord.word}`,
           mimeType: 'image/png',
         });
@@ -896,7 +894,7 @@ export default function BrushWordsScreen() {
                     分享图片
                   </ThemedText>
                   <ThemedText variant="caption" color={theme.textMuted} style={styles.shareOptionDesc}>
-                    生成精美的单词卡片图片
+                    分享精美的单词学习卡片
                   </ThemedText>
                 </View>
                 <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
