@@ -335,36 +335,85 @@ export default function ReviewPlanScreen() {
                     </ThemedText>
                   </View>
                   
-                  {item.words.map((word) => (
-                    <TouchableOpacity 
-                      key={word.id}
-                      style={styles.wordItem}
-                      onPress={() => router.push('/word-detail', { id: word.id.toString() })}
-                    >
-                      <View style={styles.wordInfo}>
-                        <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                          {word.word}
-                        </ThemedText>
-                        {word.partOfSpeech && (
-                          <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
-                            {word.partOfSpeech}
+                  {/* 按词库分组显示 */}
+                  {item.wordbooks && item.wordbooks.length > 0 ? (
+                    <View style={styles.wordbookGroups}>
+                      {item.wordbooks.map((wb) => (
+                        <View key={wb.wordbookId} style={styles.wordbookGroup}>
+                          <View style={styles.wordbookGroupHeader}>
+                            <ThemedText variant="smallMedium" color={theme.textSecondary}>
+                              {wb.wordbookName}
+                            </ThemedText>
+                            <ThemedText variant="caption" color={theme.primary}>
+                              {wb.count} 个单词
+                            </ThemedText>
+                          </View>
+                          {wb.words.map((word) => (
+                            <TouchableOpacity 
+                              key={word.id}
+                              style={styles.wordItem}
+                              onPress={() => router.push('/word-detail', { id: word.id.toString() })}
+                            >
+                              <View style={styles.wordInfo}>
+                                <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                                  {word.word}
+                                </ThemedText>
+                                {word.partOfSpeech && (
+                                  <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
+                                    {word.partOfSpeech}
+                                  </ThemedText>
+                                )}
+                                <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
+                                  {word.definition}
+                                </ThemedText>
+                              </View>
+                              
+                              <View style={styles.wordStatus}>
+                                <ThemedText variant="caption" color={theme.textMuted}>
+                                  {formatStability(word.stability)}
+                                </ThemedText>
+                                {word.is_mastered && (
+                                  <FontAwesome6 name="circle-check" size={16} color={theme.success} />
+                                )}
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    // 没有词库分组时显示原始单词列表
+                    item.words.map((word) => (
+                      <TouchableOpacity 
+                        key={word.id}
+                        style={styles.wordItem}
+                        onPress={() => router.push('/word-detail', { id: word.id.toString() })}
+                      >
+                        <View style={styles.wordInfo}>
+                          <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                            {word.word}
                           </ThemedText>
-                        )}
-                        <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
-                          {word.definition}
-                        </ThemedText>
-                      </View>
-                      
-                      <View style={styles.wordStatus}>
-                        <ThemedText variant="caption" color={theme.textMuted}>
-                          {formatStability(word.stability)}
-                        </ThemedText>
-                        {word.is_mastered && (
-                          <FontAwesome6 name="circle-check" size={16} color={theme.success} />
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                          {word.partOfSpeech && (
+                            <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
+                              {word.partOfSpeech}
+                            </ThemedText>
+                          )}
+                          <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
+                            {word.definition}
+                          </ThemedText>
+                        </View>
+                        
+                        <View style={styles.wordStatus}>
+                          <ThemedText variant="caption" color={theme.textMuted}>
+                            {formatStability(word.stability)}
+                          </ThemedText>
+                          {word.is_mastered && (
+                            <FontAwesome6 name="circle-check" size={16} color={theme.success} />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </View>
               ))}
             </View>

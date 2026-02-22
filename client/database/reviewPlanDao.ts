@@ -7,6 +7,12 @@ export interface ReviewPlanItem {
   timeLabel: string;  // 显示的时间标签，如 "10:30"
   fullDateTime: string;  // 完整的日期时间显示，如 "今天 10:30"
   words: Word[];  // 当天需要复习的单词
+  wordbooks: Array<{  // 按词库分组的单词
+    wordbookId: number;
+    wordbookName: string;
+    words: Word[];
+    count: number;
+  }>;
   count: number;  // 单词数量
 }
 
@@ -36,19 +42,22 @@ export async function getReviewPlan(daysAhead: number = 7): Promise<ReviewPlanIt
   const endDate = new Date();
   endDate.setDate(now.getDate() + daysAhead);
   
-  // 获取所有有复习计划的单词（next_review 不为空）
+  // 获取所有有复习计划的单词（next_review 不为空），并关联词库信息
   const rows = await db.getAllAsync<any>(
-    `SELECT * FROM words 
-     WHERE next_review IS NOT NULL 
-     AND next_review <= ?
-     ORDER BY next_review ASC`,
+    `SELECT w.*, ww.wordbook_id, wb.name as wordbook_name
+     FROM words w
+     INNER JOIN wordbook_words ww ON w.id = ww.word_id
+     INNER JOIN wordbooks wb ON ww.wordbook_id = wb.id
+     WHERE w.next_review IS NOT NULL 
+     AND w.next_review <= ?
+     ORDER BY w.next_review ASC, wb.name ASC`,
     [endDate.toISOString()]
   );
   
   console.log('[getReviewPlan] 获取到的单词数量:', rows.length);
   
   // 按日期分组
-  const planMap = new Map<string, Word[]>();
+  const planMap = new Map<string, Array<{ word: Word; wordbookId: number; wordbookName: string }>>();
   
   rows.forEach(row => {
     const word = mapToWord(row);
@@ -61,21 +70,49 @@ export async function getReviewPlan(daysAhead: number = 7): Promise<ReviewPlanIt
         planMap.set(dateKey, []);
       }
       
-      planMap.get(dateKey)!.push(word);
+      planMap.get(dateKey)!.push({
+        word,
+        wordbookId: row.wordbook_id,
+        wordbookName: row.wordbook_name
+      });
     }
   });
   
   // 转换为数组并排序
   const plan: ReviewPlanItem[] = Array.from(planMap.entries())
-    .map(([date, words]) => {
+    .map(([date, wordbookItems]) => {
       const dateObj = new Date(date + 'T09:00:00');  // 默认上午 9 点
       const { dateLabel, timeLabel, fullDateTime } = getDateTimeLabel(dateObj, now);
+      
+      const words = wordbookItems.map(item => item.word);
+      
+      // 按词库分组单词
+      const wordbookMap = new Map<number, { wordbookId: number; wordbookName: string; words: Word[] }>();
+      wordbookItems.forEach(item => {
+        if (!wordbookMap.has(item.wordbookId)) {
+          wordbookMap.set(item.wordbookId, {
+            wordbookId: item.wordbookId,
+            wordbookName: item.wordbookName,
+            words: []
+          });
+        }
+        wordbookMap.get(item.wordbookId)!.words.push(item.word);
+      });
+      
+      const wordbooks = Array.from(wordbookMap.values()).map(wb => ({
+        wordbookId: wb.wordbookId,
+        wordbookName: wb.wordbookName,
+        words: wb.words,
+        count: wb.words.length
+      }));
+      
       return {
         date,
         dateLabel,
         timeLabel,
         fullDateTime,
         words,
+        wordbooks,
         count: words.length
       };
     })

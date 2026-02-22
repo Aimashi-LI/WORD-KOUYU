@@ -189,6 +189,22 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       gap: Spacing.xs,
     },
+    wordbookGroups: {
+      marginTop: Spacing.md,
+    },
+    wordbookGroup: {
+      marginBottom: Spacing.md,
+    },
+    wordbookGroupHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      backgroundColor: `${theme.primary}10`,
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.xs,
+    },
     // 加载和空状态
     loadingContainer: {
       paddingVertical: Spacing.xl,
