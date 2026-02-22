@@ -1,6 +1,5 @@
 import * as SQLite from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
-import { importHighFrequencyWords } from './importHighFrequencyWords';
 
 const DB_NAME = 'word_review.db';
 const DB_VERSION = 5; // 数据库版本号 - 升级到 5，确保 sentence 字段正确处理
@@ -375,11 +374,6 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     
     // 初始化基础音标数据
     await initDefaultPhonetics();
-
-    // 异步导入高频100词（不阻塞数据库初始化）
-    importHighFrequencyWords().catch(error => {
-      console.warn('Failed to import high frequency words:', error);
-    });
   }
 
   // 每次调用都检查是否需要迁移

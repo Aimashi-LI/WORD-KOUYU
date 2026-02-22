@@ -103,8 +103,7 @@ export default function AddWordScreen() {
   const [definition, setDefinition] = useState('');
   const [partOfSpeech, setPartOfSpeech] = useState('');
   const [sentence, setSentence] = useState('');
-  const [exampleEn, setExampleEn] = useState('');
-  const [exampleCn, setExampleCn] = useState('');
+  const [example, setExample] = useState('');
   
   // 音标键盘
   const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
@@ -443,19 +442,6 @@ export default function AddWordScreen() {
 
       const splitText = convertSplitItemsToString(splitItems);
       
-      // 合并中英文例句为 sentence 字段
-      let sentenceValue: string | undefined;
-      if (exampleEn.trim() || exampleCn.trim()) {
-        const parts: string[] = [];
-        if (exampleEn.trim()) {
-          parts.push(exampleEn.trim());
-        }
-        if (exampleCn.trim()) {
-          parts.push(exampleCn.trim());
-        }
-        sentenceValue = parts.join('\n');
-      }
-      
       const newWord: NewWord = {
         word: word.trim(),
         phonetic: phonetic.trim() || undefined,
@@ -463,7 +449,7 @@ export default function AddWordScreen() {
         partOfSpeech: partOfSpeech,
         split: splitText || undefined,
         mnemonic: sentence.trim() || undefined, // 助记句子
-        sentence: sentenceValue, // 中英文对照例句
+        sentence: example.trim() || undefined, // 例句
       };
 
       console.log('[AddWord] 准备保存的单词数据:', JSON.stringify(newWord, null, 2));
@@ -742,30 +728,14 @@ export default function AddWordScreen() {
         {/* 例句输入 */}
         <ThemedView level="tertiary" style={styles.inputContainer}>
           <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
-            英文例句（可选）
+            例句（可选）
           </ThemedText>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="输入英文例句，帮助理解单词用法"
+            placeholder="输入例句，帮助理解单词用法"
             placeholderTextColor={theme.textMuted}
-            value={exampleEn}
-            onChangeText={setExampleEn}
-            multiline
-            numberOfLines={2}
-          />
-        </ThemedView>
-
-        {/* 中文翻译 */}
-        <ThemedView level="tertiary" style={styles.inputContainer}>
-          <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
-            中文翻译（可选）
-          </ThemedText>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="输入例句的中文翻译"
-            placeholderTextColor={theme.textMuted}
-            value={exampleCn}
-            onChangeText={setExampleCn}
+            value={example}
+            onChangeText={setExample}
             multiline
             numberOfLines={2}
           />

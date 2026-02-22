@@ -16,28 +16,6 @@ LogBox.ignoreLogs([
 ]);
 
 export default function RootLayout() {
-  // 添加调试工具：捕获 React key 警告
-  useEffect(() => {
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-      const message = args[0];
-      // 检查是否是 key 警告
-      if (typeof message === 'string' && message.includes('two children with the same key')) {
-        console.error('=== Key 警告 ===');
-        console.error('警告信息:', message);
-        console.error('调用栈:');
-        console.trace();
-        console.error('================');
-      }
-      // 调用原始 console.warn
-      originalWarn.apply(console, args);
-    };
-
-    return () => {
-      console.warn = originalWarn;
-    };
-  }, []);
-
   return (
     <AuthProvider>
       <ColorSchemeProvider>

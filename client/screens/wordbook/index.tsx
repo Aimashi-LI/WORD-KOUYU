@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
@@ -10,12 +10,11 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getAllWords, getWordStats, deleteWord } from '@/database/wordDao';
-import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordbook, getWordsInWordbook, getWordbookStats, getWordbookNamesByWordId, recalculateAllWordbookCounts } from '@/database/wordbookDao';
-import { initDatabase, getDatabase } from '@/database';
+import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordbook, getWordsInWordbook, getWordbookStats, getWordbookNamesByWordId } from '@/database/wordbookDao';
+import { initDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
 import { useCallback } from 'react';
 import { isWordIncomplete } from '@/utils';
-import { sortAndFilterSearchResults } from '@/utils/similarity';
 
 export default function WordbookScreen() {
   const { theme, isDark } = useTheme();
@@ -34,146 +33,53 @@ export default function WordbookScreen() {
   const [newWordbookName, setNewWordbookName] = useState('');
   const [newWordbookDesc, setNewWordbookDesc] = useState('');
   
-  // 用于跟踪最后一次词库切换的 ID，避免多次更新词库列表
-  const lastWordbookIdRef = useRef<number | null>(null);
-  // 用于跟踪是否正在更新词库列表
-  const isUpdatingRef = useRef(false);
-  // 用于记录最后更新时每个词库的单词数
-  const lastWordCountsRef = useRef<Map<number, number>>(new Map());
-  
   // 批量选择相关状态
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
   const [showBatchActionModal, setShowBatchActionModal] = useState(false);
   const [showMoveToBookModal, setShowMoveToBookModal] = useState(false);
-  
-  // 搜索相关状态
-  const [searchText, setSearchText] = useState('');
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  // 搜索功能
-  const handleSearch = async (text: string) => {
-    setSearchText(text);
-    
-    if (!text.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    
-    setIsSearching(true);
-    try {
-      await initDatabase();
-      const db = getDatabase();
-      
-      // 第一步：尝试精确匹配
-      const exactResults = await db.getAllAsync<any>(
-        `SELECT DISTINCT * FROM words WHERE word = ? COLLATE NOCASE`,
-        [text.trim()]
-      );
-      
-      if (exactResults.length > 0) {
-        // 有精确匹配结果，直接返回
-        setSearchResults(exactResults);
-        return;
-      }
-      
-      // 第二步：尝试前缀匹配（单词以查询开头）
-      const prefixResults = await db.getAllAsync<any>(
-        `SELECT DISTINCT * FROM words WHERE word LIKE ? COLLATE NOCASE ORDER BY created_at DESC LIMIT 50`,
-        [`${text.trim()}%`]
-      );
-      
-      if (prefixResults.length > 0) {
-        // 有前缀匹配结果，使用相似度算法排序后返回
-        const sortedResults = sortAndFilterSearchResults(prefixResults, text.trim());
-        setSearchResults(sortedResults);
-        return;
-      }
-      
-      // 第三步：模糊匹配（包含查询词）
-      const fuzzyResults = await db.getAllAsync<any>(
-        `SELECT DISTINCT * FROM words WHERE word LIKE ? OR definition LIKE ? OR split LIKE ? OR mnemonic LIKE ? COLLATE NOCASE ORDER BY created_at DESC LIMIT 100`,
-        [`%${text}%`, `%${text}%`, `%${text}%`, `%${text}%`]
-      );
-      
-      // 使用相似度算法对模糊匹配结果进行排序
-      const sortedResults = sortAndFilterSearchResults(fuzzyResults, text.trim());
-      
-      // JavaScript 层面再次去重，确保没有重复的 ID
-      const uniqueResults = Array.from(
-        new Map(sortedResults.map(word => [word.id, word])).values()
-      );
-      
-      setSearchResults(uniqueResults);
-    } catch (error) {
-      console.error('搜索失败:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // 添加一个 ref 来跟踪是否已经初始化过
-  const isInitializedRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
-      if (!isInitializedRef.current) {
-        isInitializedRef.current = true;
-        loadData();
-      }
+      loadData();
     }, [])
   );
 
   const loadData = async () => {
-    setLoading(true);
     try {
       await initDatabase();
       
-      // 重新计算所有词库的单词数，修复数据错误
-      await recalculateAllWordbookCounts();
+      // 加载词库列表
+      const bookList = await getAllWordbooks();
+      setWordbooks(bookList);
       
-      // 加载词库列表（只在初始化时加载一次）
-      if (wordbooks.length === 0) {
-        console.log('[loadData] 开始加载词库列表...');
-        const bookList = await getAllWordbooks();
-        console.log('[loadData] 获取到词库列表，数量:', bookList.length);
-        console.log('[loadData] 词库ID:', bookList.map(b => b.id));
-        
-        // 去重：根据 ID 去重，确保每个词库只出现一次
-        const uniqueBooks = Array.from(
-          new Map(bookList.map(book => [book.id, book])).values()
-        );
-        console.log('[loadData] 去重后词库数量:', uniqueBooks.length);
-        console.log('[loadData] 去重后词库ID:', uniqueBooks.map(b => b.id));
-        
-        // 记录初始单词数
-        uniqueBooks.forEach(book => {
-          lastWordCountsRef.current.set(book.id, book.word_count);
-        });
-        
-        setWordbooks(uniqueBooks);
-        
-        // 如果有词库且没有当前选中的，默认选中第一个
-        if (uniqueBooks.length > 0 && currentWordbookId === null) {
-          setCurrentWordbookId(uniqueBooks[0].id);
-        }
+      // 如果有词库且没有当前选中的，默认选中第一个
+      if (bookList.length > 0 && currentWordbookId === null) {
+        setCurrentWordbookId(bookList[0].id);
       }
       
-      // 加载全局统计（始终显示所有词库的总和）
-      const globalStats = await getWordStats();
-      setStats(globalStats);
-      
-      // 加载单词列表（初始化时不调用 loadWordbookData，避免重复设置词库列表）
+      // 加载统计数据和单词列表
       if (currentWordbookId) {
-        const wordList = await getWordsInWordbook(currentWordbookId);
-        setWords(wordList);
+        await loadWordbookData(currentWordbookId);
       } else {
-        // 如果没有词库，加载全部单词
-        const wordList = await getAllWords();
-        setWords(wordList);
+        // 如果没有词库，加载全部单词的统计
+        const [wordStats, wordList] = await Promise.all([
+          getWordStats(),
+          getAllWords()
+        ]);
+        setStats(wordStats);
+        
+        // 为每个单词添加词库信息
+        const wordsWithBookInfo = await Promise.all(
+          wordList.map(async (word) => {
+            const bookNames = await getWordbookNamesByWordId(word.id);
+            return {
+              ...word,
+              wordbooks: bookNames,
+            };
+          })
+        );
+        setWords(wordsWithBookInfo);
       }
     } catch (error) {
       console.error('加载失败:', error);
@@ -185,65 +91,20 @@ export default function WordbookScreen() {
 
   const loadWordbookData = async (wordbookId: number) => {
     try {
-      // 只加载词库中的单词列表
+      const wordbook = await getWordbookWithCount(wordbookId);
+      if (!wordbook) return;
+      
+      // 更新词库列表（更新单词数）
+      const updatedBooks = await getAllWordbooks();
+      setWordbooks(updatedBooks);
+      
+      // 加载统计数据
+      const wordStats = await getWordbookStats(wordbookId);
+      setStats(wordStats);
+      
+      // 加载词库中的单词
       const wordList = await getWordsInWordbook(wordbookId);
       setWords(wordList);
-      
-      // 延迟更新词库列表（确保单词数正确）
-      // 使用 ref 跟踪最后一次词库切换，避免快速切换时多次更新
-      lastWordbookIdRef.current = wordbookId;
-      
-      setTimeout(async () => {
-        // 只有当最后一次切换的 ID 与当前 ID 一致时才更新
-        if (lastWordbookIdRef.current === wordbookId && !isUpdatingRef.current) {
-          try {
-            console.log('[loadWordbookData] 开始更新词库列表，当前ID:', wordbookId);
-            isUpdatingRef.current = true;
-            
-            // 重新计算所有词库的单词数
-            await recalculateAllWordbookCounts();
-            
-            const updatedBooks = await getAllWordbooks();
-            console.log('[loadWordbookData] 获取到更新后的词库列表，数量:', updatedBooks.length);
-            console.log('[loadWordbookData] 词库ID:', updatedBooks.map(b => b.id));
-            
-            // 去重：根据 ID 去重，确保每个词库只出现一次
-            const uniqueBooks = Array.from(
-              new Map(updatedBooks.map(book => [book.id, book])).values()
-            );
-            console.log('[loadWordbookData] 去重后词库数量:', uniqueBooks.length);
-            
-            // 检查单词数是否有变化，只有变化时才更新
-            const hasChanges = uniqueBooks.some(book => {
-              const lastCount = lastWordCountsRef.current.get(book.id);
-              return lastCount !== book.word_count;
-            });
-            
-            if (hasChanges) {
-              console.log('[loadWordbookData] 检测到单词数变化，更新词库列表');
-              
-              // 更新最后记录的单词数
-              uniqueBooks.forEach(book => {
-                lastWordCountsRef.current.set(book.id, book.word_count);
-              });
-              
-              setWordbooks(uniqueBooks);
-            } else {
-              console.log('[loadWordbookData] 单词数无变化，跳过更新');
-            }
-          } catch (error) {
-            console.error('更新词库列表失败:', error);
-          } finally {
-            isUpdatingRef.current = false;
-          }
-        } else {
-          console.log('[loadWordbookData] 跳过更新，原因:', {
-            currentRef: lastWordbookIdRef.current,
-            wordbookId,
-            isUpdating: isUpdatingRef.current
-          });
-        }
-      }, 300);
     } catch (error) {
       console.error('加载词库数据失败:', error);
     }
@@ -274,79 +135,6 @@ export default function WordbookScreen() {
   const handleSwitchWordbook = async (wordbookId: number) => {
     setCurrentWordbookId(wordbookId);
     await loadWordbookData(wordbookId);
-  };
-
-  // 长按词库显示操作选项
-  const openEditWordbookModal = (wordbook: Wordbook) => {
-    Alert.alert(
-      `${wordbook.name}`,
-      `共 ${wordbook.word_count} 个单词`,
-      [
-        {
-          text: '取消',
-          style: 'cancel'
-        },
-        {
-          text: '删除词库',
-          style: 'destructive',
-          onPress: () => handleDeleteWordbook(wordbook)
-        }
-      ]
-    );
-  };
-
-  // 删除词库
-  const handleDeleteWordbook = async (wordbook: Wordbook) => {
-    Alert.alert(
-      '确认删除',
-      `确定要删除词库"${wordbook.name}"吗？\n\n这将删除词库本身，但不会删除其中的单词。`,
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '删除',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await initDatabase();
-              const db = getDatabase();
-
-              // 查询该词库中的单词数
-              const countRow = await db.getFirstAsync<{ count: number }>(
-                'SELECT COUNT(*) as count FROM wordbook_words WHERE wordbook_id = ?',
-                [wordbook.id]
-              );
-
-              const wordCount = countRow?.count || 0;
-
-              // 删除词库关联
-              await db.runAsync(
-                'DELETE FROM wordbook_words WHERE wordbook_id = ?',
-                [wordbook.id]
-              );
-
-              // 删除词库
-              await db.runAsync(
-                'DELETE FROM wordbooks WHERE id = ?',
-                [wordbook.id]
-              );
-
-              // 如果删除的是当前词库，切换到"全部单词"
-              if (currentWordbookId === wordbook.id) {
-                setCurrentWordbookId(null);
-              }
-
-              // 重新加载数据
-              await loadData();
-
-              Alert.alert('成功', `已删除词库"${wordbook.name}"及其 ${wordCount} 个单词的关联关系`);
-            } catch (error) {
-              console.error('删除词库失败:', error);
-              Alert.alert('错误', '删除词库失败');
-            }
-          }
-        }
-      ]
-    );
   };
 
   // 批量选择相关函数
@@ -480,12 +268,6 @@ export default function WordbookScreen() {
             >
               <FontAwesome6 name="circle-info" size={24} color={theme.textMuted} />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.topBarButton}
-              onPress={() => setShowSearchModal(true)}
-            >
-              <FontAwesome6 name="magnifying-glass" size={24} color={theme.textMuted} />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -531,7 +313,6 @@ export default function WordbookScreen() {
               contentContainerStyle={styles.wordbookScrollContent}
             >
               <TouchableOpacity 
-                key="all"
                 style={[styles.wordbookChip, currentWordbookId === null && styles.wordbookChipActive]}
                 onPress={() => { setCurrentWordbookId(null); loadData(); }}
               >
@@ -540,26 +321,17 @@ export default function WordbookScreen() {
                 </ThemedText>
               </TouchableOpacity>
               
-              {wordbooks.map((book, index) => {
-                // 检查是否有重复的 ID
-                const duplicateIndex = wordbooks.findIndex((b, i) => b.id === book.id && i !== index);
-                if (duplicateIndex !== -1) {
-                  console.error(`[词库渲染] 发现重复 ID: ${book.id}，当前索引: ${index}，重复索引: ${duplicateIndex}`);
-                }
-                
-                return (
+              {wordbooks.map((book) => (
                 <TouchableOpacity 
                   key={book.id}
                   style={[styles.wordbookChip, currentWordbookId === book.id && styles.wordbookChipActive]}
                   onPress={() => handleSwitchWordbook(book.id)}
-                  onLongPress={() => openEditWordbookModal(book)}
                 >
                   <ThemedText variant="smallMedium" color={currentWordbookId === book.id ? theme.buttonPrimaryText : theme.textPrimary}>
                     {book.name} ({book.word_count})
                   </ThemedText>
                 </TouchableOpacity>
-              );
-              })}
+              ))}
           </ScrollView>
         </View>
         </View>
@@ -654,14 +426,7 @@ export default function WordbookScreen() {
             </ThemedText>
           </View>
         ) : (
-          words.map((word, index) => {
-            // 检查是否有重复的 ID
-            const duplicateIndex = words.findIndex((w, i) => w.id === word.id && i !== index);
-            if (duplicateIndex !== -1) {
-              console.error(`[单词渲染] 发现重复 ID: ${word.id}，当前索引: ${index}，重复索引: ${duplicateIndex}`);
-            }
-            
-            return (
+          words.map((word) => (
             <TouchableOpacity 
               key={word.id} 
               style={[
@@ -719,22 +484,14 @@ export default function WordbookScreen() {
               {/* 显示词库名称 - 只在全部单词视图中显示 */}
               {currentWordbookId === null && word.wordbooks && word.wordbooks.length > 0 && (
                 <View style={styles.wordbookTags}>
-                  {word.wordbooks.map((book: any, bookIndex: number) => {
-                    // 检查词库标签是否有重复的 ID
-                    const bookDuplicateIndex = word.wordbooks.findIndex((b: any, i: number) => b.id === book.id && i !== bookIndex);
-                    if (bookDuplicateIndex !== -1) {
-                      console.error(`[词库标签渲染] 单词 ${word.id} 发现重复词库 ID: ${book.id}，当前索引: ${bookIndex}，重复索引: ${bookDuplicateIndex}`);
-                    }
-                    
-                    return (
-                      <View key={book.id} style={styles.wordbookTag}>
-                        <FontAwesome6 name="folder" size={12} color={theme.primary} />
-                        <ThemedText variant="caption" color={theme.primary} style={styles.wordbookTagText}>
-                          {book.name}
-                        </ThemedText>
-                      </View>
-                    );
-                  })}
+                  {word.wordbooks.map((book: any) => (
+                    <View key={book.id} style={styles.wordbookTag}>
+                      <FontAwesome6 name="folder" size={12} color={theme.primary} />
+                      <ThemedText variant="caption" color={theme.primary} style={styles.wordbookTagText}>
+                        {book.name}
+                      </ThemedText>
+                    </View>
+                  ))}
                 </View>
               )}
               
@@ -750,8 +507,7 @@ export default function WordbookScreen() {
                 </View>
               )}
             </TouchableOpacity>
-            );
-          })
+          ))
         )}
       </ScrollView>
 
@@ -950,145 +706,6 @@ export default function WordbookScreen() {
             </TouchableOpacity>
           </TouchableOpacity>
         </KeyboardAvoidingView>
-      </Modal>
-
-      {/* 全局搜索 Modal */}
-      <Modal
-        visible={showSearchModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setShowSearchModal(false);
-          setSearchText('');
-          setSearchResults([]);
-        }}
-      >
-        <TouchableOpacity 
-          style={styles.searchModalOverlay}
-          activeOpacity={1}
-          onPress={() => {
-            setShowSearchModal(false);
-            setSearchText('');
-            setSearchResults([]);
-          }}
-        >
-          <TouchableOpacity 
-            activeOpacity={1}
-            style={styles.searchModalContent}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <ThemedText variant="h3" color={theme.textPrimary}>全局搜索</ThemedText>
-              <TouchableOpacity onPress={() => {
-                setShowSearchModal(false);
-                setSearchText('');
-                setSearchResults([]);
-              }}>
-                <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
-              </TouchableOpacity>
-            </View>
-            
-            {/* 搜索输入框 */}
-            <View style={styles.searchInputContainer}>
-              <FontAwesome6 name="magnifying-glass" size={20} color={theme.textMuted} />
-              <TextInput
-                style={[styles.searchInput, { color: theme.textPrimary }]}
-                value={searchText}
-                onChangeText={handleSearch}
-                placeholder="搜索单词、释义、拆分、助记"
-                placeholderTextColor={theme.textMuted}
-                autoFocus
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {searchText.length > 0 && (
-                <TouchableOpacity onPress={() => {
-                  setSearchText('');
-                  setSearchResults([]);
-                }}>
-                  <FontAwesome6 name="circle-xmark" size={20} color={theme.textMuted} />
-                </TouchableOpacity>
-              )}
-            </View>
-            
-            {/* 搜索结果 */}
-            <ScrollView style={styles.searchResultsContainer}>
-              {isSearching ? (
-                <View style={styles.searchLoadingContainer}>
-                  <ActivityIndicator size="large" color={theme.primary} />
-                  <ThemedText color={theme.textMuted} style={styles.searchLoadingText}>搜索中...</ThemedText>
-                </View>
-              ) : searchResults.length > 0 ? (
-                searchResults.map((word, index) => {
-                  // 检查是否有重复的 ID
-                  const duplicateIndex = searchResults.findIndex((w, i) => w.id === word.id && i !== index);
-                  if (duplicateIndex !== -1) {
-                    console.error(`[搜索结果渲染] 发现重复 ID: ${word.id}，当前索引: ${index}，重复索引: ${duplicateIndex}`);
-                  }
-                  
-                  // 获取匹配类型
-                  const matchType = (word.matchType || 'fuzzy') as 'exact' | 'prefix' | 'contains' | 'fuzzy';
-                  
-                  // 匹配类型标签文本
-                  const matchTypeTextMap: Record<string, string> = {
-                    exact: '精确',
-                    prefix: '前缀',
-                    contains: '包含',
-                    fuzzy: '相似'
-                  };
-                  const matchTypeText = matchTypeTextMap[matchType] || '相似';
-                  
-                  return (
-                  <TouchableOpacity
-                    key={word.id}
-                    style={styles.searchResultItem}
-                    onPress={() => {
-                      setShowSearchModal(false);
-                      router.push('/word-detail', { id: word.id.toString() });
-                    }}
-                  >
-                    <View style={styles.searchResultHeader}>
-                      <ThemedText variant="h3" color={theme.primary}>{word.word}</ThemedText>
-                      {word.phonetic && (
-                        <ThemedText variant="caption" color={theme.textMuted}>{word.phonetic}</ThemedText>
-                      )}
-                      {/* 匹配类型标签 */}
-                      <View style={[
-                        styles.searchMatchTypeTag,
-                        matchType === 'exact' && styles.searchMatchTypeTagExact,
-                        matchType === 'prefix' && styles.searchMatchTypeTagPrefix,
-                        matchType === 'fuzzy' && styles.searchMatchTypeTagFuzzy
-                      ]}>
-                        <ThemedText variant="caption" color={theme.textMuted} style={styles.searchMatchTypeText}>
-                          {matchTypeText}
-                        </ThemedText>
-                      </View>
-                    </View>
-                    <ThemedText variant="body" color={theme.textSecondary} numberOfLines={2}>
-                      {word.definition}
-                    </ThemedText>
-                    {word.mnemonic && (
-                      <View style={styles.mnemonicContainer}>
-                        <FontAwesome6 name="lightbulb" size={14} color={theme.accent} />
-                        <ThemedText variant="caption" color={theme.textSecondary} style={styles.mnemonicText}>
-                          {word.mnemonic}
-                        </ThemedText>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  );
-                })
-              ) : searchText.length > 0 ? (
-                <View style={styles.searchEmptyContainer}>
-                  <FontAwesome6 name="magnifying-glass" size={48} color={theme.textMuted} />
-                  <ThemedText variant="body" color={theme.textMuted} style={styles.searchEmptyText}>
-                    未找到匹配的单词
-                  </ThemedText>
-                </View>
-              ) : null}
-            </ScrollView>
-          </TouchableOpacity>
-        </TouchableOpacity>
       </Modal>
     </Screen>
   );
