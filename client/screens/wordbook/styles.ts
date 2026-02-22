@@ -401,5 +401,19 @@ export const createStyles = (theme: Theme) => {
       borderWidth: 1,
       borderColor: theme.primary,
     },
+    // Modal 表单样式
+    formField: {
+      marginBottom: Spacing.lg,
+    },
+    formLabel: {
+      marginBottom: Spacing.sm,
+    },
+    formInput: {
+      borderWidth: 1,
+      borderRadius: BorderRadius.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      fontSize: 16,
+    },
   });
 };
