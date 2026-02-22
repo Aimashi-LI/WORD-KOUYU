@@ -1,1 +1,1 @@
-export { default } from "@/screens/review-home";
+export { default } from "@/screens/review";

@@ -44,14 +44,6 @@ export default function RootLayout() {
               }} 
             />
             <Stack.Screen 
-              name="camera-scan" 
-              options={{ 
-                title: "拍照识别",
-                presentation: 'fullScreenModal',
-                animation: 'fade'
-              }} 
-            />
-            <Stack.Screen 
               name="word-detail" 
               options={{ 
                 title: "单词详情",
@@ -59,9 +51,16 @@ export default function RootLayout() {
               }} 
             />
             <Stack.Screen 
-              name="review-home" 
+              name="review" 
               options={{ 
                 title: "复习项目",
+                presentation: 'card'
+              }} 
+            />
+            <Stack.Screen 
+              name="review-plan" 
+              options={{ 
+                title: "复习计划",
                 presentation: 'card'
               }} 
             />

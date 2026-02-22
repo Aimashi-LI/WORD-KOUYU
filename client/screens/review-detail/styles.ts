@@ -1,0 +1,367 @@
+import { StyleSheet } from 'react-native';
+import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+
+export const createStyles = (theme: Theme) => {
+  return StyleSheet.create({
+    reviewContainer: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      padding: Spacing.lg,
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      marginBottom: Spacing.md,
+    },
+    backButton: {
+      padding: Spacing.sm,
+    },
+    progressContainer: {
+      marginBottom: Spacing.xl,
+    },
+    progressBar: {
+      height: 6,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: 3,
+      marginTop: Spacing.xs,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    reviewModeContainer: {
+      gap: Spacing.lg,
+    },
+    // 方式一容器背景（包含提示文字、信息展示框、输入框等）- 浅蓝色背景
+    reviewModeContainerType1: {
+      backgroundColor: '#3B82F608', // 非常浅的蓝色背景
+      padding: Spacing.md,
+      borderRadius: BorderRadius.lg,
+    },
+    // 方式二容器背景（包含提示文字、信息展示框、输入框等）- 浅红色背景
+    reviewModeContainerType2: {
+      backgroundColor: '#EF444408', // 非常浅的红色背景
+      padding: Spacing.md,
+      borderRadius: BorderRadius.lg,
+    },
+    modeHint: {
+      textAlign: 'center',
+    },
+    reviewCard: {
+      padding: Spacing.xl,
+      borderRadius: BorderRadius.lg,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    // 方式一卡片（显示词性、释义、拆分）- 浅蓝色背景
+    cardType1: {
+      backgroundColor: '#3B82F610', // 浅蓝色背景
+      borderWidth: 2,
+      borderColor: '#3B82F630', // 浅蓝色边框
+    },
+    // 方式二卡片（显示单词、音标、助记、例句）- 浅红色背景
+    cardType2: {
+      backgroundColor: '#EF444410', // 浅红色背景
+      borderWidth: 2,
+      borderColor: '#EF444430', // 浅红色边框
+    },
+    cardNormal: {},
+    cardCorrect: {
+      backgroundColor: `${theme.success}20`,
+      borderWidth: 2,
+      borderColor: theme.success,
+    },
+    cardWrong: {
+      backgroundColor: `${theme.error}20`,
+      borderWidth: 2,
+      borderColor: theme.error,
+    },
+    cardPink: {
+      backgroundColor: '#FF69B433',
+      borderWidth: 2,
+      borderColor: '#FF69B4',
+    },
+    cardContent: {
+      gap: Spacing.md,
+    },
+    cardText: {
+      textAlign: 'center',
+      paddingLeft: 60, // 左边距等于标签宽度，确保信息文字居中时不会被标签遮挡
+    },
+    cardItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    infoLabel: {
+      position: 'absolute',
+      left: 10, // 标签距离左边10
+    },
+    input: {
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      fontSize: 16,
+    },
+    // 方式一输入框（填写单词）- 浅蓝色背景
+    inputType1: {
+      backgroundColor: '#3B82F615', // 浅蓝色（Primary 的浅色版本）
+      borderColor: '#3B82F640', // 浅蓝色边框
+    },
+    // 方式二输入框（填写释义）- 浅红色背景
+    inputType2: {
+      backgroundColor: '#EF444415', // 浅红色（Error 的浅色版本）
+      borderColor: '#EF444440', // 浅红色边框
+    },
+    textArea: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+    confirmButton: {
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    feedbackContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+    },
+    quickScoreButtons: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      marginTop: Spacing.md,
+    },
+    quickScoreButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    quickScoreButtonActive: {
+      opacity: 0.5,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: Spacing.md,
+    },
+    loadingText: {
+      marginTop: Spacing.md,
+    },
+    startScreen: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    startIcon: {
+      marginBottom: Spacing.xl,
+    },
+    startTitle: {
+      marginBottom: Spacing.sm,
+    },
+    startSubtitle: {
+      marginBottom: Spacing['3xl'],
+    },
+    startButton: {
+      paddingVertical: Spacing.lg,
+      paddingHorizontal: Spacing['3xl'],
+      borderRadius: BorderRadius.lg,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    completedContainer: {
+      flex: 1,
+    },
+    completedScrollContent: {
+      flexGrow: 1,
+      padding: Spacing.lg,
+      alignItems: 'center',
+      paddingBottom: Spacing['3xl'],
+    },
+    completedTitle: {
+      marginTop: Spacing.xl,
+      marginBottom: Spacing.lg,
+    },
+    rating: {
+      marginBottom: Spacing.xl,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      gap: Spacing.xl,
+      marginBottom: Spacing.md,
+    },
+    trophyContainer: {
+      width: 140,
+      height: 140,
+      borderRadius: 70,
+      backgroundColor: theme.backgroundTertiary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.lg,
+    },
+    statsCard: {
+      width: '100%',
+      padding: Spacing.xl,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    statsGrid: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+    },
+    statItem: {
+      alignItems: 'center',
+    },
+    statDivider: {
+      width: 1,
+      height: 40,
+      backgroundColor: theme.borderLight,
+    },
+    timeStatsCard: {
+      width: '100%',
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+      gap: Spacing.sm,
+    },
+    timeStatsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+    },
+    scoreDistributionCard: {
+      width: '100%',
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    cardTitle: {
+      marginBottom: Spacing.md,
+    },
+    scoreBar: {
+      flexDirection: 'row',
+      borderRadius: BorderRadius.md,
+      overflow: 'hidden',
+      minHeight: 32,
+    },
+    scoreBarSegment: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.xs,
+      minWidth: 60,
+    },
+    scoreBarLabel: {
+      fontSize: 11,
+    },
+    masteredBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+      borderWidth: 2,
+      borderColor: theme.success,
+    },
+    masteredBannerContent: {
+      flex: 1,
+    },
+    masteredTitle: {
+      marginBottom: Spacing.xs,
+    },
+    masteredWordsList: {
+      width: '100%',
+      maxHeight: 200,
+      marginBottom: Spacing.xl,
+    },
+    masteredListHeader: {
+      marginBottom: Spacing.sm,
+      textAlign: 'center',
+    },
+    masteredWordItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.sm,
+    },
+    masteredWordInfo: {
+      flex: 1,
+    },
+    buttonGroup: {
+      width: '100%',
+      gap: Spacing.md,
+    },
+    completeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.lg,
+      paddingHorizontal: Spacing['2xl'],
+      borderRadius: BorderRadius.lg,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    secondaryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.lg,
+      paddingHorizontal: Spacing['2xl'],
+      borderRadius: BorderRadius.lg,
+      borderWidth: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    buttonIcon: {},
+  });
+};

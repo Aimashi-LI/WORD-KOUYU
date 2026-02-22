@@ -66,21 +66,22 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
 // 获取或创建用户（基于设备ID）
 export async function getOrCreateUser(deviceId: string): Promise<any> {
   if (!db) await initDatabase();
+  const database = getDatabase();
 
   try {
     // 尝试获取现有用户
-    let user = await db.getFirstAsync<any>(
+    let user = await database.getFirstAsync<any>(
       'SELECT * FROM users WHERE device_id = ?',
       [deviceId]
     );
 
     if (!user) {
       // 创建新用户
-      const result = await db.runAsync(
+      const result = await database.runAsync(
         'INSERT INTO users (device_id, free_attempts, paid_attempts, total_used) VALUES (?, 10, 0, 0)',
         [deviceId]
       );
-      user = await db.getFirstAsync<any>(
+      user = await database.getFirstAsync<any>(
         'SELECT * FROM users WHERE id = ?',
         [result.lastInsertRowId]
       );
@@ -96,9 +97,10 @@ export async function getOrCreateUser(deviceId: string): Promise<any> {
 // 获取用户信息
 export async function getUser(userId: number): Promise<any> {
   if (!db) await initDatabase();
+  const database = getDatabase();
 
   try {
-    const user = await db.getFirstAsync<any>(
+    const user = await database.getFirstAsync<any>(
       'SELECT * FROM users WHERE id = ?',
       [userId]
     );
@@ -112,6 +114,7 @@ export async function getUser(userId: number): Promise<any> {
 // 扣减识别次数
 export async function consumeAttempt(userId: number): Promise<boolean> {
   if (!db) await initDatabase();
+  const database = getDatabase();
 
   try {
     // 先获取用户信息
@@ -129,20 +132,20 @@ export async function consumeAttempt(userId: number): Promise<boolean> {
     let updatedAttempts: number;
     if (user.free_attempts > 0) {
       updatedAttempts = user.free_attempts - 1;
-      await db.runAsync(
+      await database.runAsync(
         'UPDATE users SET free_attempts = ?, total_used = total_used + 1, updated_at = datetime(\'now\') WHERE id = ?',
         [updatedAttempts, userId]
       );
     } else {
       updatedAttempts = user.paid_attempts - 1;
-      await db.runAsync(
+      await database.runAsync(
         'UPDATE users SET paid_attempts = ?, total_used = total_used + 1, updated_at = datetime(\'now\') WHERE id = ?',
         [updatedAttempts, userId]
       );
     }
 
     // 记录使用日志
-    await db.runAsync(
+    await database.runAsync(
       'INSERT INTO usage_records (user_id, action, attempts_used) VALUES (?, \'ocr_recognize\', 1)',
       [userId]
     );
@@ -157,9 +160,10 @@ export async function consumeAttempt(userId: number): Promise<boolean> {
 // 增加识别次数（购买后）
 export async function addAttempts(userId: number, attempts: number): Promise<void> {
   if (!db) await initDatabase();
+  const database = getDatabase();
 
   try {
-    await db.runAsync(
+    await database.runAsync(
       'UPDATE users SET paid_attempts = paid_attempts + ?, updated_at = datetime(\'now\') WHERE id = ?',
       [attempts, userId]
     );
@@ -172,9 +176,10 @@ export async function addAttempts(userId: number, attempts: number): Promise<voi
 // 创建订单
 export async function createOrder(userId: number, packageId: number, amount: number, attempts: number): Promise<any> {
   if (!db) await initDatabase();
+  const database = getDatabase();
 
   try {
-    const result = await db.runAsync(
+    const result = await database.runAsync(
       'INSERT INTO orders (user_id, package_id, amount, attempts, status) VALUES (?, ?, ?, ?, \'pending\')',
       [userId, packageId, amount, attempts]
     );
@@ -195,15 +200,16 @@ export async function createOrder(userId: number, packageId: number, amount: num
 // 更新订单状态（支付成功）
 export async function updateOrderStatus(orderId: number, status: string, transactionId?: string): Promise<void> {
   if (!db) await initDatabase();
+  const database = getDatabase();
 
   try {
     if (status === 'paid') {
-      await db.runAsync(
+      await database.runAsync(
         'UPDATE orders SET status = ?, transaction_id = ?, paid_at = datetime(\'now\') WHERE id = ?',
-        [status, transactionId, orderId]
+        [status, transactionId || '', orderId]
       );
     } else {
-      await db.runAsync(
+      await database.runAsync(
         'UPDATE orders SET status = ? WHERE id = ?',
         [status, orderId]
       );
@@ -217,9 +223,10 @@ export async function updateOrderStatus(orderId: number, status: string, transac
 // 获取用户订单列表
 export async function getUserOrders(userId: number): Promise<any[]> {
   if (!db) await initDatabase();
+  const database = getDatabase();
 
   try {
-    const orders = await db.getAllAsync<any>(
+    const orders = await database.getAllAsync<any>(
       'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC',
       [userId]
     );
