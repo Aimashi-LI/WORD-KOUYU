@@ -208,6 +208,12 @@ export default function AddWordScreen() {
       return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     };
 
+    // 检查是否已经补全过的函数
+    const isAlreadyCompleted = (text: string, meaning: string, code: string): boolean => {
+      const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
+      return patternWithBrackets.test(text);
+    };
+
     // 对每个拆分项进行检查
     for (const split of validSplits) {
       const { code, content } = split;
@@ -218,18 +224,21 @@ export default function AddWordScreen() {
 
       // 检查每个含义
       for (const meaning of meanings) {
-        // 检查是否已经包含了"中文（字母）"或"中文(字母)"的形式
-        const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
-        if (patternWithBrackets.test(newText)) {
-          continue; // 已经有了括号补全，跳过这个含义
+        // 跳过空含义
+        if (!meaning) continue;
+
+        // 检查是否已经补全过
+        if (isAlreadyCompleted(newText, meaning, code)) {
+          continue;
         }
 
-        // 检查是否包含纯中文（需要补全）
-        // 只补全单词边界（前后是空格或标点）
-        const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`);
-        if (wordBoundaryPattern.test(newText)) {
-          // 替换为"中文（字母）"形式
-          newText = newText.replace(new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'), `$1${meaning}（${code}）$3`);
+        // 检查句子中是否包含这个含义
+        const regex = new RegExp(escapeRegex(meaning), 'g');
+        const matches = newText.match(regex);
+        
+        if (matches && matches.length > 0) {
+          // 替换所有匹配的中文为带编码的形式
+          newText = newText.replace(regex, `${meaning}（${code}）`);
           hasChanges = true;
         }
       }

@@ -113,16 +113,14 @@ export default function WordDetailScreen() {
           continue;
         }
 
-        // 检查句子中是否包含这个含义（作为独立单词）
-        // 匹配规则：中文前后必须是边界（空格、标点、句首、句尾）
-        const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`);
+        // 检查句子中是否包含这个含义
+        // 使用简单的包含匹配，找到所有出现的位置
+        const regex = new RegExp(escapeRegex(meaning), 'g');
+        const matches = newText.match(regex);
         
-        if (wordBoundaryPattern.test(newText)) {
-          // 执行补全：在中文后面添加（编码）
-          newText = newText.replace(
-            new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'),
-            `$1${meaning}（${code}）$3`
-          );
+        if (matches && matches.length > 0) {
+          // 替换所有匹配的中文为带编码的形式
+          newText = newText.replace(regex, `${meaning}（${code}）`);
           hasChanges = true;
         }
       }
