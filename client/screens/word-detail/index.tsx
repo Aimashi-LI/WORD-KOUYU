@@ -5,6 +5,7 @@ import {
   TextInput,
   Alert,
   TouchableOpacity,
+  Modal,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
@@ -21,11 +22,17 @@ import { initDatabase } from '@/database';
 import { Word, Code } from '@/database/types';
 import {
   SplitItem,
+  autoSplitByCodeLib,
+  autoFillMeaning,
   validateSplitCompleteness,
   convertSplitItemsToString,
-  parseSplitString
+  parseSplitString,
+  performSplit,
+  getCodeSuggestion,
+  CodeSuggestion
 } from '@/utils/splitHelper';
 import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
+import { fetchPhoneticByWord } from '@/utils';
 
 // 词性列表
 const PART_OF_SPEECH_LIST = [
@@ -54,6 +61,11 @@ export default function WordDetailScreen() {
   
   // 拆分相关
   const [splitItems, setSplitItems] = useState<SplitItem[]>([{ code: '', content: '' }]);
+  const [splitHistory, setSplitHistory] = useState<SplitItem[][]>([]);
+  const [codeSuggestions, setCodeSuggestions] = useState<Record<string, CodeSuggestion>>({});
+  const [activeCodeIndex, setActiveCodeIndex] = useState(-1);
+  
+  // 编码库
   const [codes, setCodes] = useState<Code[]>([]);
   
   // UI 状态
@@ -61,6 +73,48 @@ export default function WordDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [originalWord, setOriginalWord] = useState<Word | null>(null);
+  const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true);
+
+  // 助记自动补全功能
+  useEffect(() => {
+    if (!autoCompleteEnabled || !sentence.trim()) return;
+
+    const validSplits = splitItems.filter(item => item.code && item.content);
+    if (validSplits.length === 0) return;
+
+    let newText = sentence;
+    let hasChanges = false;
+
+    const escapeRegex = (str: string) => {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    };
+
+    for (const split of validSplits) {
+      const { code, content } = split;
+      if (!code || !content) continue;
+
+      const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
+
+      for (const meaning of meanings) {
+        const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
+        if (patternWithBrackets.test(newText)) {
+          continue;
+        }
+
+        const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`);
+        if (wordBoundaryPattern.test(newText)) {
+          newText = newText.replace(new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'), `$1${meaning}（${code}）$3`);
+          hasChanges = true;
+        }
+      }
+    }
+
+    if (hasChanges) {
+      setAutoCompleteEnabled(false);
+      setSentence(newText);
+      setTimeout(() => setAutoCompleteEnabled(true), 100);
+    }
+  }, [sentence, splitItems]);
 
   // 加载单词数据
   useEffect(() => {
@@ -128,8 +182,143 @@ export default function WordDetailScreen() {
           setSplitItems(parsedSplits);
         }
       }
+      
+      setSplitHistory([]);
+      setAutoCompleteEnabled(true);
     }
     setEditMode('view');
+  };
+
+  // 处理单词输入
+  const handleWordChange = async (text: string) => {
+    const filteredText = text.replace(/[^a-z]/gi, '');
+    if (text !== filteredText) {
+      Alert.alert('提示', '仅允许输入英文字母');
+    }
+    setWord(filteredText);
+    
+    // 自动填充拆分
+    if (filteredText.length > 0) {
+      setSplitItems([{ code: filteredText, content: autoFillMeaning(filteredText, codes) }]);
+    } else {
+      setSplitItems([{ code: '', content: '' }]);
+      setSplitHistory([]);
+    }
+  };
+
+  // 处理单词失焦（触发自动拆分）
+  const handleWordBlur = () => {
+    if (!word) return;
+    
+    const autoSplitResult = autoSplitByCodeLib(word, codes);
+    if (autoSplitResult && autoSplitResult.length > 0) {
+      // 保存历史记录
+      setSplitHistory(prev => [...prev, [...splitItems]]);
+      setSplitItems(autoSplitResult);
+    }
+  };
+
+  // 处理编码输入
+  const handleCodeChange = (index: number, text: string) => {
+    const newSplitItems = [...splitItems];
+    newSplitItems[index].code = text;
+    setSplitItems(newSplitItems);
+    
+    // 查找编码建议
+    const suggestion = getCodeSuggestion(text, codes);
+    if (suggestion) {
+      setCodeSuggestions(prev => ({
+        ...prev,
+        [`code_${index}`]: suggestion
+      }));
+      
+      // 如果完全匹配，自动填充含义
+      if (text.toLowerCase() === suggestion.matchedCode.letter.toLowerCase()) {
+        newSplitItems[index].content = suggestion.matchedCode.chinese;
+        setSplitItems(newSplitItems);
+      }
+    } else {
+      setCodeSuggestions(prev => {
+        const newSuggestions = { ...prev };
+        delete newSuggestions[`code_${index}`];
+        return newSuggestions;
+      });
+    }
+  };
+
+  // 选择编码建议
+  const handleSelectSuggestion = (index: number) => {
+    const suggestion = codeSuggestions[`code_${index}`];
+    if (!suggestion) return;
+
+    const newSplitItems = [...splitItems];
+    newSplitItems[index].code = suggestion.matchedCode.letter;
+    newSplitItems[index].content = suggestion.matchedCode.chinese;
+    setSplitItems(newSplitItems);
+    
+    setCodeSuggestions(prev => {
+      const newSuggestions = { ...prev };
+      delete newSuggestions[`code_${index}`];
+      return newSuggestions;
+    });
+  };
+
+  // 处理含义输入
+  const handleContentChange = (index: number, text: string) => {
+    const newSplitItems = [...splitItems];
+    newSplitItems[index].content = text;
+    setSplitItems(newSplitItems);
+  };
+
+  // 执行拆分
+  const handlePerformSplit = (splitIndex: number, charIndex: number) => {
+    const splitItem = splitItems[splitIndex];
+    if (!splitItem || !splitItem.code) {
+      Alert.alert('提示', '请先输入单词');
+      return;
+    }
+
+    const code = splitItem.code;
+    if (charIndex <= 0 || charIndex >= code.length) {
+      Alert.alert('提示', '请在单词中间位置拆分');
+      return;
+    }
+
+    // 保存历史记录
+    setSplitHistory(prev => [...prev, [...splitItems]]);
+
+    const result = performSplit(code, charIndex, codes);
+    if (result) {
+      const [left, right] = result;
+      const newSplitItems = [...splitItems];
+      newSplitItems.splice(splitIndex, 1, left, right);
+      setSplitItems(newSplitItems);
+      setActiveCodeIndex(-1);
+    }
+  };
+
+  // 撤销拆分
+  const handleUndoSplit = () => {
+    if (splitHistory.length === 0) {
+      Alert.alert('提示', '没有可撤销的操作');
+      return;
+    }
+
+    const lastHistory = splitHistory[splitHistory.length - 1];
+    setSplitItems(lastHistory);
+    setSplitHistory(prev => prev.slice(0, -1));
+    setActiveCodeIndex(-1);
+  };
+
+  // 添加新的拆分项
+  const handleAddSplitItem = () => {
+    setSplitItems([...splitItems, { code: '', content: '' }]);
+  };
+
+  // 删除拆分项
+  const handleRemoveSplitItem = (index: number) => {
+    const newSplitItems = splitItems.filter((_, i) => i !== index);
+    setSplitItems(newSplitItems.length > 0 ? newSplitItems : [{ code: '', content: '' }]);
   };
 
   // 表单验证
@@ -219,36 +408,6 @@ export default function WordDetailScreen() {
     );
   };
 
-  // 处理编码输入
-  const handleCodeChange = (index: number, text: string) => {
-    const newSplitItems = [...splitItems];
-    newSplitItems[index].code = text;
-    setSplitItems(newSplitItems);
-  };
-
-  // 处理含义输入
-  const handleContentChange = (index: number, text: string) => {
-    const newSplitItems = [...splitItems];
-    newSplitItems[index].content = text;
-    setSplitItems(newSplitItems);
-  };
-
-  // 添加新的拆分项
-  const handleAddSplitItem = () => {
-    setSplitItems([...splitItems, { code: '', content: '' }]);
-  };
-
-  // 删除拆分项
-  const handleRemoveSplitItem = (index: number) => {
-    const newSplitItems = splitItems.filter((_, i) => i !== index);
-    setSplitItems(newSplitItems.length > 0 ? newSplitItems : [{ code: '', content: '' }]);
-  };
-
-  // 处理音标插入
-  const handleInsertPhonetic = (symbol: string) => {
-    setPhonetic(prev => prev + symbol);
-  };
-
   if (loading) {
     return (
       <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
@@ -283,7 +442,8 @@ export default function WordDetailScreen() {
             <TextInput
               style={styles.input}
               value={word}
-              onChangeText={setWord}
+              onChangeText={handleWordChange}
+              onBlur={handleWordBlur}
               placeholder="请输入单词"
               placeholderTextColor={theme.textMuted}
             />
@@ -291,29 +451,14 @@ export default function WordDetailScreen() {
 
           {/* 音标输入 */}
           <View style={styles.inputContainer}>
-            <View style={styles.labelRow}>
-              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-                音标
-              </ThemedText>
-              <TouchableOpacity
-                style={styles.phoneticButton}
-                onPress={() => setShowPhoneticKeyboard(!showPhoneticKeyboard)}
-              >
-                <FontAwesome6 name="keyboard" size={16} color={theme.primary} />
-                <ThemedText variant="caption" color={theme.primary} style={styles.phoneticButtonText}>
-                  {showPhoneticKeyboard ? '隐藏' : '显示'}键盘
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-            {showPhoneticKeyboard && (
-              <PhoneticKeyboard
-                onKeyPress={handleInsertPhonetic}
-              />
-            )}
+            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+              音标
+            </ThemedText>
             <TextInput
               style={styles.input}
               value={phonetic}
               onChangeText={setPhonetic}
+              onFocus={() => setShowPhoneticKeyboard(true)}
               placeholder="请输入音标"
               placeholderTextColor={theme.textMuted}
             />
@@ -364,9 +509,19 @@ export default function WordDetailScreen() {
 
           {/* 拆分 */}
           <View style={styles.inputContainer}>
-            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-              拆分
-            </ThemedText>
+            <View style={styles.labelRow}>
+              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+                拆分
+              </ThemedText>
+              {splitHistory.length > 0 && (
+                <TouchableOpacity onPress={handleUndoSplit} style={styles.undoButton}>
+                  <FontAwesome6 name="rotate-left" size={16} color={theme.accent} />
+                  <ThemedText variant="caption" color={theme.accent} style={styles.undoText}>
+                    撤销
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+            </View>
             {splitItems.map((item, index) => (
               <View key={index} style={styles.splitItemContainer}>
                 <View style={styles.splitCodeRow}>
@@ -374,9 +529,12 @@ export default function WordDetailScreen() {
                     style={styles.splitCodeInput}
                     value={item.code}
                     onChangeText={text => handleCodeChange(index, text)}
+                    onFocus={() => setActiveCodeIndex(index)}
+                    onBlur={() => setActiveCodeIndex(-1)}
                     placeholder="编码"
                     placeholderTextColor={theme.textMuted}
                   />
+                  <ThemedText variant="body" color={theme.textMuted}>-</ThemedText>
                   <TextInput
                     style={styles.splitContentInput}
                     value={item.content}
@@ -384,13 +542,47 @@ export default function WordDetailScreen() {
                     placeholder="含义"
                     placeholderTextColor={theme.textMuted}
                   />
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => handleRemoveSplitItem(index)}
-                  >
-                    <FontAwesome6 name="xmark" size={18} color={theme.error} />
-                  </TouchableOpacity>
+                  {splitItems.length > 1 && (
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => handleRemoveSplitItem(index)}
+                    >
+                      <FontAwesome6 name="xmark" size={18} color={theme.error} />
+                    </TouchableOpacity>
+                  )}
                 </View>
+
+                {/* 编码建议 */}
+                {codeSuggestions[`code_${index}`] && activeCodeIndex === index && (
+                  <TouchableOpacity
+                    onPress={() => handleSelectSuggestion(index)}
+                    style={styles.codeSuggestion}
+                  >
+                    <ThemedText variant="body" color={theme.textPrimary}>
+                      {codeSuggestions[`code_${index}`].userInput}
+                    </ThemedText>
+                    <ThemedText variant="body" color={theme.primary}>
+                      {codeSuggestions[`code_${index}`].completedText}
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+
+                {/* 字符拆分按钮 */}
+                {item.code && (
+                  <View style={styles.splitCharsContainer}>
+                    {item.code.split('').map((char, charIndex) => (
+                      <TouchableOpacity
+                        key={charIndex}
+                        onPress={() => handlePerformSplit(index, charIndex)}
+                        style={styles.splitCharButton}
+                      >
+                        <ThemedText variant="h3" color={theme.textPrimary}>
+                          {char}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
             ))}
             <TouchableOpacity
@@ -404,14 +596,29 @@ export default function WordDetailScreen() {
 
           {/* 助记句子 */}
           <View style={styles.inputContainer}>
-            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-              助记句子
-            </ThemedText>
+            <View style={styles.labelRow}>
+              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+                助记句子
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => setAutoCompleteEnabled(!autoCompleteEnabled)}
+                style={styles.autoCompleteToggle}
+              >
+                <FontAwesome6
+                  name={autoCompleteEnabled ? "toggle-on" : "toggle-off"}
+                  size={24}
+                  color={autoCompleteEnabled ? theme.primary : theme.textMuted}
+                />
+                <ThemedText variant="caption" color={theme.textSecondary} style={styles.autoCompleteLabel}>
+                  自动补全
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={sentence}
               onChangeText={setSentence}
-              placeholder="请输入助记句子"
+              placeholder="例：编码an对应多个含义（阿牛、一个），填写任一含义即可触发补全"
               placeholderTextColor={theme.textMuted}
               multiline
             />
@@ -443,6 +650,40 @@ export default function WordDetailScreen() {
             </ThemedText>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* 音标键盘 */}
+        <Modal
+          visible={showPhoneticKeyboard}
+          transparent
+          animationType="slide"
+        >
+          <View style={styles.keyboardModalOverlay}>
+            <TouchableOpacity
+              style={styles.keyboardCloseArea}
+              activeOpacity={1}
+              onPress={() => setShowPhoneticKeyboard(false)}
+            >
+              <View style={styles.keyboardDragHandle} />
+            </TouchableOpacity>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              keyboardVerticalOffset={0}
+            >
+              <View style={styles.keyboardContainer}>
+                <PhoneticKeyboard
+                  onKeyPress={(symbol) => setPhonetic(phonetic + symbol)}
+                  onDelete={() => setPhonetic(phonetic.slice(0, -1))}
+                />
+                <TouchableOpacity
+                  style={styles.keyboardHideButton}
+                  onPress={() => setShowPhoneticKeyboard(false)}
+                >
+                  <ThemedText variant="body" color={theme.buttonPrimaryText}>完成</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </Modal>
       </Screen>
     );
   }

@@ -152,6 +152,83 @@ export const createStyles = (theme: Theme) => {
     splitContent: {
       flex: 1,
     },
+    undoButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    undoText: {
+      marginLeft: 4,
+    },
+    codeSuggestion: {
+      flexDirection: 'row',
+      backgroundColor: theme.backgroundRoot,
+      borderWidth: 1,
+      borderColor: theme.primary,
+      borderRadius: BorderRadius.sm,
+      padding: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+    splitCharsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.xs,
+      marginTop: Spacing.sm,
+      padding: Spacing.sm,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.sm,
+    },
+    splitCharButton: {
+      width: 32,
+      height: 32,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.sm,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    autoCompleteToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    autoCompleteLabel: {
+      fontSize: 12,
+    },
+    // 音标键盘 Modal 样式
+    keyboardModalOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'transparent',
+    },
+    keyboardCloseArea: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    keyboardDragHandle: {
+      width: 40,
+      height: 4,
+      backgroundColor: theme.border,
+      borderRadius: 2,
+      marginBottom: Spacing.md,
+    },
+    keyboardContainer: {
+      backgroundColor: theme.backgroundRoot,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: Spacing.xl,
+      paddingBottom: Spacing['2xl'],
+      paddingTop: Spacing.md,
+    },
+    keyboardHideButton: {
+      marginTop: Spacing.md,
+      paddingVertical: Spacing.md,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
     // 查看模式样式
     headerActions: {
       flexDirection: 'row',
