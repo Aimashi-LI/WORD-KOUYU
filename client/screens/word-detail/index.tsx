@@ -105,20 +105,19 @@ export default function WordDetailScreen() {
         });
       }
       
-      // 从后向前查找，检查末尾是否是（编码）模式
-      if (matches.length > 0) {
-        const lastMatch = matches[matches.length - 1];
+      // 从后向前查找，找到文本末尾附近的（编码）模式
+      for (let i = matches.length - 1; i >= 0; i--) {
+        const m = matches[i];
         
-        // 检查文本末尾是否正好在（编码）的末尾
-        if (prevText.length === lastMatch.end) {
-          // 检测到删除操作，需要跳过（编码）部分，直接删除前面的含义
+        // 检查删除操作是否在（编码）的右侧或内部
+        // 如果删除了1个字符，且文本末尾正好在（编码）的右侧
+        if (deletedCount === 1 && prevText.length === m.end) {
           // 找到（编码）前面的含义文本
-          const meaningEnd = lastMatch.start;
-          let meaningStart = meaningEnd;
+          let meaningStart = m.start;
           
-          // 向前查找含义的起始位置
+          // 向前查找含义的起始位置（跳过其他（编码）模式）
           let braceCount = 0;
-          for (let j = meaningEnd - 1; j >= 0; j--) {
+          for (let j = m.start - 1; j >= 0; j--) {
             if (prevText[j] === '）') {
               braceCount++;
             } else if (prevText[j] === '（') {
@@ -130,37 +129,25 @@ export default function WordDetailScreen() {
             }
           }
           
-          const meaningText = prevText.substring(meaningStart, meaningEnd);
+          const meaningText = prevText.substring(meaningStart, m.start);
           
-          // 如果有含义文本，执行删除
+          // 删除含义的最后一个字符
           if (meaningText.length > 0) {
-            // 计算要删除的字符数
-            const charsToDelete = Math.min(deletedCount, meaningText.length);
+            const newMeaningText = meaningText.substring(0, meaningText.length - 1);
             
-            if (charsToDelete > 0) {
-              // 删除含义的最后 charsToDelete 个字符
-              const newMeaningText = meaningText.substring(0, meaningText.length - charsToDelete);
-              
-              // 如果含义被删除完了，删除整个（编码）模式
-              if (newMeaningText.length === 0) {
-                const result = prevText.substring(0, meaningStart);
-                setSentence(result);
-                setPreviousSentence(result);
-                return;
-              } else {
-                // 否则只删除含义的字符，保留（编码）
-                const result = prevText.substring(0, meaningStart) + newMeaningText + prevText.substring(lastMatch.end);
-                setSentence(result);
-                setPreviousSentence(result);
-                return;
-              }
+            // 如果含义被删除完了，删除整个（编码）模式
+            if (newMeaningText.length === 0) {
+              const result = prevText.substring(0, meaningStart) + prevText.substring(m.end);
+              setSentence(result);
+              setPreviousSentence(result);
+              return;
+            } else {
+              // 否则只删除含义的最后一个字符，保留（编码）
+              const result = prevText.substring(0, meaningStart) + newMeaningText + prevText.substring(m.end - deletedCount);
+              setSentence(result);
+              setPreviousSentence(result);
+              return;
             }
-          } else {
-            // 没有含义文本，直接删除（编码）
-            const result = prevText.substring(0, meaningEnd);
-            setSentence(result);
-            setPreviousSentence(result);
-            return;
           }
         }
       }
