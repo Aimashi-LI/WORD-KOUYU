@@ -15,7 +15,8 @@ import Animated, {
   useAnimatedScrollHandler,
   interpolate,
   Extrapolation,
-  SharedValue
+  SharedValue,
+  useDerivedValue
 } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -484,11 +485,30 @@ export default function BrushWordsScreen() {
     },
   });
 
+  // 实时计算当前索引（用于进度条实时更新）
+  const currentProgress = useDerivedValue(() => {
+    if (words.length === 0) return 0;
+    const rawIndex = scrollX.value / (CARD_WIDTH + CARD_SPACING);
+    const clampedIndex = Math.max(0, Math.min(Math.round(rawIndex), words.length - 1));
+    return (clampedIndex + 1) / words.length;
+  });
+
+  // 进度条动画样式
+  const progressAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      width: `${currentProgress.value * 100}%`,
+    };
+  });
+
   // 根据滚动位置更新当前索引
   const onMomentumScrollEnd = (event: any) => {
     const offset = event.nativeEvent.contentOffset.x;
     const newIndex = Math.round(offset / (CARD_WIDTH + CARD_SPACING));
-    setCurrentIndex(Math.max(0, Math.min(newIndex, words.length - 1)));
+    const clampedIndex = Math.max(0, Math.min(newIndex, words.length - 1));
+    
+    console.log('[onMomentumScrollEnd] 当前索引:', currentIndex, '新索引:', clampedIndex);
+    setCurrentIndex(clampedIndex);
+    setShowDefinition(false);
   };
 
   // 分享单词卡片 - 显示选项弹窗
@@ -610,12 +630,7 @@ export default function BrushWordsScreen() {
         {/* 进度条 */}
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${((currentIndex + 1) / words.length) * 100}%` }
-              ]}
-            />
+            <Animated.View style={[styles.progressFill, progressAnimatedStyle]} />
           </View>
         </View>
 

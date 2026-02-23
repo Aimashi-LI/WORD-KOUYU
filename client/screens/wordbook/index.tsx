@@ -54,20 +54,24 @@ export default function WordbookScreen() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       await initDatabase();
       
       // 加载词库列表
       const bookList = await getAllWordbooks();
       setWordbooks(bookList);
       
-      // 如果有词库且没有当前选中的，默认选中第一个
-      if (bookList.length > 0 && currentWordbookId === null) {
+      // 确定要加载的词库ID
+      const targetWordbookId = currentWordbookId || (bookList.length > 0 ? bookList[0].id : null);
+      
+      // 如果没有当前选中的词库，设置为第一个词库
+      if (!currentWordbookId && bookList.length > 0) {
         setCurrentWordbookId(bookList[0].id);
       }
       
       // 加载当前词库的统计数据和单词列表
-      if (currentWordbookId) {
-        await loadWordbookData(currentWordbookId);
+      if (targetWordbookId) {
+        await loadWordbookData(targetWordbookId);
       }
     } catch (error) {
       console.error('加载失败:', error);
@@ -78,23 +82,30 @@ export default function WordbookScreen() {
   };
 
   const loadWordbookData = async (wordbookId: number) => {
+    console.log('[loadWordbookData] 开始加载词库数据，词库ID:', wordbookId);
     try {
-      const wordbook = await getWordbookWithCount(wordbookId);
-      if (!wordbook) return;
+      // 并行加载所有数据，提高性能
+      const [wordbook, updatedBooks, wordStats, wordList] = await Promise.all([
+        getWordbookWithCount(wordbookId),
+        getAllWordbooks(),
+        getWordbookStats(wordbookId),
+        getWordsInWordbook(wordbookId)
+      ]);
       
-      // 更新词库列表（更新单词数）
-      const updatedBooks = await getAllWordbooks();
+      if (!wordbook) {
+        console.log('[loadWordbookData] 词库不存在');
+        return;
+      }
+      
+      console.log('[loadWordbookData] 加载完成，单词数:', wordList.length);
+      
+      // 更新状态（一次性更新所有状态，减少重新渲染次数）
       setWordbooks(updatedBooks);
-      
-      // 加载统计数据
-      const wordStats = await getWordbookStats(wordbookId);
       setStats(wordStats);
-      
-      // 加载词库中的单词
-      const wordList = await getWordsInWordbook(wordbookId);
       setWords(wordList);
     } catch (error) {
-      console.error('加载词库数据失败:', error);
+      console.error('[loadWordbookData] 加载词库数据失败:', error);
+      Alert.alert('错误', '加载词库数据失败');
     }
   };
 
@@ -121,6 +132,9 @@ export default function WordbookScreen() {
   };
 
   const handleSwitchWordbook = async (wordbookId: number) => {
+    if (wordbookId === currentWordbookId) return;
+    
+    console.log('[handleSwitchWordbook] 切换词库，从', currentWordbookId, '到', wordbookId);
     setCurrentWordbookId(wordbookId);
     await loadWordbookData(wordbookId);
   };
