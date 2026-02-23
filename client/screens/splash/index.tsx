@@ -33,7 +33,7 @@ export default function SplashScreen() {
   
   const [canClose, setCanClose] = useState(false);
   const [countdown, setCountdown] = useState(3);
-  const [showFullText, setShowFullText] = useState(false);
+  const [showFullText, setShowFullText] = useState(true); // 默认展开显示完整内容
 
   // 倒计时逻辑
   useEffect(() => {
@@ -58,11 +58,11 @@ export default function SplashScreen() {
       try {
         // 标记 splash 页面已显示
         await AsyncStorage.setItem(SPLASH_SHOWN_KEY, 'true');
-        router.back();
+        router.replace('/'); // 使用 replace 跳转到首页，避免 GO_BACK 警告
       } catch (error) {
         console.error('保存 splash 标记失败:', error);
         // 即使保存失败也允许关闭
-        router.back();
+        router.replace('/'); // 使用 replace 跳转到首页
       }
     }
   };
