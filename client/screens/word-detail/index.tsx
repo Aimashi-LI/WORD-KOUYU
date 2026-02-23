@@ -163,6 +163,27 @@ export default function WordDetailScreen() {
   };
 
   const handleEdit = () => {
+    // 自动识别并拆分单词
+    if (word && word.trim()) {
+      // 检查当前拆分是否完整
+      const splitValidation = validateSplitCompleteness(splitItems, word);
+      
+      // 如果拆分不完整或者没有拆分数据，则自动拆分
+      if (!splitValidation.valid || splitItems.length === 0 || (splitItems.length === 1 && splitItems[0].code === '')) {
+        // 尝试自动拆分
+        const autoSplitResult = autoSplitByCodeLib(word, codes);
+        if (autoSplitResult && autoSplitResult.length > 0) {
+          // 拆分成功，使用拆分结果
+          setSplitItems(autoSplitResult);
+        } else {
+          // 拆分失败，使用单个项（编码框显示单词）
+          const meaning = autoFillMeaning(word, codes);
+          setSplitItems([{ code: word, content: meaning }]);
+        }
+        // 清空历史记录
+        setSplitHistory([]);
+      }
+    }
     setEditMode('edit');
   };
 

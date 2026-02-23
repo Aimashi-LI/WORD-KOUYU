@@ -223,11 +223,11 @@ export const createStyles = (theme: Theme) => {
       paddingTop: Spacing.md,
     },
     keyboardHideButton: {
-      marginTop: Spacing.md,
+      backgroundColor: theme.primary,
       paddingVertical: Spacing.md,
-      backgroundColor: theme.backgroundTertiary,
-      borderRadius: 12,
+      borderRadius: BorderRadius.md,
       alignItems: 'center',
+      marginTop: Spacing.sm,
     },
     // 查看模式样式
     headerActions: {
