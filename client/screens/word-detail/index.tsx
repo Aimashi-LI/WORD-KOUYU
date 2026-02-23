@@ -89,29 +89,50 @@ export default function WordDetailScreen() {
       return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     };
 
+    // 检查是否已经补全过的函数
+    const isAlreadyCompleted = (text: string, meaning: string, code: string): boolean => {
+      const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
+      return patternWithBrackets.test(text);
+    };
+
+    // 检查是否有新增的中文含义需要补全
     for (const split of validSplits) {
       const { code, content } = split;
       if (!code || !content) continue;
 
+      // 将编码的含义按逗号分割，支持多种含义
       const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
 
+      // 检查句子中是否包含任何一个含义（尚未补全的）
       for (const meaning of meanings) {
-        const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
-        if (patternWithBrackets.test(newText)) {
+        // 跳过空含义
+        if (!meaning) continue;
+
+        // 检查是否已经补全过
+        if (isAlreadyCompleted(newText, meaning, code)) {
           continue;
         }
 
+        // 检查句子中是否包含这个含义（作为独立单词）
+        // 匹配规则：中文前后必须是边界（空格、标点、句首、句尾）
         const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`);
+        
         if (wordBoundaryPattern.test(newText)) {
-          newText = newText.replace(new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'), `$1${meaning}（${code}）$3`);
+          // 执行补全：在中文后面添加（编码）
+          newText = newText.replace(
+            new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'),
+            `$1${meaning}（${code}）$3`
+          );
           hasChanges = true;
         }
       }
     }
 
+    // 如果有变化，更新 sentence 并禁用自动补全（避免重复触发）
     if (hasChanges) {
       setAutoCompleteEnabled(false);
       setSentence(newText);
+      // 短暂延迟后重新启用自动补全
       setTimeout(() => setAutoCompleteEnabled(true), 100);
     }
   }, [sentence, splitItems]);
