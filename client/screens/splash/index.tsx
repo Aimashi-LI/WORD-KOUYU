@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, TouchableOpacity, ScrollView, Text, ActivityIndicator } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -22,6 +23,8 @@ const LEARNING_TRUTH_TEXT = `学习者必须面对的一个真相
 
 // 简短版本（用于标签显示）
 const LEARNING_TRUTH_SHORT = '学习者必须面对的一个真相';
+
+const SPLASH_SHOWN_KEY = '@app:splash_shown';
 
 export default function SplashScreen() {
   const { theme, isDark } = useTheme();
@@ -50,9 +53,17 @@ export default function SplashScreen() {
     };
   }, []);
 
-  const handleClose = () => {
+  const handleClose = async () => {
     if (canClose) {
-      router.back();
+      try {
+        // 标记 splash 页面已显示
+        await AsyncStorage.setItem(SPLASH_SHOWN_KEY, 'true');
+        router.back();
+      } catch (error) {
+        console.error('保存 splash 标记失败:', error);
+        // 即使保存失败也允许关闭
+        router.back();
+      }
     }
   };
 
