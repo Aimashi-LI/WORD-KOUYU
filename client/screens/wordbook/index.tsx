@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeSwitch } from '@/hooks/useThemeSwitch';
 import { Screen } from '@/components/Screen';
@@ -15,6 +16,8 @@ import { initDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
 import { useCallback } from 'react';
 import { isWordIncomplete } from '@/utils';
+
+const SPLASH_SHOWN_KEY = '@app:splash_shown';
 
 export default function WordbookScreen() {
   const { theme, isDark } = useTheme();
@@ -48,7 +51,27 @@ export default function WordbookScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      // 检查是否需要显示 splash 页面
+      const checkAndShowSplash = async () => {
+        try {
+          const hasShownSplash = await AsyncStorage.getItem(SPLASH_SHOWN_KEY);
+          
+          // 如果没有显示过，则跳转到 splash 页面
+          if (!hasShownSplash) {
+            router.replace('/splash');
+            return;
+          }
+          
+          // 已经显示过，正常加载数据
+          await loadData();
+        } catch (error) {
+          console.error('检查 splash 页面失败:', error);
+          // 出错时仍然加载数据
+          await loadData();
+        }
+      };
+
+      checkAndShowSplash();
     }, [])
   );
 
