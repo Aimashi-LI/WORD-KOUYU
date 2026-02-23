@@ -15,6 +15,63 @@ const APP_NAME = '编码记忆法';
 const DEVELOPER = '小浣熊';
 const CONTACT_EMAIL = '2487717060@qq.com';
 
+// 学习真相文本
+const LEARNING_TRUTH = `# 学习者必须面对的一个真相
+
+**如果你真的想改变自己，就必须面对这个令人不适的真相。**
+
+## 残酷的现实
+
+大多数人的"努力学习"，其实是在**自我感动**。
+
+- ❌ 看了3小时书，却只记住了3个知识点
+- ❌ 每天背单词，却永远停留在同一页
+- ❌ 买了无数课程，却从未真正消化
+- ❌ 刷了100道题，下次遇到还是不会
+
+**这不是因为你不够聪明，而是因为你的大脑在抗拒。**
+
+## 大脑的欺骗机制
+
+你的大脑有一个进化出的保护机制——它害怕改变，害怕不确定性。所以它会用各种方式欺骗你：
+
+- 🧠 "今天太累了，明天再说吧"
+- 🧠 "我已经看了那么久，应该记住了"
+- 🧠 "这个太难了，先学简单的"
+- 🧠 "我理解了，不需要练习"
+
+**这些都是大脑为了节省能量而编织的谎言。**
+
+## 真正的学习需要痛苦
+
+**有效学习的本质是：主动突破大脑的保护机制。**
+
+这意味着你需要：
+
+- ✅ 主动挑战稍高于当前能力的任务
+- ✅ 强制大脑提取记忆，而不是被动阅读
+- ✅ 主动制造"费解感"，而不是追求"舒适感"
+- ✅ 主动测试自己，而不是复习笔记
+- ✅ 主动暴露盲区，而不是隐藏弱点
+
+这个过程一定是**不舒服**的。如果你感觉学习很舒服，那你在浪费生命。
+
+## 唯一的出路
+
+**拥抱痛苦，持续挑战。**
+
+- 🔥 每天选择1个有挑战的学习目标
+- 🔥 使用间隔重复，强迫大脑提取记忆
+- 🔥 主动测试，发现真实水平
+- 🔥 持续追踪，量化进步
+- 🔥 接受不完美，但永不停止
+
+**真正的进步，永远发生在你不舒服的区域。**
+
+---
+
+*记住：如果你在舒适区，你就在原地踏步。*`;
+
 // 法律文档内容（简化版，用于应用内展示）
 const LEGAL_DOCS = {
   privacyPolicy: `# 隐私政策
@@ -168,6 +225,7 @@ export default function AboutScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [selectedDoc, setSelectedDoc] = useState<{ title: string; content: string } | null>(null);
+  const [showLearningTruth, setShowLearningTruth] = useState(false);
 
   const showLegalDoc = (title: string, content: string) => {
     setSelectedDoc({ title, content });
@@ -360,7 +418,38 @@ export default function AboutScreen() {
           <ThemedText variant="caption" color={theme.textMuted} style={styles.developerHint}>
             用于清理测试数据，请谨慎操作
           </ThemedText>
+
+          <TouchableOpacity
+            style={styles.developerOption}
+            onPress={() => setShowLearningTruth(!showLearningTruth)}
+          >
+            <FontAwesome6
+              name={showLearningTruth ? 'chevron-up' : 'lightbulb'}
+              size={20}
+              color={showLearningTruth ? theme.primary : theme.accent}
+              style={styles.optionIcon}
+            />
+            <ThemedText
+              variant="body"
+              color={showLearningTruth ? theme.primary : theme.accent}
+              style={styles.optionText}
+            >
+              学习者必须面对的一个真相
+            </ThemedText>
+          </TouchableOpacity>
         </View>
+
+        {/* 学习真相 */}
+        {showLearningTruth && (
+          <View style={styles.section}>
+            <ThemedText variant="h3" color={theme.primary} style={styles.sectionTitle}>
+              💡 学习者必须面对的一个真相
+            </ThemedText>
+            <ThemedText variant="body" color={theme.textSecondary}>
+              {LEARNING_TRUTH}
+            </ThemedText>
+          </View>
+        )}
 
         {/* 开源许可 */}
         <View style={styles.section}>
