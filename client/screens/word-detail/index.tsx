@@ -100,8 +100,8 @@ export default function WordDetailScreen() {
       const { code, content } = split;
       if (!code || !content) continue;
 
-      // 将编码的含义按逗号分割，支持多种含义
-      const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
+      // 将编码的含义按逗号或顿号分割，支持多种含义
+      const meanings = content.split(/[、，]/).map(m => m.trim()).filter(m => m);
 
       // 检查句子中是否包含任何一个含义（尚未补全的）
       for (const meaning of meanings) {
