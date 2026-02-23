@@ -74,6 +74,89 @@ export default function WordDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [originalWord, setOriginalWord] = useState<Word | null>(null);
   const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true);
+  const [previousSentence, setPreviousSentence] = useState('');
+
+  // 智能删除处理：当删除含义时，自动跳过（编码）部分，直接删除含义
+  const handleSentenceChange = (newText: string) => {
+    const prevText = previousSentence;
+    
+    // 如果是第一次输入，直接更新
+    if (!prevText) {
+      setSentence(newText);
+      setPreviousSentence(newText);
+      return;
+    }
+    
+    // 检测是否是删除操作（新文本比旧文本短）
+    if (newText.length < prevText.length) {
+      const deletedCount = prevText.length - newText.length;
+      
+      // 查找所有（编码）模式
+      const pattern = /（([^）]+)）/g;
+      const matches: Array<{ text: string; start: number; end: number; code: string }> = [];
+      let match;
+      
+      while ((match = pattern.exec(prevText)) !== null) {
+        matches.push({
+          text: match[0],
+          start: match.index,
+          end: match.index + match[0].length,
+          code: match[1]
+        });
+      }
+      
+      // 从后向前查找，找到文本末尾附近的（编码）模式
+      for (let i = matches.length - 1; i >= 0; i--) {
+        const m = matches[i];
+        
+        // 检查删除操作是否在（编码）的右侧或内部
+        // 如果删除了1个字符，且文本末尾正好在（编码）的右侧
+        if (deletedCount === 1 && prevText.length === m.end) {
+          // 找到（编码）前面的含义文本
+          let meaningStart = m.start;
+          
+          // 向前查找含义的起始位置（跳过其他（编码）模式）
+          let braceCount = 0;
+          for (let j = m.start - 1; j >= 0; j--) {
+            if (prevText[j] === '）') {
+              braceCount++;
+            } else if (prevText[j] === '（') {
+              braceCount--;
+              if (braceCount < 0) {
+                meaningStart = j + 1;
+                break;
+              }
+            }
+          }
+          
+          const meaningText = prevText.substring(meaningStart, m.start);
+          
+          // 删除含义的最后一个字符
+          if (meaningText.length > 0) {
+            const newMeaningText = meaningText.substring(0, meaningText.length - 1);
+            
+            // 如果含义被删除完了，删除整个（编码）模式
+            if (newMeaningText.length === 0) {
+              const result = prevText.substring(0, meaningStart) + prevText.substring(m.end);
+              setSentence(result);
+              setPreviousSentence(result);
+              return;
+            } else {
+              // 否则只删除含义的最后一个字符，保留（编码）
+              const result = prevText.substring(0, meaningStart) + newMeaningText + prevText.substring(m.end - deletedCount);
+              setSentence(result);
+              setPreviousSentence(result);
+              return;
+            }
+          }
+        }
+      }
+    }
+    
+    // 正常更新
+    setSentence(newText);
+    setPreviousSentence(newText);
+  };
 
   // 助记自动补全功能
   useEffect(() => {
@@ -130,6 +213,7 @@ export default function WordDetailScreen() {
     if (hasChanges) {
       setAutoCompleteEnabled(false);
       setSentence(newText);
+      setPreviousSentence(newText);
       // 短暂延迟后重新启用自动补全
       setTimeout(() => setAutoCompleteEnabled(true), 100);
     }
@@ -657,7 +741,7 @@ export default function WordDetailScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={sentence}
-              onChangeText={setSentence}
+              onChangeText={handleSentenceChange}
               placeholder="例：编码an对应多个含义（阿牛、一个），填写任一含义即可触发补全"
               placeholderTextColor={theme.textMuted}
               multiline
