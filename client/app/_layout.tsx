@@ -70,6 +70,15 @@ export default function RootLayout() {
             // 隐藏自带的头部
             headerShown: false
           }}>
+            <Stack.Screen 
+              name="splash" 
+              options={{ 
+                title: "",
+                presentation: 'card',
+                gestureEnabled: false,
+                animation: 'fade'
+              }} 
+            />
             <Stack.Screen name="(tabs)" options={{ title: "" }} />
             <Stack.Screen 
               name="add-word" 
