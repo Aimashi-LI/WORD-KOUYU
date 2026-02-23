@@ -35,8 +35,10 @@ import { isWordIncomplete } from '@/utils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// 单词卡片组件
-const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme, cardRef, router, isCurrent }: {
+/* eslint-disable react/prop-types */
+
+// WordCard 的 Props 类型
+interface WordCardProps {
   word: Word;
   index: number;
   scrollX: SharedValue<number>;
@@ -47,7 +49,10 @@ const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme,
   cardRef: React.RefObject<View | null>;
   router: any;
   isCurrent: boolean;
-}) => {
+}
+
+// 单词卡片组件 - 使用 React.memo 优化性能
+const WordCard = React.memo<WordCardProps>(({ word, index, scrollX, cardWidth, cardSpacing, styles, theme, cardRef, router, isCurrent }) => {
   const offset = index * (cardWidth + cardSpacing);
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -177,7 +182,18 @@ const WordCard = ({ word, index, scrollX, cardWidth, cardSpacing, styles, theme,
       </View>
     </Animated.View>
   );
-};
+}, (prevProps, nextProps) => {
+  // 自定义比较函数：只有当关键属性变化时才重新渲染
+  return (
+    prevProps.word.id === nextProps.word.id &&
+    prevProps.index === nextProps.index &&
+    prevProps.isCurrent === nextProps.isCurrent &&
+    prevProps.word === nextProps.word
+  );
+});
+
+// 设置组件显示名称（用于调试）
+WordCard.displayName = 'WordCard';
 
 export default function BrushWordsScreen() {
   const { theme, isDark } = useTheme();
@@ -223,21 +239,17 @@ export default function BrushWordsScreen() {
     try {
       await initDatabase();
       
-      // 强制检查数据库表结构
+      // 检查数据库表结构
       const db = getDatabase();
       const tableInfo = await db.getAllAsync<{ name: string, type: string }>(
         'PRAGMA table_info(words)'
       );
       
-      console.log('[loadWords] words 表的所有字段:', tableInfo.map(col => `${col.name} (${col.type})`));
       const hasPartOfSpeech = tableInfo.some(col => col.name === 'partOfSpeech');
-      console.log('[loadWords] partOfSpeech 字段是否存在:', hasPartOfSpeech);
       
       if (!hasPartOfSpeech) {
-        console.log('[loadWords] 警告：partOfSpeech 字段不存在，尝试添加...');
         try {
           await db.execAsync('ALTER TABLE words ADD COLUMN partOfSpeech TEXT');
-          console.log('[loadWords] 成功添加 partOfSpeech 字段');
         } catch (error) {
           console.error('[loadWords] 添加 partOfSpeech 字段失败:', error);
         }
@@ -249,17 +261,9 @@ export default function BrushWordsScreen() {
         // 从指定词库加载单词
         wordList = await getWordsInWordbook(parseInt(projectId));
       } else {
-        // 直接查询数据库，绕过 getAllWords 函数
+        // 直接查询数据库
         const db = getDatabase();
         const rows = await db.getAllAsync<any>('SELECT * FROM words ORDER BY created_at DESC');
-
-        console.log('[loadWords] 直接查询返回的行数:', rows.length);
-        if (rows.length > 0) {
-          console.log('[loadWords] 直接查询 - 第一行的所有字段:', Object.keys(rows[0]));
-          console.log('[loadWords] 直接查询 - 第一行完整数据:', JSON.stringify(rows[0], null, 2));
-          console.log('[loadWords] 直接查询 - 第一行 partOfSpeech 值:', rows[0].partOfSpeech);
-          console.log('[loadWords] 直接查询 - 第一行 sentence 值:', rows[0].sentence);
-        }
 
         // 手动映射
         wordList = rows.map(row => ({
@@ -279,27 +283,6 @@ export default function BrushWordsScreen() {
           is_mastered: row.is_mastered || 0,
           created_at: row.created_at
         }));
-
-        if (wordList.length > 0) {
-          console.log('[loadWords] 手动映射后的第一个单词的所有字段:', Object.keys(wordList[0]));
-          console.log('[loadWords] 手动映射后的第一个单词完整数据:', JSON.stringify(wordList[0], null, 2));
-          console.log('[loadWords] 手动映射后 partOfSpeech 值:', wordList[0].partOfSpeech);
-          console.log('[loadWords] 手动映射后 sentence 值:', wordList[0].sentence);
-        }
-      }
-      
-      // 新增：在接收 getAllWords 返回值后立即打印
-      if (wordList.length > 0) {
-        console.log('[BrushWords] getAllWords 返回后立即 - 第一个单词的所有字段:', Object.keys(wordList[0]));
-        console.log('[BrushWords] getAllWords 返回后立即 - partOfSpeech:', wordList[0].partOfSpeech);
-        console.log('[BrushWords] getAllWords 返回后立即 - sentence:', wordList[0].sentence);
-        console.log('[BrushWords] getAllWords 返回后立即 - 完整数据:', JSON.stringify(wordList[0], null, 2));
-      }
-      
-      // 新增：在 setWords 之前再次打印，确认数据没有在传递中丢失
-      if (wordList.length > 0) {
-        console.log('[BrushWords] setWords 之前的第一个单词:', JSON.stringify(wordList[0], null, 2));
-        console.log('[BrushWords] setWords 之前 partOfSpeech 值:', wordList[0].partOfSpeech);
       }
       
       setWords(wordList);
@@ -307,16 +290,8 @@ export default function BrushWordsScreen() {
       setShowDefinition(false);
       // 记录所有单词ID
       setBrowsingWords(wordList.map(w => w.id));
-
-      // 调试日志：打印第一个单词的所有字段
-      if (wordList.length > 0) {
-        console.log('[BrushWords] 第一个单词完整数据:', JSON.stringify(wordList[0], null, 2));
-        console.log('[BrushWords] partOfSpeech 值:', wordList[0].partOfSpeech);
-        console.log('[BrushWords] sentence 值:', wordList[0].sentence);
-        console.log('[BrushWords] mnemonic 值:', wordList[0].mnemonic);
-      }
     } catch (error) {
-      console.error('加载单词失败:', error);
+      console.error('[loadWords] 加载单词失败:', error);
     } finally {
       setLoading(false);
     }
@@ -467,16 +442,8 @@ export default function BrushWordsScreen() {
     setShowCreateProjectModal(true);
   };
 
-  const currentWord = words[currentIndex];
-
-  // 调试日志：在渲染时打印词性和助记句
-  React.useEffect(() => {
-    if (currentWord) {
-      console.log('[BrushWords Render] partOfSpeech:', currentWord.partOfSpeech);
-      console.log('[BrushWords Render] mnemonic:', currentWord.mnemonic);
-      console.log('[BrushWords Render] sentence:', currentWord.sentence);
-    }
-  }, [currentWord]);
+  // 使用 useMemo 优化当前单词计算
+  const currentWord = useMemo(() => words[currentIndex] || null, [words, currentIndex]);
 
   // 滑动处理函数
   const scrollHandler = useAnimatedScrollHandler({
@@ -506,7 +473,6 @@ export default function BrushWordsScreen() {
     const newIndex = Math.round(offset / (CARD_WIDTH + CARD_SPACING));
     const clampedIndex = Math.max(0, Math.min(newIndex, words.length - 1));
     
-    console.log('[onMomentumScrollEnd] 当前索引:', currentIndex, '新索引:', clampedIndex);
     setCurrentIndex(clampedIndex);
     setShowDefinition(false);
   };
