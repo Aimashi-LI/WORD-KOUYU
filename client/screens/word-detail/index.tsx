@@ -103,31 +103,20 @@ export default function WordDetailScreen() {
       const sortedMeanings = [...meanings].sort((a, b) => b.length - a.length);
       
       console.log(`[编辑自动补全] 排序后的含义:`, sortedMeanings);
-      
-      // 记录已补全的文本片段，避免重复替换
-      const completedSegments = new Set<string>();
 
       for (const meaning of sortedMeanings) {
         console.log(`[编辑自动补全] 检查含义: "${meaning}"`);
+        console.log(`[编辑自动补全] 当前文本: "${newText}"`);
         
         const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
         if (patternWithBrackets.test(newText)) {
           console.log(`[编辑自动补全] 含义 "${meaning}" 已补全，跳过`);
-          completedSegments.add(meaning);
-          continue;
-        }
-
-        // 检查该含义是否是其他已补全片段的一部分
-        const isPartOfCompleted = Array.from(completedSegments).some(
-          completed => completed !== meaning && completed.includes(meaning)
-        );
-        
-        if (isPartOfCompleted) {
-          console.log(`[编辑自动补全] 含义 "${meaning}" 是已补全片段的一部分，跳过`);
           continue;
         }
 
         // 检查是否包含该含义（不限制边界，任何位置都可以补全）
+        console.log(`[编辑自动补全] 检查是否包含含义 "${meaning}"`, newText.includes(meaning));
+        
         if (newText.includes(meaning)) {
           console.log(`[编辑自动补全] 匹配到含义 "${meaning}"，准备补全`);
           // 替换为"中文（字母）"形式（不限制边界，任何位置都可以补全）
@@ -138,9 +127,6 @@ export default function WordDetailScreen() {
           hasChanges = true;
           
           console.log(`[编辑自动补全] 补全后的文本: "${newText}"`);
-          
-          // 记录已补全的片段
-          completedSegments.add(meaning);
         } else {
           console.log(`[编辑自动补全] 未匹配到含义 "${meaning}"`);
         }
