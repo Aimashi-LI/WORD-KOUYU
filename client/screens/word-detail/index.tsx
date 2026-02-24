@@ -32,6 +32,7 @@ import {
   CodeSuggestion
 } from '@/utils/splitHelper';
 import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
+import { MnemonicInput } from '@/components/MnemonicInput';
 import { fetchPhoneticByWord } from '@/utils';
 
 // 词性列表
@@ -73,48 +74,6 @@ export default function WordDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [originalWord, setOriginalWord] = useState<Word | null>(null);
-  const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true);
-
-  // 助记自动补全功能
-  useEffect(() => {
-    if (!autoCompleteEnabled || !sentence.trim()) return;
-
-    const validSplits = splitItems.filter(item => item.code && item.content);
-    if (validSplits.length === 0) return;
-
-    let newText = sentence;
-    let hasChanges = false;
-
-    const escapeRegex = (str: string) => {
-      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    };
-
-    for (const split of validSplits) {
-      const { code, content } = split;
-      if (!code || !content) continue;
-
-      const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
-
-      for (const meaning of meanings) {
-        const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
-        if (patternWithBrackets.test(newText)) {
-          continue;
-        }
-
-        const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`);
-        if (wordBoundaryPattern.test(newText)) {
-          newText = newText.replace(new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'), `$1${meaning}（${code}）$3`);
-          hasChanges = true;
-        }
-      }
-    }
-
-    if (hasChanges) {
-      setAutoCompleteEnabled(false);
-      setSentence(newText);
-      setTimeout(() => setAutoCompleteEnabled(true), 100);
-    }
-  }, [sentence, splitItems]);
 
   // 加载单词数据
   useEffect(() => {
@@ -205,7 +164,6 @@ export default function WordDetailScreen() {
       }
       
       setSplitHistory([]);
-      setAutoCompleteEnabled(true);
     }
     setEditMode('view');
   };
@@ -592,31 +550,19 @@ export default function WordDetailScreen() {
 
           {/* 助记句子 */}
           <View style={styles.inputContainer}>
-            <View style={styles.labelRow}>
-              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-                助记句子
-              </ThemedText>
-              <TouchableOpacity
-                onPress={() => setAutoCompleteEnabled(!autoCompleteEnabled)}
-                style={styles.autoCompleteToggle}
-              >
-                <FontAwesome6
-                  name={autoCompleteEnabled ? "toggle-on" : "toggle-off"}
-                  size={24}
-                  color={autoCompleteEnabled ? theme.primary : theme.textMuted}
-                />
-                <ThemedText variant="caption" color={theme.textSecondary} style={styles.autoCompleteLabel}>
-                  自动补全
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={[styles.input, styles.textArea]}
+            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+              助记句子
+            </ThemedText>
+            <ThemedText variant="caption" color={theme.textMuted} style={styles.helperText}>
+              例：编码an对应多个含义（阿牛、一个），填写任一含义即可触发自动补全
+            </ThemedText>
+            <MnemonicInput
               value={sentence}
-              onChangeText={setSentence}
-              placeholder="例：编码an对应多个含义（阿牛、一个），填写任一含义即可触发补全"
-              placeholderTextColor={theme.textMuted}
-              multiline
+              onChange={setSentence}
+              codes={codes}
+              placeholder="请输入助记句子"
+              multiline={true}
+              style={[styles.input, styles.textArea]}
             />
           </View>
 

@@ -41,6 +41,10 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.xs,
       fontWeight: '500',
     },
+    helperText: {
+      marginBottom: Spacing.sm,
+      marginTop: -Spacing.xs,
+    },
     phoneticButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -187,14 +191,6 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.sm,
       borderWidth: 1,
       borderColor: theme.borderLight,
-    },
-    autoCompleteToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    autoCompleteLabel: {
-      fontSize: 12,
     },
     // 音标键盘 Modal 样式
     keyboardModalOverlay: {
