@@ -238,7 +238,20 @@ export default function AddWordScreen() {
 
         if (shouldReplace) {
           // 替换为"中文（字母）"形式
-          newText = newText.replace(new RegExp(`${escapeRegex(meaning)}`, 'g'), `${meaning}（${code}）`);
+          if (splitIndex === 0) {
+            // 第一个拆分项：使用中文兼容的边界（允许中文字符作为边界）
+            // 匹配：开头、空格、标点后 + 含义 + (空格/标点/结尾)
+            newText = newText.replace(
+              new RegExp(`((?:^|[\\s\\p{P}])${escapeRegex(meaning)})(?=[\\s\\p{P}]|$)`, 'gu'),
+              `$1（${code}）`
+            );
+          } else {
+            // 其他拆分项：保留原有的边界字符
+            newText = newText.replace(
+              new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'),
+              `$1${meaning}（${code}）$3`
+            );
+          }
           hasChanges = true;
         }
       }
