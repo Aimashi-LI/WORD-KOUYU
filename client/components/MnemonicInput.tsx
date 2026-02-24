@@ -39,6 +39,7 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
   const [activeFragmentId, setActiveFragmentId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRefs = useRef<Map<string, TextInput>>(new Map());
+  const isUpdatingRef = useRef(false);
 
   // 获取编码对应的含义列表
   const getCodeMeanings = useCallback((code: string, codeList: { letter: string; chinese: string }[]): string[] => {
@@ -112,6 +113,11 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
 
   // 初始化片段
   useEffect(() => {
+    if (isUpdatingRef.current) {
+      isUpdatingRef.current = false;
+      return;
+    }
+    
     const newFragments = parseTextToFragments(value);
     setFragments(newFragments);
   }, [value, parseTextToFragments]);
@@ -188,6 +194,9 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
         mergedFragments.push(current);
       }
 
+      // 标记正在更新，避免在 useEffect 中重复解析
+      isUpdatingRef.current = true;
+      
       // 通知父组件
       onChange(fragmentsToText(mergedFragments));
       
@@ -223,6 +232,9 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
                   ...newFragments[i],
                   text: newFragments[i].text.slice(0, -1)
                 };
+                
+                // 标记正在更新
+                isUpdatingRef.current = true;
                 
                 // 通知父组件
                 onChange(fragmentsToText(newFragments));
@@ -303,9 +315,9 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
         width: '100%',
       },
       fragmentsContainer: {
-        flexDirection: multiline ? 'column' : 'row',
-        flexWrap: multiline ? 'wrap' : 'nowrap',
-        alignItems: multiline ? 'flex-start' : 'center',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
         minHeight: multiline ? 100 : 44,
       },
       textInput: {
@@ -349,7 +361,7 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
       <ScrollView
         ref={scrollViewRef}
         style={styles.scrollView}
-        horizontal={multiline ? false : true}
+        horizontal={!multiline}
         showsHorizontalScrollIndicator={false}
         scrollEnabled={false}
       >
