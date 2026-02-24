@@ -388,11 +388,6 @@ export default function AddWordScreen() {
     setActiveCodeIndex(-1);
   };
 
-  // 添加新的拆分项
-  const handleAddSplitItem = () => {
-    setSplitItems([...splitItems, { code: '', content: '' }]);
-  };
-
   // 删除拆分项
   const handleRemoveSplitItem = (index: number) => {
     const newSplitItems = splitItems.filter((_, i) => i !== index);
@@ -684,14 +679,6 @@ export default function AddWordScreen() {
               )}
             </View>
           ))}
-
-          <TouchableOpacity
-            onPress={handleAddSplitItem}
-            style={styles.addSplitButton}
-          >
-            <FontAwesome6 name="plus" size={16} color={theme.primary} />
-            <ThemedText variant="caption" color={theme.primary}>添加拆分项</ThemedText>
-          </TouchableOpacity>
         </ThemedView>
 
         {/* 短句输入 */}
