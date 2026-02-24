@@ -50,7 +50,7 @@ export function SentenceInput({
     let lastIndex = 0;
     let pureText = '';
     let positionAdjustment = 0;
-
+    
     while ((match = shadowRegex.exec(text)) !== null) {
       const fullMatch = match[0];
       const code = match[1];
@@ -64,11 +64,11 @@ export function SentenceInput({
       const placeholder = '\u200B'.repeat(fullMatch.length);
       pureText += placeholder;
 
-      // 记录影子文本信息
+      // 记录影子文本信息（使用纯文本中的位置）
       shadows.push({
         code,
         text: fullMatch,
-        position: start + positionAdjustment
+        position: start + positionAdjustment  // 纯文本中的位置
       });
 
       positionAdjustment += fullMatch.length - placeholder.length;
@@ -85,54 +85,114 @@ export function SentenceInput({
 
   // 处理文本变化
   const handleTextChange = (newText: string) => {
-    // 检查删除操作
+    // 检测删除操作
     if (newText.length < pureText.length) {
       const deletedCount = pureText.length - newText.length;
-      const sortedShadows = [...shadows].sort((a, b) => b.position - a.position);
       
-      // 从后向前检查
-      for (const shadow of sortedShadows) {
-        // 检查删除操作是否在影子文本的右侧
-        const textEnd = pureText.length;
+      // 计算删除位置（在纯文本中的位置，假设删除发生在末尾）
+      const deletePosInPure = newText.length;
+      
+      // 对于每个影子文本，检查删除是否发生在其前面的含义中
+      for (const shadow of shadows) {
+        const shadowStartInPure = shadow.position;
         
-        // 如果删除操作在影子文本的右侧
-        if (textEnd === shadow.position + shadow.text.length) {
-          // 查找影子文本前面的含义
-          let meaningStart = shadow.position;
-          
-          // 向前查找含义起始位置（跳过其他影子文本）
-          for (let j = shadow.position - 1; j >= 0; j--) {
-            if (pureText[j] === '\u200B') {
-              // 跳过占位符
-              continue;
-            }
-            if (j === 0 || pureText[j - 1] === '\u200B') {
-              meaningStart = j;
-              break;
+        // 如果删除位置在影子文本之前，说明删除了影子文本前面的含义
+        if (deletePosInPure <= shadowStartInPure) {
+          // 计算影子文本前面的纯字符数（在纯文本中）
+          let beforeCharsInPure = 0;
+          for (let i = 0; i < shadowStartInPure; i++) {
+            if (pureText[i] !== '\u200B') {
+              beforeCharsInPure++;
             }
           }
           
-          const meaningText = value.substring(meaningStart, shadow.position);
+          // 计算新文本中对应的纯字符数
+          let newBeforeCharsInPure = 0;
+          const searchLength = Math.min(shadowStartInPure, newText.length);
+          for (let i = 0; i < searchLength; i++) {
+            if (newText[i] !== '\u200B') {
+              newBeforeCharsInPure++;
+            }
+          }
           
-          if (meaningText.length > 0) {
-            const newMeaningText = meaningText.substring(0, meaningText.length - 1);
+          // 如果前面的字符被删除
+          if (newBeforeCharsInPure < beforeCharsInPure) {
+            // 在原始文本中重建
+            // 计算原始文本中影子文本的位置
+            let purePos = 0;
+            let realPos = 0;
+            let realShadowPos = -1;
             
-            // 重建完整的文本
-            const beforeShadow = value.substring(0, meaningStart);
-            const afterShadow = value.substring(shadow.position);
+            while (purePos < pureText.length && realPos < value.length) {
+              if (pureText[purePos] === '\u200B') {
+                // 纯文本中的占位符对应原始文本中的编码
+                if (purePos === shadowStartInPure) {
+                  // 找到了影子文本在原始文本中的位置
+                  // 需要向前找 '（'
+                  while (realPos > 0 && value[realPos - 1] !== '（') {
+                    realPos--;
+                  }
+                  realShadowPos = realPos;
+                  break;
+                }
+                // 跳过原始文本中的编码
+                if (value[realPos] === '（') {
+                  const closeParen = value.indexOf('）', realPos);
+                  if (closeParen !== -1) {
+                    realPos = closeParen + 1;
+                  }
+                }
+                purePos++;
+              } else {
+                // 普通字符，一一对应
+                if (purePos === shadowStartInPure) {
+                  realShadowPos = realPos;
+                  break;
+                }
+                purePos++;
+                realPos++;
+              }
+            }
             
-            if (newMeaningText.length === 0) {
-              // 含义被完全删除，移除影子文本，恢复自动补全
-              const result = beforeShadow + afterShadow;
-              onChange(result);
-              onAutoCompleteChange?.(true); // 恢复自动补全
-              return;
-            } else {
-              // 含义被部分删除，保留影子文本，关闭自动补全
-              const result = beforeShadow + newMeaningText + afterShadow;
-              onChange(result);
-              onAutoCompleteChange?.(false); // 关闭自动补全
-              return;
+            if (realShadowPos !== -1) {
+              // 找到含义起始位置（从影子文本位置向前数 newBeforeCharsInPure 个字符）
+              let meaningStart = realShadowPos;
+              let foundChars = 0;
+              for (let i = realShadowPos - 1; i >= 0; i--) {
+                if (value[i] === '（') {
+                  // 遇到其他编码的左括号，停止
+                  break;
+                }
+                if (value[i] === '）') {
+                  // 遇到其他编码的右括号，跳过整个编码
+                  const openParen = value.lastIndexOf('（', i);
+                  if (openParen !== -1) {
+                    i = openParen;
+                  }
+                } else {
+                  foundChars++;
+                  if (foundChars === newBeforeCharsInPure) {
+                    meaningStart = i;
+                    break;
+                  }
+                }
+              }
+              
+              const beforeShadow = value.substring(0, meaningStart);
+              const afterShadow = value.substring(realShadowPos + shadow.text.length);
+              
+              if (newBeforeCharsInPure === 0) {
+                // 前面的字符被完全删除，移除影子文本
+                onChange(beforeShadow + afterShadow);
+                onAutoCompleteChange?.(true); // 恢复自动补全
+                return;
+              } else {
+                // 前面的字符被部分删除，保留影子文本，更新含义
+                const newMeaningText = value.substring(meaningStart, realShadowPos);
+                onChange(beforeShadow + newMeaningText + shadow.text + afterShadow);
+                onAutoCompleteChange?.(false); // 关闭自动补全
+                return;
+              }
             }
           }
         }
@@ -140,15 +200,6 @@ export function SentenceInput({
     }
     
     // 正常更新（需要处理零宽占位符）
-    // 找到第一个非零宽字符的位置
-    let firstNonZeroWidthIndex = 0;
-    for (let i = 0; i < newText.length; i++) {
-      if (newText[i] !== '\u200B') {
-        firstNonZeroWidthIndex = i;
-        break;
-      }
-    }
-    
     // 提取纯文本（去掉零宽占位符）
     let cleanText = '';
     for (let i = 0; i < newText.length; i++) {
@@ -158,7 +209,7 @@ export function SentenceInput({
     }
     
     // 重建完整文本（重新插入影子文本）
-    const { pureText: originalPureText, shadows: originalShadows } = parseText(value);
+    const { shadows: originalShadows } = parseText(value);
     
     // 检查是否需要更新影子文本的位置
     let result = cleanText;
