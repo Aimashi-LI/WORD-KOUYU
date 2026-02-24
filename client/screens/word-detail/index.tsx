@@ -89,7 +89,8 @@ export default function WordDetailScreen() {
       return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     };
 
-    for (const split of validSplits) {
+    for (let splitIndex = 0; splitIndex < validSplits.length; splitIndex++) {
+      const split = validSplits[splitIndex];
       const { code, content } = split;
       if (!code || !content) continue;
 
@@ -101,9 +102,20 @@ export default function WordDetailScreen() {
           continue;
         }
 
-        const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`);
-        if (wordBoundaryPattern.test(newText)) {
-          newText = newText.replace(new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'), `$1${meaning}（${code}）$3`);
+        let shouldReplace = false;
+
+        if (splitIndex === 0) {
+          // 第一个拆分项：无论出现在什么位置都匹配（不限制单词边界）
+          shouldReplace = newText.includes(meaning);
+        } else {
+          // 其他拆分项：只匹配单词边界（前后是空格或标点）
+          const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`);
+          shouldReplace = wordBoundaryPattern.test(newText);
+        }
+
+        if (shouldReplace) {
+          // 替换为"中文（字母）"形式
+          newText = newText.replace(new RegExp(`${escapeRegex(meaning)}`, 'g'), `${meaning}（${code}）`);
           hasChanges = true;
         }
       }
