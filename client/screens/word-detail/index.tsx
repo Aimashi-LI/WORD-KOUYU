@@ -95,10 +95,26 @@ export default function WordDetailScreen() {
       if (!code || !content) continue;
 
       const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
+      
+      // 按长度降序排序（最长含义优先），避免短含义匹配长含义的一部分
+      const sortedMeanings = [...meanings].sort((a, b) => b.length - a.length);
+      
+      // 记录已补全的文本片段，避免重复替换
+      const completedSegments = new Set<string>();
 
-      for (const meaning of meanings) {
+      for (const meaning of sortedMeanings) {
         const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
         if (patternWithBrackets.test(newText)) {
+          completedSegments.add(meaning);
+          continue;
+        }
+
+        // 检查该含义是否是其他已补全片段的一部分
+        const isPartOfCompleted = Array.from(completedSegments).some(
+          completed => completed !== meaning && completed.includes(meaning)
+        );
+        
+        if (isPartOfCompleted) {
           continue;
         }
 
@@ -110,6 +126,9 @@ export default function WordDetailScreen() {
             `${meaning}（${code}）`
           );
           hasChanges = true;
+          
+          // 记录已补全的片段
+          completedSegments.add(meaning);
         }
       }
     }

@@ -216,13 +216,30 @@ export default function AddWordScreen() {
 
       // 将 content 拆分为多个含义（用逗号分隔）
       const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
+      
+      // 按长度降序排序（最长含义优先），避免短含义匹配长含义的一部分
+      const sortedMeanings = [...meanings].sort((a, b) => b.length - a.length);
+      
+      // 记录已补全的文本片段，避免重复替换
+      const completedSegments = new Set<string>();
 
       // 检查每个含义
-      for (const meaning of meanings) {
+      for (const meaning of sortedMeanings) {
         // 检查是否已经包含了"中文（字母）"或"中文(字母)"的形式
         const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
         if (patternWithBrackets.test(newText)) {
-          continue; // 已经有了括号补全，跳过这个含义
+          // 记录已补全的片段
+          completedSegments.add(meaning);
+          continue;
+        }
+
+        // 检查该含义是否是其他已补全片段的一部分
+        const isPartOfCompleted = Array.from(completedSegments).some(
+          completed => completed !== meaning && completed.includes(meaning)
+        );
+        
+        if (isPartOfCompleted) {
+          continue; // 跳过已补全片段的一部分
         }
 
         // 检查是否包含该含义（不限制边界，任何位置都可以补全）
@@ -233,6 +250,9 @@ export default function AddWordScreen() {
             `${meaning}（${code}）`
           );
           hasChanges = true;
+          
+          // 记录已补全的片段
+          completedSegments.add(meaning);
         }
       }
     }
