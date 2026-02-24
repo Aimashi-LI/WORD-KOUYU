@@ -116,6 +116,22 @@ export default function WordDetailScreen() {
     }
   }, [sentence, splitItems]);
 
+  // 处理助记句子输入（检测删除行为和输入内容）
+  const handleSentenceChange = (text: string) => {
+    // 检测删除行为：文本长度减少
+    if (text.length < sentence.length) {
+      // 检测到删除，关闭自动补全
+      setAutoCompleteEnabled(false);
+      console.log('[助记输入] 检测到删除行为，关闭自动补全');
+    } else if (text.length > sentence.length) {
+      // 检测到输入，恢复自动补全
+      setAutoCompleteEnabled(true);
+      console.log('[助记输入] 检测到输入行为，恢复自动补全');
+    }
+    
+    setSentence(text);
+  };
+
   // 加载单词数据
   useEffect(() => {
     loadWordDetail();
@@ -613,7 +629,7 @@ export default function WordDetailScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={sentence}
-              onChangeText={setSentence}
+              onChangeText={handleSentenceChange}
               placeholder="例：编码an对应多个含义（阿牛、一个），填写任一含义即可触发补全"
               placeholderTextColor={theme.textMuted}
               multiline
