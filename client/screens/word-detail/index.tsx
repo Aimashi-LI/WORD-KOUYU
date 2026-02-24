@@ -102,9 +102,7 @@ export default function WordDetailScreen() {
           continue;
         }
 
-        // 检查是否包含该含义（不限制边界，任何位置都可以补全）
         if (newText.includes(meaning)) {
-          // 替换为"中文（字母）"形式（不限制边界，任何位置都可以补全）
           newText = newText.replace(
             new RegExp(`${escapeRegex(meaning)}`, 'g'),
             `${meaning}（${code}）`
@@ -127,11 +125,9 @@ export default function WordDetailScreen() {
     if (text.length < sentence.length) {
       // 检测到删除，关闭自动补全
       setAutoCompleteEnabled(false);
-      console.log('[助记输入] 检测到删除行为，关闭自动补全');
     } else if (text.length > sentence.length) {
       // 检测到输入，恢复自动补全
       setAutoCompleteEnabled(true);
-      console.log('[助记输入] 检测到输入行为，恢复自动补全');
     }
     
     setSentence(text);

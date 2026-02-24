@@ -252,11 +252,9 @@ export default function AddWordScreen() {
     if (text.length < sentence.length) {
       // 检测到删除，关闭自动补全
       setAutoCompleteEnabled(false);
-      console.log('[助记输入] 检测到删除行为，关闭自动补全');
     } else if (text.length > sentence.length) {
       // 检测到输入，恢复自动补全
       setAutoCompleteEnabled(true);
-      console.log('[助记输入] 检测到输入行为，恢复自动补全');
     }
     
     setSentence(text);
