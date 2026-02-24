@@ -39,7 +39,7 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
   const [activeFragmentId, setActiveFragmentId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRefs = useRef<Map<string, TextInput>>(new Map());
-  const isUpdatingRef = useRef(false);
+  const isInternalUpdateRef = useRef(false); // 标记是否是内部更新
 
   // 获取编码对应的含义列表
   const getCodeMeanings = useCallback((code: string, codeList: { letter: string; chinese: string }[]): string[] => {
@@ -111,10 +111,11 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
     return fragmentList.map(f => f.text).join('');
   }, []);
 
-  // 初始化片段
+  // 初始化片段（只在 value 真正变化时更新）
   useEffect(() => {
-    if (isUpdatingRef.current) {
-      isUpdatingRef.current = false;
+    // 如果是内部更新导致的 value 变化，跳过
+    if (isInternalUpdateRef.current) {
+      isInternalUpdateRef.current = false;
       return;
     }
     
@@ -164,7 +165,7 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
         }
       }
 
-      // 检查前一个编码片段是否需要移除
+      // 检查前一个编码片段是否需要移除（文本不再匹配含义）
       if (fragmentIndex > 0 && newFragments[fragmentIndex - 1].type === 'code') {
         const prevCode = newFragments[fragmentIndex - 1];
         if (prevCode.meanings) {
@@ -177,30 +178,13 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
         }
       }
 
-      // 合并相邻的文本片段
-      const mergedFragments: TextFragment[] = [];
-      let idCounter = 0;
-      for (let i = 0; i < newFragments.length; i++) {
-        const current = { ...newFragments[i], id: String(idCounter++) };
-        
-        if (current.type === 'text') {
-          // 检查是否可以与下一个文本片段合并
-          while (i < newFragments.length - 1 && newFragments[i + 1].type === 'text') {
-            current.text = current.text + newFragments[i + 1].text;
-            i++;
-          }
-        }
-        
-        mergedFragments.push(current);
-      }
-
-      // 标记正在更新，避免在 useEffect 中重复解析
-      isUpdatingRef.current = true;
+      // 标记为内部更新
+      isInternalUpdateRef.current = true;
       
       // 通知父组件
-      onChange(fragmentsToText(mergedFragments));
+      onChange(fragmentsToText(newFragments));
       
-      return mergedFragments;
+      return newFragments;
     });
   }, [codes, getCodeMeanings, fragmentsToText, onChange]);
 
@@ -212,8 +196,8 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
       const input = inputRefs.current.get(fragmentId);
       if (!input) return;
 
-      // 获取当前光标位置
-      const selection = input.props.selection || { start: 0, end: 0 };
+      // 安全获取当前光标位置
+      const selection = input?.props?.selection || { start: 0, end: 0 };
       
       // 如果光标在开头，尝试删除上一个文本片段的最后一个字符
       if (selection.start === 0 && selection.end === 0) {
@@ -228,13 +212,14 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
               
               if (newFragments[i].text.length > 0) {
                 // 删除最后一个字符
+                const newText = newFragments[i].text.slice(0, -1);
                 newFragments[i] = {
                   ...newFragments[i],
-                  text: newFragments[i].text.slice(0, -1)
+                  text: newText
                 };
                 
-                // 标记正在更新
-                isUpdatingRef.current = true;
+                // 标记为内部更新
+                isInternalUpdateRef.current = true;
                 
                 // 通知父组件
                 onChange(fragmentsToText(newFragments));
@@ -245,7 +230,7 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
                   if (prevInput) {
                     prevInput.focus();
                     prevInput.setNativeProps({
-                      selection: { start: newFragments[i].text.length, end: newFragments[i].text.length }
+                      selection: { start: newText.length, end: newText.length }
                     });
                   }
                 }, 0);
