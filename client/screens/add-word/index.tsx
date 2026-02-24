@@ -214,45 +214,25 @@ export default function AddWordScreen() {
       const { code, content } = split;
       if (!code || !content) continue;
 
-      console.log(`[自动补全] 处理拆分项: code=${code}, content=${content}`);
-
       // 将 content 拆分为多个含义（用逗号分隔）
       const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
-      
-      console.log(`[自动补全] 解析出的含义:`, meanings);
-      
-      // 按长度降序排序（最长含义优先），避免短含义匹配长含义的一部分
-      const sortedMeanings = [...meanings].sort((a, b) => b.length - a.length);
-
-      console.log(`[自动补全] 排序后的含义:`, sortedMeanings);
 
       // 检查每个含义
-      for (const meaning of sortedMeanings) {
-        console.log(`[自动补全] 检查含义: "${meaning}"`);
-        console.log(`[自动补全] 当前文本: "${newText}"`);
-
+      for (const meaning of meanings) {
         // 检查是否已经包含了"中文（字母）"或"中文(字母)"的形式
         const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
         if (patternWithBrackets.test(newText)) {
-          console.log(`[自动补全] 含义 "${meaning}" 已补全，跳过`);
-          continue;
+          continue; // 已经有了括号补全，跳过这个含义
         }
 
         // 检查是否包含该含义（不限制边界，任何位置都可以补全）
-        console.log(`[自动补全] 检查是否包含含义 "${meaning}"`, newText.includes(meaning));
-        
         if (newText.includes(meaning)) {
-          console.log(`[自动补全] 匹配到含义 "${meaning}"，准备补全`);
           // 替换为"中文（字母）"形式（不限制边界，任何位置都可以补全）
           newText = newText.replace(
             new RegExp(`${escapeRegex(meaning)}`, 'g'),
             `${meaning}（${code}）`
           );
           hasChanges = true;
-          
-          console.log(`[自动补全] 补全后的文本: "${newText}"`);
-        } else {
-          console.log(`[自动补全] 未匹配到含义 "${meaning}"`);
         }
       }
     }

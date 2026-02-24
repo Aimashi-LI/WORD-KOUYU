@@ -95,40 +95,21 @@ export default function WordDetailScreen() {
       if (!code || !content) continue;
 
       const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
-      
-      console.log(`[编辑自动补全] 处理拆分项: code=${code}, content=${content}`);
-      console.log(`[编辑自动补全] 解析出的含义:`, meanings);
-      
-      // 按长度降序排序（最长含义优先），避免短含义匹配长含义的一部分
-      const sortedMeanings = [...meanings].sort((a, b) => b.length - a.length);
-      
-      console.log(`[编辑自动补全] 排序后的含义:`, sortedMeanings);
 
-      for (const meaning of sortedMeanings) {
-        console.log(`[编辑自动补全] 检查含义: "${meaning}"`);
-        console.log(`[编辑自动补全] 当前文本: "${newText}"`);
-        
+      for (const meaning of meanings) {
         const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
         if (patternWithBrackets.test(newText)) {
-          console.log(`[编辑自动补全] 含义 "${meaning}" 已补全，跳过`);
           continue;
         }
 
         // 检查是否包含该含义（不限制边界，任何位置都可以补全）
-        console.log(`[编辑自动补全] 检查是否包含含义 "${meaning}"`, newText.includes(meaning));
-        
         if (newText.includes(meaning)) {
-          console.log(`[编辑自动补全] 匹配到含义 "${meaning}"，准备补全`);
           // 替换为"中文（字母）"形式（不限制边界，任何位置都可以补全）
           newText = newText.replace(
             new RegExp(`${escapeRegex(meaning)}`, 'g'),
             `${meaning}（${code}）`
           );
           hasChanges = true;
-          
-          console.log(`[编辑自动补全] 补全后的文本: "${newText}"`);
-        } else {
-          console.log(`[编辑自动补全] 未匹配到含义 "${meaning}"`);
         }
       }
     }
