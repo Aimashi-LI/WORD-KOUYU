@@ -225,33 +225,13 @@ export default function AddWordScreen() {
           continue; // 已经有了括号补全，跳过这个含义
         }
 
-        let shouldReplace = false;
-
-        if (splitIndex === 0) {
-          // 第一个拆分项：无论出现在什么位置都匹配（不限制单词边界）
-          shouldReplace = newText.includes(meaning);
-        } else {
-          // 其他拆分项：只匹配单词边界（前后是空格或标点）
-          const wordBoundaryPattern = new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`);
-          shouldReplace = wordBoundaryPattern.test(newText);
-        }
-
-        if (shouldReplace) {
-          // 替换为"中文（字母）"形式
-          if (splitIndex === 0) {
-            // 第一个拆分项：使用中文兼容的边界（允许中文字符作为边界）
-            // 匹配：开头、空格、标点后 + 含义 + (空格/标点/结尾)
-            newText = newText.replace(
-              new RegExp(`((?:^|[\\s\\p{P}])${escapeRegex(meaning)})(?=[\\s\\p{P}]|$)`, 'gu'),
-              `$1（${code}）`
-            );
-          } else {
-            // 其他拆分项：保留原有的边界字符
-            newText = newText.replace(
-              new RegExp(`(^|[^\\w\\s])(${escapeRegex(meaning)})([^\\w\\s]|$)`, 'g'),
-              `$1${meaning}（${code}）$3`
-            );
-          }
+        // 检查是否包含该含义（不限制边界，任何位置都可以补全）
+        if (newText.includes(meaning)) {
+          // 替换为"中文（字母）"形式（不限制边界，任何位置都可以补全）
+          newText = newText.replace(
+            new RegExp(`${escapeRegex(meaning)}`, 'g'),
+            `${meaning}（${code}）`
+          );
           hasChanges = true;
         }
       }
