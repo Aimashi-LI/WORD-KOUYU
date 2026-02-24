@@ -5,6 +5,9 @@ import {
   TextInput,
   ScrollView,
   StyleSheet,
+  NativeSyntheticEvent,
+  TextInputKeyPressEvent,
+  TextInputSelectionChangeEventData
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -39,14 +42,13 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
   const [activeFragmentId, setActiveFragmentId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRefs = useRef<Map<string, TextInput>>(new Map());
-  const isInternalUpdateRef = useRef(false); // 标记是否是内部更新
 
   // 获取编码对应的含义列表
   const getCodeMeanings = useCallback((code: string, codeList: { letter: string; chinese: string }[]): string[] => {
     const matched = codeList.find(c => c.letter.toLowerCase() === code.toLowerCase());
     if (!matched) return [];
 
-    // 使用分隔符拆分含义
+    // 使用 "、" 作为分隔符拆分含义
     return matched.chinese.split(/[,，、]/).map(m => m.trim()).filter(m => m);
   }, []);
 
@@ -106,19 +108,59 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
     return result.filter(f => f.text.length > 0);
   }, [codes, getCodeMeanings]);
 
+  // 检查文本是否匹配编码的任何一个含义
+  const checkCodeMatch = useCallback((text: string, fragmentId: string): TextFragment | null => {
+    if (!text.trim()) return null;
+
+    for (const codeItem of codes) {
+      const meanings = getCodeMeanings(codeItem.letter, codes);
+      
+      for (const meaning of meanings) {
+        // 检查文本是否以含义结尾
+        if (text.endsWith(meaning) && text.trim() === meaning) {
+          return {
+            id: `${fragmentId}_code_${Date.now()}`,
+            type: 'code',
+            text: `（${codeItem.letter}）`,
+            codeKey: codeItem.letter,
+            meanings: [meaning]
+          };
+        }
+      }
+    }
+
+    return null;
+  }, [codes, getCodeMeanings]);
+
   // 将片段合并为字符串
   const fragmentsToText = useCallback((fragmentList: TextFragment[]): string => {
     return fragmentList.map(f => f.text).join('');
   }, []);
 
-  // 初始化片段（只在 value 真正变化时更新）
-  useEffect(() => {
-    // 如果是内部更新导致的 value 变化，跳过
-    if (isInternalUpdateRef.current) {
-      isInternalUpdateRef.current = false;
-      return;
+  // 合并相邻的文本片段
+  const mergeTextFragments = useCallback((fragmentList: TextFragment[]): TextFragment[] => {
+    const result: TextFragment[] = [];
+    let idCounter = 0;
+    
+    for (let i = 0; i < fragmentList.length; i++) {
+      const current = { ...fragmentList[i], id: String(idCounter++) };
+      
+      if (current.type === 'text') {
+        // 检查是否可以与下一个文本片段合并
+        while (i < fragmentList.length - 1 && fragmentList[i + 1].type === 'text') {
+          current.text = current.text + fragmentList[i + 1].text;
+          i++; // 跳过下一个片段
+        }
+      }
+      
+      result.push(current);
     }
     
+    return result;
+  }, []);
+
+  // 初始化片段
+  useEffect(() => {
     const newFragments = parseTextToFragments(value);
     setFragments(newFragments);
   }, [value, parseTextToFragments]);
@@ -130,47 +172,31 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
       if (fragmentIndex === -1) return prev;
 
       const newFragments = [...prev];
-      newFragments[fragmentIndex] = {
-        ...newFragments[fragmentIndex],
-        text: newText
-      };
-
-      // 检查是否需要插入编码
-      const textFragment = newFragments[fragmentIndex];
-      if (textFragment.type === 'text' && newText.trim()) {
-        // 检查文本是否匹配某个含义
-        for (const codeItem of codes) {
-          const meanings = getCodeMeanings(codeItem.letter, codes);
-          
-          for (const meaning of meanings) {
-            // 检查文本是否以含义结尾
-            if (newText.endsWith(meaning) && newText.trim() === meaning) {
-              // 检查下一个片段是否已经是对应的编码
-              const nextFragment = fragmentIndex + 1 < newFragments.length ? newFragments[fragmentIndex + 1] : null;
-              
-              if (!nextFragment || nextFragment.type !== 'code' || nextFragment.codeKey !== codeItem.letter) {
-                // 插入编码片段
-                const codeFragment: TextFragment = {
-                  id: `code_${Date.now()}`,
-                  type: 'code',
-                  text: `（${codeItem.letter}）`,
-                  codeKey: codeItem.letter,
-                  meanings: [meaning]
-                };
-                newFragments.splice(fragmentIndex + 1, 0, codeFragment);
-              }
-              break;
-            }
-          }
-        }
+      
+      // 检查是否匹配编码
+      const codeFragment = checkCodeMatch(newText, fragmentId);
+      
+      if (codeFragment) {
+        // 插入编码片段
+        newFragments[fragmentIndex] = {
+          ...newFragments[fragmentIndex],
+          text: newText
+        };
+        newFragments.splice(fragmentIndex + 1, 0, codeFragment);
+      } else {
+        // 更新文本片段
+        newFragments[fragmentIndex] = {
+          ...newFragments[fragmentIndex],
+          text: newText
+        };
       }
 
-      // 检查前一个编码片段是否需要移除（文本不再匹配含义）
-      if (fragmentIndex > 0 && newFragments[fragmentIndex - 1].type === 'code') {
-        const prevCode = newFragments[fragmentIndex - 1];
-        if (prevCode.meanings) {
+      // 检查后续编码片段是否需要移除
+      if (fragmentIndex > 0) {
+        const prevFragment = newFragments[fragmentIndex - 1];
+        if (prevFragment.type === 'code' && prevFragment.meanings) {
           // 检查当前文本是否匹配编码的任一含义
-          const stillMatches = prevCode.meanings.some(meaning => newText === meaning);
+          const stillMatches = prevFragment.meanings.some(meaning => newText === meaning);
           if (!stillMatches) {
             // 移除编码片段
             newFragments.splice(fragmentIndex - 1, 1);
@@ -178,15 +204,15 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
         }
       }
 
-      // 标记为内部更新
-      isInternalUpdateRef.current = true;
+      // 合并相邻的文本片段
+      const mergedFragments = mergeTextFragments(newFragments);
       
       // 通知父组件
-      onChange(fragmentsToText(newFragments));
+      onChange(fragmentsToText(mergedFragments));
       
-      return newFragments;
+      return mergedFragments;
     });
-  }, [codes, getCodeMeanings, fragmentsToText, onChange]);
+  }, [checkCodeMatch, fragmentsToText, mergeTextFragments]);
 
   // 处理按键事件（删除键）
   const handleKeyPress = useCallback((e: any, fragmentId: string) => {
@@ -196,8 +222,8 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
       const input = inputRefs.current.get(fragmentId);
       if (!input) return;
 
-      // 安全获取当前光标位置
-      const selection = input?.props?.selection || { start: 0, end: 0 };
+      // 获取当前光标位置
+      const selection = input.props.selection || { start: 0, end: 0 };
       
       // 如果光标在开头，尝试删除上一个文本片段的最后一个字符
       if (selection.start === 0 && selection.end === 0) {
@@ -212,14 +238,10 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
               
               if (newFragments[i].text.length > 0) {
                 // 删除最后一个字符
-                const newText = newFragments[i].text.slice(0, -1);
                 newFragments[i] = {
                   ...newFragments[i],
-                  text: newText
+                  text: newFragments[i].text.slice(0, -1)
                 };
-                
-                // 标记为内部更新
-                isInternalUpdateRef.current = true;
                 
                 // 通知父组件
                 onChange(fragmentsToText(newFragments));
@@ -230,10 +252,36 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
                   if (prevInput) {
                     prevInput.focus();
                     prevInput.setNativeProps({
-                      selection: { start: newText.length, end: newText.length }
+                      selection: { start: newFragments[i].text.length, end: newFragments[i].text.length }
                     });
                   }
                 }, 0);
+                
+                return newFragments;
+              } else {
+                // 上一个片段为空，移除它
+                newFragments.splice(i, 1);
+                
+                // 通知父组件
+                onChange(fragmentsToText(newFragments));
+                
+                // 聚焦到更前面的片段或当前片段
+                if (i > 0) {
+                  const prevPrevInput = inputRefs.current.get(newFragments[i - 1].id);
+                  if (prevPrevInput) {
+                    setTimeout(() => {
+                      prevPrevInput.focus();
+                      const prevPrevFragment = newFragments[i - 1];
+                      prevPrevInput.setNativeProps({
+                        selection: { start: prevPrevFragment.text.length, end: prevPrevFragment.text.length }
+                      });
+                    }, 0);
+                  }
+                } else {
+                  setTimeout(() => {
+                    input.focus();
+                  }, 0);
+                }
                 
                 return newFragments;
               }
@@ -247,7 +295,7 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
   }, [onChange, fragmentsToText]);
 
   // 处理文本片段的选择变化
-  const handleSelectionChange = useCallback((e: any, fragmentId: string) => {
+  const handleSelectionChange = useCallback((e: NativeSyntheticEvent<TextInputSelectionChangeEventData>, fragmentId: string) => {
     const input = inputRefs.current.get(fragmentId);
     if (!input) return;
 
@@ -283,6 +331,18 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
     }
   }, []);
 
+  // 聚焦到最后一个文本片段
+  const focusLastFragment = useCallback(() => {
+    const textFragments = fragments.filter(f => f.type === 'text');
+    if (textFragments.length > 0) {
+      const lastFragment = textFragments[textFragments.length - 1];
+      const input = inputRefs.current.get(lastFragment.id);
+      if (input) {
+        input.focus();
+      }
+    }
+  }, [fragments]);
+
   // 获取输入框样式
   const getStyles = () => {
     return StyleSheet.create({
@@ -300,9 +360,9 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
         width: '100%',
       },
       fragmentsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'center',
+        flexDirection: multiline ? 'column' : 'row',
+        flexWrap: multiline ? 'wrap' : 'nowrap',
+        alignItems: multiline ? 'flex-start' : 'center',
         minHeight: multiline ? 100 : 44,
       },
       textInput: {
@@ -346,7 +406,7 @@ export const MnemonicInput: React.FC<MnemonicInputProps> = ({
       <ScrollView
         ref={scrollViewRef}
         style={styles.scrollView}
-        horizontal={!multiline}
+        horizontal={multiline ? false : true}
         showsHorizontalScrollIndicator={false}
         scrollEnabled={false}
       >
