@@ -214,8 +214,8 @@ export default function AddWordScreen() {
       const { code, content } = split;
       if (!code || !content) continue;
 
-      // 将 content 拆分为多个含义（用逗号分隔）
-      const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
+      // 将 content 拆分为多个含义（用顿号分隔）
+      const meanings = content.split(/、/).map(m => m.trim()).filter(m => m);
 
       // 检查每个含义
       for (const meaning of meanings) {

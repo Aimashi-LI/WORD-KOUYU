@@ -94,7 +94,7 @@ export default function WordDetailScreen() {
       const { code, content } = split;
       if (!code || !content) continue;
 
-      const meanings = content.split(/,|，/).map(m => m.trim()).filter(m => m);
+      const meanings = content.split(/、/).map(m => m.trim()).filter(m => m);
 
       for (const meaning of meanings) {
         const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
