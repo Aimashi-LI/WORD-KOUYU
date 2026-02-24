@@ -32,10 +32,14 @@ export function autoSplitByCodeLib(word: string, codes: Code[]): SplitItem[] | n
   
   dp[0] = 0;
 
-  // 预处理编码库，建立索引
-  const codeMap = new Map<string, Code>();
+  // 预处理编码库，建立索引（一个编码可能对应多个含义）
+  const codeMap = new Map<string, Code[]>();
   codes.forEach(code => {
-    codeMap.set(code.letter.toLowerCase(), code);
+    const key = code.letter.toLowerCase();
+    if (!codeMap.has(key)) {
+      codeMap.set(key, []);
+    }
+    codeMap.get(key)!.push(code);
   });
 
   // 动态规划
@@ -76,11 +80,16 @@ export function autoSplitByCodeLib(word: string, codes: Code[]): SplitItem[] | n
     if (prevIndex === -1) break;
 
     const code = lowerWord.substring(prevIndex, currentIndex);
-    const matchedCode = codeMap.get(code);
+    const matchedCodes = codeMap.get(code);
+    
+    // 如果匹配到多个含义，用逗号连接
+    const content = matchedCodes
+      ? matchedCodes.map(c => c.chinese).join('、')
+      : '';
     
     result.push({
       code: code,
-      content: matchedCode?.chinese || ''
+      content: content
     });
 
     currentIndex = prevIndex;
@@ -106,11 +115,17 @@ export function autoSplitByCodeLib(word: string, codes: Code[]): SplitItem[] | n
 export function autoFillMeaning(code: string, codes: Code[]): string {
   if (!code) return '';
   
-  const matchedCode = codes.find(c => 
+  // 查找所有匹配的编码
+  const matchedCodes = codes.filter(c => 
     c.letter.toLowerCase() === code.toLowerCase()
   );
   
-  return matchedCode?.chinese || '';
+  // 如果匹配到多个含义，用逗号连接
+  if (matchedCodes.length > 0) {
+    return matchedCodes.map(c => c.chinese).join('、');
+  }
+  
+  return '';
 }
 
 /**
@@ -297,10 +312,19 @@ export function getCodeSuggestion(input: string, codes: Code[]): CodeSuggestion 
   );
 
   if (matchedCode && input.length > 0) {
+    // 查找该编码对应的所有含义
+    const allMeanings = codes
+      .filter(c => c.letter.toLowerCase() === matchedCode.letter.toLowerCase())
+      .map(c => c.chinese)
+      .join('、');
+    
     return {
       userInput: input,
       completedText: matchedCode.letter.substring(input.length),
-      matchedCode: matchedCode
+      matchedCode: {
+        ...matchedCode,
+        chinese: allMeanings
+      }
     };
   }
 
