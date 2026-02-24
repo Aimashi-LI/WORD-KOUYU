@@ -24,6 +24,7 @@ interface SentenceInputProps {
   multiline?: boolean;
   numberOfLines?: number;
   autoFocus?: boolean;
+  onAutoCompleteChange?: (enabled: boolean) => void; // 回调：通知父组件自动补全状态的变化
 }
 
 export function SentenceInput({
@@ -34,7 +35,8 @@ export function SentenceInput({
   style,
   multiline = false,
   numberOfLines = 4,
-  autoFocus = false
+  autoFocus = false,
+  onAutoCompleteChange
 }: SentenceInputProps) {
   const { theme } = useTheme();
   const inputRef = useRef<TextInput>(null);
@@ -120,14 +122,16 @@ export function SentenceInput({
             const afterShadow = value.substring(shadow.position);
             
             if (newMeaningText.length === 0) {
-              // 含义被删除完，移除影子文本
+              // 含义被完全删除，移除影子文本，恢复自动补全
               const result = beforeShadow + afterShadow;
               onChange(result);
+              onAutoCompleteChange?.(true); // 恢复自动补全
               return;
             } else {
-              // 只删除含义的最后一个字符
+              // 含义被部分删除，保留影子文本，关闭自动补全
               const result = beforeShadow + newMeaningText + afterShadow;
               onChange(result);
+              onAutoCompleteChange?.(false); // 关闭自动补全
               return;
             }
           }
@@ -173,6 +177,7 @@ export function SentenceInput({
     }
     
     onChange(result);
+    onAutoCompleteChange?.(true); // 恢复自动补全
   };
 
   // 构建显示的文本（用不同颜色显示影子文本）

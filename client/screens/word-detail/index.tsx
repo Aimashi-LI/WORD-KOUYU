@@ -659,6 +659,7 @@ export default function WordDetailScreen() {
               style={[styles.input, styles.textArea]}
               value={sentence}
               onChange={setSentence}
+              onAutoCompleteChange={setAutoCompleteEnabled}
               placeholder="例：编码an对应多个含义（阿牛、一个），填写任一含义即可触发补全"
               placeholderTextColor={theme.textMuted}
               multiline

@@ -730,6 +730,7 @@ export default function AddWordScreen() {
             placeholderTextColor={theme.textMuted}
             value={sentence}
             onChange={setSentence}
+            onAutoCompleteChange={setAutoCompleteEnabled}
             multiline
             numberOfLines={4}
           />
