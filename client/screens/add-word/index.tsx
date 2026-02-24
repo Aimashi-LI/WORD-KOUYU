@@ -108,6 +108,9 @@ export default function AddWordScreen() {
   // 音标键盘
   const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
   
+  // 追踪已补全的编码（同一编码只补全最先填写的含义）
+  const completedCodesRef = React.useRef<Set<string>>(new Set());
+  
   // 初始化：如果从拍照识别页面传入单词，自动填充
   useEffect(() => {
     if (initialWord && initialWord.trim()) {
@@ -214,6 +217,11 @@ export default function AddWordScreen() {
       const { code, content } = split;
       if (!code || !content) continue;
 
+      // 检查该编码是否已经被补全过（同一编码只补全最先填写的含义）
+      if (completedCodesRef.current.has(code.toLowerCase())) {
+        continue; // 已补全，跳过该编码的所有含义
+      }
+
       // 将 content 拆分为多个含义（用顿号分隔）
       const meanings = content.split(/、/).map(m => m.trim()).filter(m => m);
 
@@ -233,6 +241,10 @@ export default function AddWordScreen() {
             `${meaning}（${code}）`
           );
           hasChanges = true;
+          // 标记该编码为已补全
+          completedCodesRef.current.add(code.toLowerCase());
+          // 找到一个匹配就停止该编码的其他含义
+          break;
         }
       }
     }
@@ -250,8 +262,9 @@ export default function AddWordScreen() {
   const handleSentenceChange = (text: string) => {
     // 检测删除行为：文本长度减少
     if (text.length < sentence.length) {
-      // 检测到删除，关闭自动补全
+      // 检测到删除，关闭自动补全并重置已补全编码集合
       setAutoCompleteEnabled(false);
+      completedCodesRef.current.clear(); // 清空已补全编码，允许重新补全
     } else if (text.length > sentence.length) {
       // 检测到输入，恢复自动补全
       setAutoCompleteEnabled(true);
