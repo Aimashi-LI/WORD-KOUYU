@@ -332,11 +332,6 @@ export default function WordDetailScreen() {
   };
 
   // 删除拆分项
-  const handleRemoveSplitItem = (index: number) => {
-    const newSplitItems = splitItems.filter((_, i) => i !== index);
-    setSplitItems(newSplitItems.length > 0 ? newSplitItems : [{ code: '', content: '' }]);
-  };
-
   // 表单验证
   const validateForm = (): boolean => {
     if (!word.trim()) {
@@ -558,14 +553,6 @@ export default function WordDetailScreen() {
                     placeholder="含义"
                     placeholderTextColor={theme.textMuted}
                   />
-                  {splitItems.length > 1 && (
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => handleRemoveSplitItem(index)}
-                    >
-                      <FontAwesome6 name="xmark" size={18} color={theme.error} />
-                    </TouchableOpacity>
-                  )}
                 </View>
 
                 {/* 编码建议 */}
