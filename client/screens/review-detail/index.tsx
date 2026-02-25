@@ -848,7 +848,7 @@ export default function ReviewScreen() {
               onPress={() => {
                 Alert.alert(
                   '提示',
-                  '确定要退出复习吗？当前进度将不会保存',
+                  '确定退出复习吗？',
                   [
                     { text: '取消', style: 'cancel' },
                     { text: '确定退出', onPress: () => router.back(), style: 'destructive' }
