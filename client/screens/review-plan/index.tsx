@@ -133,7 +133,12 @@ export default function ReviewPlanScreen() {
     }
   };
   
-  const formatStability = (stability: number): string => {
+  const formatStability = (stability: number | undefined): string => {
+    // 处理 undefined 或 null 的情况
+    if (stability === undefined || stability === null || isNaN(stability)) {
+      return '刚开始';
+    }
+
     if (stability < 7) {
       return '刚开始';
     } else if (stability < 14) {
