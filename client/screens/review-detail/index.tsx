@@ -1,6 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { View, TouchableOpacity, Alert, ActivityIndicator, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { EnglishInput, ChineseInput } from '@/components/SmartTextInput';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -910,7 +909,7 @@ export default function ReviewScreen() {
 
               {/* 输入框 */}
               {!isCompleted && (
-                <EnglishInput
+                <TextInput
                   style={[styles.input, styles.inputType1, { color: theme.textPrimary }]}
                   placeholder="请输入单词"
                   placeholderTextColor={theme.textMuted}
@@ -981,7 +980,7 @@ export default function ReviewScreen() {
 
               {/* 输入框 */}
               {!isCompleted && (
-                <ChineseInput
+                <TextInput
                   style={[styles.input, styles.textArea, styles.inputType2, { color: theme.textPrimary }]}
                   placeholder="请输入释义"
                   placeholderTextColor={theme.textMuted}

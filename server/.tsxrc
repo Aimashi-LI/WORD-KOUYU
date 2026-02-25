@@ -1,9 +1,0 @@
-{
-  "tsconfig": "./tsconfig.json",
-  "ignore": [
-    "node_modules/react-native",
-    "node_modules/@react-native",
-    "node_modules/expo",
-    "node_modules/expo-*"
-  ]
-}

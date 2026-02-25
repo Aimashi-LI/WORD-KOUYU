@@ -1,5 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
-import { initDatabase, getOrCreateUser, getUser, consumeAttempt, createOrder, updateOrderStatus, getUserOrders, PACKAGES, updateUser, getOrder } from '../db/userDao';
+import { initDatabase, getOrCreateUser, getUser, consumeAttempt, createOrder, updateOrderStatus, getUserOrders, PACKAGES, getDatabase } from '../../../client/database/userDao';
 
 // 简单的内存存储（生产环境应该使用 Redis 或数据库）
 const userSessions = new Map<string, { userId: number; deviceId: string; createdAt: Date }>();
@@ -67,7 +67,10 @@ router.post('/register', async (req: Request, res: Response) => {
     
     // 更新用户名（如果提供）
     if (username) {
-      await updateUser(user.id, username);
+      await getDatabase().runAsync(
+        'UPDATE users SET username = ?, updated_at = datetime(\'now\') WHERE id = ?',
+        [username, user.id]
+      );
     }
     
     // 生成访问令牌
@@ -258,11 +261,15 @@ router.post('/orders/:orderId/pay', authMiddleware, async (req: Request, res: Re
     const userId = (req as any).userId;
     
     await initDatabase();
+    const userId = (req as any).userId;
     
     // 获取订单信息
-    const order = await getOrder(parseInt(orderId));
+    const order = await getDatabase().getFirstAsync<any>(
+      'SELECT * FROM orders WHERE id = ? AND user_id = ?',
+      [parseInt(orderId), userId]
+    );
     
-    if (!order || order.userId !== userId) {
+    if (!order) {
       return res.status(404).json({ success: false, error: '订单不存在' });
     }
     
