@@ -493,6 +493,14 @@ export default function ReviewScreen() {
   // 快速评分：没印象（0分）
   const handleNoImpression = () => {
     const currentWordSnapshot = currentWord; // 保存当前单词引用
+
+    // ✅ 如果用户已经在输入框输入了文本，清空输入框
+    if (reviewMode === 'type1' && type1Answer.trim().length > 0) {
+      setType1Answer('');
+    } else if (reviewMode === 'type2' && type2Answer.trim().length > 0) {
+      setType2Answer('');
+    }
+
     setQuickScore(SCORING_CONFIG.QUICK_NO_IMPRESSION);
     setIsEditing(false);
 
@@ -507,6 +515,14 @@ export default function ReviewScreen() {
   // 快速评分：有印象，但想不起来（2分）
   const handleSomeImpression = () => {
     const currentWordSnapshot = currentWord; // 保存当前单词引用
+
+    // ✅ 如果用户已经在输入框输入了文本，清空输入框
+    if (reviewMode === 'type1' && type1Answer.trim().length > 0) {
+      setType1Answer('');
+    } else if (reviewMode === 'type2' && type2Answer.trim().length > 0) {
+      setType2Answer('');
+    }
+
     setQuickScore(SCORING_CONFIG.QUICK_SOME_IMPRESSION);
     setIsEditing(false);
 
@@ -1102,7 +1118,6 @@ export default function ReviewScreen() {
                   quickScore === 0 && styles.quickScoreButtonActive
                 ]}
                 onPress={handleNoImpression}
-                disabled={isEditing}
               >
                 <FontAwesome6 name="circle-xmark" size={20} color={theme.buttonPrimaryText} />
                 <ThemedText variant="body" color={theme.buttonPrimaryText}>没印象</ThemedText>
@@ -1115,7 +1130,6 @@ export default function ReviewScreen() {
                   quickScore === 2 && styles.quickScoreButtonActive
                 ]}
                 onPress={handleSomeImpression}
-                disabled={isEditing}
               >
                 <FontAwesome6 name="face-meh" size={20} color={theme.buttonPrimaryText} />
                 <ThemedText variant="body" color={theme.buttonPrimaryText}>有印象，但想不起来</ThemedText>
