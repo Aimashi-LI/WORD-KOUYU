@@ -16,7 +16,8 @@ import { Word } from '@/database/types';
 import {
   updateWithTimeWeight,
   calculateMasteryRate,
-  getRating
+  getRating,
+  checkMastery
 } from '@/algorithm/fsrs';
 import { useCallback } from 'react';
 import { formatSplitStringForDisplay } from '@/utils/splitHelper';
@@ -455,7 +456,7 @@ export default function ReviewScreen() {
         nextReviewDate,
         masteryAdjustmentFactor,
         reviewStatus
-      } = await updateWithTimeWeight(word, finalScore, responseTime);
+      } = await updateWithTimeWeight(word, finalScore, responseTime, word.review_count + 1);
 
       // 记录复习时机信息到日志
       console.log(`[Review] 单词 ${word.word} 复习时机: ${reviewStatus}, 掌握率调整因子: ${masteryAdjustmentFactor.toFixed(2)}`);
@@ -469,7 +470,7 @@ export default function ReviewScreen() {
       });
 
       // 检查是否掌握（使用更新后的稳定性）
-      const recentLogs = await getRecentReviewLogs(word.id, MASTERY_CONFIG.consecutiveHighScores);
+      const recentLogs = await getRecentReviewLogs(word.id, MASTERY_CONFIG.reviewScoreWindowSize);
       const recentScores = recentLogs.map(log => log.score);
 
       // 使用更新后的单词数据进行判断
@@ -494,7 +495,8 @@ export default function ReviewScreen() {
         avg_response_time: newAvgResponseTime,
         last_review: new Date().toISOString(),
         next_review: nextReviewDate.toISOString(),
-        is_mastered: isMastered ? 1 : 0
+        is_mastered: isMastered ? 1 : 0,
+        review_count: word.review_count + 1
       });
 
       // 记录单词得分
@@ -539,7 +541,7 @@ export default function ReviewScreen() {
         nextReviewDate,
         masteryAdjustmentFactor,
         reviewStatus
-      } = await updateWithTimeWeight(word, finalScore, responseTime);
+      } = await updateWithTimeWeight(word, finalScore, responseTime, word.review_count + 1);
 
       // 记录复习时机信息到日志
       console.log(`[Review] 单词 ${word.word} 复习时机: ${reviewStatus}, 掌握率调整因子: ${masteryAdjustmentFactor.toFixed(2)}`);
@@ -553,7 +555,7 @@ export default function ReviewScreen() {
       });
 
       // 检查是否掌握（使用更新后的稳定性）
-      const recentLogs = await getRecentReviewLogs(word.id, MASTERY_CONFIG.consecutiveHighScores);
+      const recentLogs = await getRecentReviewLogs(word.id, MASTERY_CONFIG.reviewScoreWindowSize);
       const recentScores = recentLogs.map(log => log.score);
 
       // 使用更新后的单词数据进行判断
@@ -578,7 +580,8 @@ export default function ReviewScreen() {
         avg_response_time: newAvgResponseTime,
         last_review: new Date().toISOString(),
         next_review: nextReviewDate.toISOString(),
-        is_mastered: isMastered ? 1 : 0
+        is_mastered: isMastered ? 1 : 0,
+        review_count: word.review_count + 1
       });
 
       // 记录单词得分
@@ -628,22 +631,13 @@ export default function ReviewScreen() {
 
   // 使用配置的掌握标准判断
   const checkMasteryWithConfig = (word: Word, recentScores: number[]): boolean => {
-    // 条件1：稳定性达到阈值
-    const condition1 = word.stability >= MASTERY_CONFIG.stabilityThreshold;
-
-    // 条件2：最近N次得分都≥高分标准
-    const condition2 = recentScores.length >= MASTERY_CONFIG.consecutiveHighScores &&
-      recentScores.slice(0, MASTERY_CONFIG.consecutiveHighScores).every(s => s >= MASTERY_CONFIG.highScoreThreshold);
-
     // 调试日志
     console.log(`[checkMasteryWithConfig] 单词: ${word.word}`);
-    console.log(`[checkMasteryWithConfig]   稳定性: ${word.stability.toFixed(2)} 天 (阈值: ${MASTERY_CONFIG.stabilityThreshold} 天)`);
-    console.log(`[checkMasteryWithConfig]   最近得分: [${recentScores.join(', ')}] (需要: ${MASTERY_CONFIG.consecutiveHighScores}次 ≥ ${MASTERY_CONFIG.highScoreThreshold}分)`);
-    console.log(`[checkMasteryWithConfig]   条件1 (稳定性≥阈值): ${condition1}`);
-    console.log(`[checkMasteryWithConfig]   条件2 (连续高分): ${condition2}`);
-    console.log(`[checkMasteryWithConfig]   是否已掌握: ${condition1 && condition2}`);
+    console.log(`[checkMasteryWithConfig]   稳定性: ${word.stability.toFixed(2)} 天`);
+    console.log(`[checkMasteryWithConfig]   最近得分: [${recentScores.join(', ')}]`);
+    console.log(`[checkMasteryWithConfig]   是否已掌握: ${checkMastery(word, recentScores)}`);
 
-    return condition1 && condition2;
+    return checkMastery(word, recentScores);
   };
 
   const renderStartScreen = () => {

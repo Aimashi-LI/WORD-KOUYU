@@ -14,6 +14,7 @@ export interface Word {
   next_review?: string;
   avg_response_time: number;
   is_mastered: number;
+  review_count: number;
   created_at: string;
 }
 
@@ -30,6 +31,7 @@ export interface NewWord {
   stability?: number;
   avg_response_time?: number;
   is_mastered?: number;
+  review_count?: number;
 }
 
 // 句子数据模型

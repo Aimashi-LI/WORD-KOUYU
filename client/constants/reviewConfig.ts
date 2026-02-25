@@ -4,13 +4,22 @@
 
 // 掌握标准配置
 export const MASTERY_CONFIG = {
-  // 稳定性阈值（天）- 超过此天数的单词很难遗忘
-  // 降低阈值：对于频繁复习的单词，不需要等待 14 天的稳定性
-  // 0.5 天 = 约 12 小时，如果单词在 12 小时内能保持记忆，说明已掌握
-  stabilityThreshold: 0.5,
+  // 动态掌握标准 - 根据稳定性分段
+  // 低稳定性（<3天）：需要3次连续高分（巩固短期记忆）
+  // 中等稳定性（3-7天）：需要2次连续高分（形成中期记忆）
+  // 高稳定性（≥7天）：需要1次连续高分（已形成长期记忆）
+  dynamicConsecutive: {
+    low: { threshold: 3, consecutive: 3 },      // <3天：3次≥5分
+    medium: { threshold: 3, consecutive: 2 },    // 3-7天：2次≥5分
+    high: { threshold: 7, consecutive: 1 },      // ≥7天：1次≥5分
+  },
 
-  // 连续高分次数 - 需要连续多少次高分才能标记为已掌握
-  consecutiveHighScores: 2,
+  // 总体掌握程度阈值（%）
+  // 最近5次得分平均达到60%以上才算掌握
+  overallMasteryThreshold: 60,
+
+  // 最近得分的窗口大小（次）
+  reviewScoreWindowSize: 5,
 
   // 高分标准 - 最低多少分才算高分
   highScoreThreshold: 5,
@@ -19,7 +28,7 @@ export const MASTERY_CONFIG = {
 // FSRS 算法参数
 export const FSRS_PARAMS = {
   REQUEST_PRIOR: { ease: 0.5, stability: 0 },
-  MINIMUM_STABILITY: 0.1,
+  MINIMUM_STABILITY: 1.0, // 初始稳定性设为1.0天，避免刚学完即安排数天后复习
   DESIRED_RETENTION: 0.9,
   MAXIMUM_INTERVAL: 36500, // 100年
   EASE_FACTOR: 1.3,

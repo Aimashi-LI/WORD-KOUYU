@@ -174,7 +174,7 @@ export async function updateWord(id: number, updates: Partial<Omit<Word, 'id' | 
   const db = getDatabase();
   const fields: string[] = [];
   const values: any[] = [];
-  
+
   if (updates.word !== undefined) { fields.push('word = ?'); values.push(updates.word); }
   if (updates.phonetic !== undefined) { fields.push('phonetic = ?'); values.push(updates.phonetic); }
   if (updates.definition !== undefined) { fields.push('definition = ?'); values.push(updates.definition); }
@@ -188,7 +188,8 @@ export async function updateWord(id: number, updates: Partial<Omit<Word, 'id' | 
   if (updates.next_review !== undefined) { fields.push('next_review = ?'); values.push(updates.next_review); }
   if (updates.avg_response_time !== undefined) { fields.push('avg_response_time = ?'); values.push(updates.avg_response_time); }
   if (updates.is_mastered !== undefined) { fields.push('is_mastered = ?'); values.push(updates.is_mastered); }
-  
+  if (updates.review_count !== undefined) { fields.push('review_count = ?'); values.push(updates.review_count); }
+
   values.push(id);
   await db.runAsync(`UPDATE words SET ${fields.join(', ')} WHERE id = ?`, values);
 }
@@ -346,7 +347,7 @@ function mapToWord(row: any): Word {
   console.log('[mapToWord] partOfSpeech 原始值:', row.partOfSpeech);
   console.log('[mapToWord] partOfSpeech 类型:', typeof row.partOfSpeech);
   console.log('[mapToWord] sentence 原始值:', row.sentence);
-  
+
   // 不使用类型断言，直接返回新对象
   const result = {
     id: row.id,
@@ -363,14 +364,15 @@ function mapToWord(row: any): Word {
     next_review: row.next_review,
     avg_response_time: row.avg_response_time || 0,
     is_mastered: row.is_mastered || 0,
+    review_count: row.review_count || 0,
     created_at: row.created_at
   };
-  
+
   // 打印返回对象的所有字段
   console.log('[mapToWord] 返回对象的所有字段:', Object.keys(result));
   console.log('[mapToWord] 返回对象的 partOfSpeech:', result.partOfSpeech);
   console.log('[mapToWord] 返回对象的 sentence:', result.sentence);
-  
+
   return result;
 }
 

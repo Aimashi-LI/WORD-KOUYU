@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const DB_NAME = 'word_review.db';
-const DB_VERSION = 5; // 数据库版本号 - 升级到 5，确保 sentence 字段正确处理
+const DB_VERSION = 6; // 数据库版本号 - 升级到 6，添加 review_count 字段
 let db: SQLite.SQLiteDatabase | null = null;
 
 // 基础音标数据（常用词）
@@ -211,6 +211,7 @@ async function migrateDatabase(): Promise<void> {
           next_review TEXT,
           avg_response_time REAL DEFAULT 0,
           is_mastered INTEGER DEFAULT 0,
+          review_count INTEGER DEFAULT 0,
           created_at TEXT NOT NULL
         );
 
@@ -222,12 +223,13 @@ async function migrateDatabase(): Promise<void> {
       if (words.length > 0) {
         for (const w of words) {
           await db.runAsync(
-            `INSERT INTO words (id, word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, difficulty, stability, last_review, next_review, avg_response_time, is_mastered, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO words (id, word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, difficulty, stability, last_review, next_review, avg_response_time, is_mastered, review_count, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               w.id, w.word, w.phonetic, w.definition, w.partOfSpeech,
               w.split, w.mnemonic, w.sentence, w.difficulty, w.stability,
-              w.last_review, w.next_review, w.avg_response_time, w.is_mastered, w.created_at
+              w.last_review, w.next_review, w.avg_response_time, w.is_mastered,
+              w.review_count || 0, w.created_at
             ]
           );
         }
@@ -325,6 +327,27 @@ async function migrateDatabase(): Promise<void> {
 
         console.log('Migration to version 5 completed');
       }
+
+      // 版本 6 迁移：添加 review_count 字段
+      if (currentVersion < 6) {
+        console.log('Migrating to version 6: checking review_count field...');
+
+        // 检查 review_count 字段是否存在
+        const tableInfo = await db.getAllAsync<{ name: string, type: string, notnull: number }>(
+          'PRAGMA table_info(words)'
+        );
+        const hasReviewCount = tableInfo.some(col => col.name === 'review_count');
+
+        if (!hasReviewCount) {
+          console.log('review_count field missing, adding it...');
+          await db.execAsync('ALTER TABLE words ADD COLUMN review_count INTEGER DEFAULT 0');
+          console.log('Added review_count column to words table');
+        } else {
+          console.log('review_count field already exists');
+        }
+
+        console.log('Migration to version 6 completed');
+      }
     }
 
     // 更新版本号
@@ -359,6 +382,7 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         next_review TEXT,
         avg_response_time REAL DEFAULT 0,
         is_mastered INTEGER DEFAULT 0,
+        review_count INTEGER DEFAULT 0,
         created_at TEXT NOT NULL
       );
 

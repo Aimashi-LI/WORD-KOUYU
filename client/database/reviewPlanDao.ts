@@ -353,6 +353,7 @@ function mapToWord(row: any): Word {
     next_review: row.next_review,
     avg_response_time: row.avg_response_time || 0,
     is_mastered: row.is_mastered || 0,
+    review_count: row.review_count || 0,
     created_at: row.created_at
   };
 }
