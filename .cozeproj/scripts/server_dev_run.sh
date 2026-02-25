@@ -43,4 +43,5 @@ kill_old_server
 
 echo "启动 server 服务..."
 cd "$SERVER_DIR"
-NODE_ENV=development PORT="$SERVER_PORT" npx tsx ./src/index.ts 2>&1 | pipe_to_log "SERVER" "$LOG_SERVER_FILE"
+# 使用简化版本，避免 expo-sqlite 和 react-native 依赖
+NODE_ENV=development PORT="$SERVER_PORT" npx tsx ./src/index-simple.ts 2>&1 | pipe_to_log "SERVER" "$LOG_SERVER_FILE"

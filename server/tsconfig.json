@@ -14,11 +14,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "bundler",
-
-    "rewriteRelativeImportExtensions": true,
-    "erasableSyntaxOnly": true,
-    "verbatimModuleSyntax": true
+    "moduleResolution": "bundler"
   },
   "include": ["src"]
 }

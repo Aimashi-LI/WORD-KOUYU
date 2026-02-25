@@ -1,5 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
-import { initDatabase, getOrCreateUser, getUser, consumeAttempt, createOrder, updateOrderStatus, getUserOrders, PACKAGES, getDatabase } from '../../../client/database/userDao';
+import { initDatabase, getOrCreateUser, getUser, consumeAttempt, createOrder, updateOrderStatus, getUserOrders, PACKAGES, getDatabase, addAttempts } from '../../../client/database/userDao';
 
 // 简单的内存存储（生产环境应该使用 Redis 或数据库）
 const userSessions = new Map<string, { userId: number; deviceId: string; createdAt: Date }>();
@@ -259,14 +259,13 @@ router.post('/orders/:orderId/pay', authMiddleware, async (req: Request, res: Re
     const { orderId } = req.params;
     const { paymentMethod } = req.body;
     const userId = (req as any).userId;
-    
+
     await initDatabase();
-    const userId = (req as any).userId;
-    
+
     // 获取订单信息
     const order = await getDatabase().getFirstAsync<any>(
       'SELECT * FROM orders WHERE id = ? AND user_id = ?',
-      [parseInt(orderId), userId]
+      [parseInt(orderId as string), userId]
     );
     
     if (!order) {

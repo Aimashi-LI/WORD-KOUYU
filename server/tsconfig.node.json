@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "module": "esnext"
+  },
+  "ts-node": {
+    "esm": true
+  }
+}
