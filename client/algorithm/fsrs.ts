@@ -123,9 +123,11 @@ export async function updateWithTimeWeight(
     responseTime
   );
 
-  // 计算下次复习时间
+  // 计算下次复习时间（精确到小时）
+  // 方案A：去掉 Math.floor，使用小时精度
   const nextReviewDate = new Date();
-  nextReviewDate.setDate(nextReviewDate.getDate() + Math.floor(newStability));
+  const intervalHours = Math.round(newStability * 24);
+  nextReviewDate.setHours(nextReviewDate.getHours() + intervalHours);
 
   return {
     newDifficulty,

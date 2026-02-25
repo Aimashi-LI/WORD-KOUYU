@@ -81,11 +81,16 @@ export async function getReviewPlan(daysAhead: number = 7): Promise<ReviewPlanIt
   // 转换为数组并排序
   const plan: ReviewPlanItem[] = Array.from(planMap.entries())
     .map(([date, wordbookItems]) => {
-      const dateObj = new Date(date + 'T09:00:00');  // 默认上午 9 点
+      // 使用该组内第一个单词的实际复习时间作为默认时间
+      // 如果单词有精确的 next_review 时间，会使用它；否则使用默认上午9点
+      const firstWordReview = wordbookItems[0].word.next_review;
+      const dateObj = firstWordReview
+        ? new Date(firstWordReview)
+        : new Date(date + 'T09:00:00');
       const { dateLabel, timeLabel, fullDateTime } = getDateTimeLabel(dateObj, now);
-      
+
       const words = wordbookItems.map(item => item.word);
-      
+
       // 按词库分组单词
       const wordbookMap = new Map<number, { wordbookId: number; wordbookName: string; words: Word[] }>();
       wordbookItems.forEach(item => {
@@ -98,14 +103,14 @@ export async function getReviewPlan(daysAhead: number = 7): Promise<ReviewPlanIt
         }
         wordbookMap.get(item.wordbookId)!.words.push(item.word);
       });
-      
+
       const wordbooks = Array.from(wordbookMap.values()).map(wb => ({
         wordbookId: wb.wordbookId,
         wordbookName: wb.wordbookName,
         words: wb.words,
         count: wb.words.length
       }));
-      
+
       return {
         date,
         dateLabel,
