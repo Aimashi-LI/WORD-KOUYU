@@ -1083,7 +1083,16 @@ export default function ReviewScreen() {
         <View style={styles.topBar}>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              Alert.alert(
+                '是否确认退出？',
+                '',
+                [
+                  { text: '取消', style: 'cancel' },
+                  { text: '确认退出', onPress: () => router.back(), style: 'destructive' }
+                ]
+              );
+            }}
           >
             <FontAwesome6 name="arrow-left" size={24} color={theme.textPrimary} />
           </TouchableOpacity>
@@ -1242,7 +1251,16 @@ export default function ReviewScreen() {
 
             <TouchableOpacity
               style={[styles.secondaryButton, { backgroundColor: theme.backgroundTertiary, borderColor: theme.border }]}
-              onPress={() => router.back()}
+              onPress={() => {
+                Alert.alert(
+                  '是否确认退出？',
+                  '',
+                  [
+                    { text: '取消', style: 'cancel' },
+                    { text: '确认退出', onPress: () => router.back(), style: 'destructive' }
+                  ]
+                );
+              }}
             >
               <FontAwesome6 name="house" size={20} color={theme.textPrimary} style={styles.buttonIcon} />
               <ThemedText variant="h3" color={theme.textPrimary}>返回首页</ThemedText>
