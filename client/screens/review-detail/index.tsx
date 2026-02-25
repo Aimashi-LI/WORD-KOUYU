@@ -41,6 +41,8 @@ interface WordCompletion {
   completedModes: Set<'type1' | 'type2'>;
   type1Score: number; // 0: 未完成, 1: 正确, 2: 错误
   type2Score: number; // 0: 未完成, 1: 正确, 2: 错误
+  isQuickCompleted: boolean; // 是否通过快速评分完成
+  quickScore: number | null; // 快速评分分数
 }
 
 export default function ReviewScreen() {
@@ -207,7 +209,9 @@ export default function ReviewScreen() {
           wordId: word.id,
           completedModes: new Set(),
           type1Score: 0,
-          type2Score: 0
+          type2Score: 0,
+          isQuickCompleted: false,
+          quickScore: null
         });
       });
       setWordCompletionStatus(completionMap);
@@ -573,6 +577,18 @@ export default function ReviewScreen() {
         }
       ]);
 
+      // ✅ 更新单词完成状态（快速评分）
+      setWordCompletionStatus(prev => {
+        const newStatus = prev;
+        const completion = newStatus.get(word.id);
+        if (completion) {
+          completion.isQuickCompleted = true;
+          completion.quickScore = finalScore;
+          newStatus.set(word.id, completion);
+        }
+        return new Map(newStatus);
+      });
+
       // 如果单词已掌握，添加到已掌握列表
       if (isMastered && !word.is_mastered) {
         console.log(`[Review] 单词 ${word.word} 已掌握，添加到已掌握列表`);
@@ -609,7 +625,9 @@ export default function ReviewScreen() {
               wordId: newWord.id,
               completedModes: new Set(),
               type1Score: 0,
-              type2Score: 0
+              type2Score: 0,
+              isQuickCompleted: false,
+              quickScore: null
             });
             return new Map(newStatus);
           });
@@ -697,6 +715,18 @@ export default function ReviewScreen() {
         }
       ]);
 
+      // ✅ 更新单词完成状态（快速评分）
+      setWordCompletionStatus(prev => {
+        const newStatus = prev;
+        const completion = newStatus.get(word.id);
+        if (completion) {
+          completion.isQuickCompleted = true;
+          completion.quickScore = finalScore;
+          newStatus.set(word.id, completion);
+        }
+        return new Map(newStatus);
+      });
+
       // ✅ 如果单词已掌握，自动补充新单词
       if (isMastered && !word.is_mastered) {
         console.log(`[Review] 快速评分 - 单词 ${word.word} 已掌握，尝试补充新单词`);
@@ -731,7 +761,9 @@ export default function ReviewScreen() {
               wordId: newWord.id,
               completedModes: new Set(),
               type1Score: 0,
-              type2Score: 0
+              type2Score: 0,
+              isQuickCompleted: false,
+              quickScore: null
             });
             return new Map(newStatus);
           });
@@ -862,10 +894,15 @@ export default function ReviewScreen() {
 
           {/* 进度指示 */}
           <View style={styles.progressContainer}>
-            {/* 计算已完成的单词数量（两种方式都完成了） */}
+            {/* 计算已完成的单词数量（包括正常完成和快速评分完成） */}
             {(() => {
-              const completedWordCount = Array.from(wordCompletionStatus.values())
+              // 正常完成：两种方式都完成了
+              const normalCompleted = Array.from(wordCompletionStatus.values())
                 .filter(comp => comp.completedModes.size === 2).length;
+              // 快速评分完成：通过快速评分按钮完成
+              const quickCompleted = Array.from(wordCompletionStatus.values())
+                .filter(comp => comp.isQuickCompleted).length;
+              const completedWordCount = normalCompleted + quickCompleted;
               return (
                 <>
                   <ThemedText variant="caption" color={theme.textMuted}>
