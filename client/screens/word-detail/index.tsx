@@ -551,9 +551,14 @@ export default function WordDetailScreen() {
           {/* 拆分 */}
           <View style={styles.inputContainer}>
             <View style={styles.labelRow}>
-              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-                拆分
-              </ThemedText>
+              <View style={styles.splitLabelContainer}>
+                <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+                  拆分
+                </ThemedText>
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  点击字母开始拆分
+                </ThemedText>
+              </View>
               {splitHistory.length > 0 && (
                 <TouchableOpacity onPress={handleUndoSplit} style={styles.undoButton}>
                   <FontAwesome6 name="rotate-left" size={16} color={theme.accent} />

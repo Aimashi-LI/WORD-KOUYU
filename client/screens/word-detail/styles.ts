@@ -41,6 +41,11 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.xs,
       fontWeight: '500',
     },
+    splitLabelContainer: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: Spacing.xs,
+    },
     phoneticButton: {
       flexDirection: 'row',
       alignItems: 'center',
