@@ -133,26 +133,17 @@ export default function ReviewPlanScreen() {
     }
   };
   
-  const formatStability = (stability: number | undefined | null): string => {
-    // 确保总是返回字符串，避免渲染错误
-    try {
-      if (stability === undefined || stability === null || isNaN(stability)) {
-        return '未知';
-      }
-      if (stability < 7) {
-        return '刚开始';
-      } else if (stability < 14) {
-        return '学习中';
-      } else if (stability < 30) {
-        return '较稳定';
-      } else if (stability < 60) {
-        return '稳定';
-      } else {
-        return '很稳定';
-      }
-    } catch (error) {
-      console.error('[formatStability] Error:', error);
-      return '未知';
+  const formatStability = (stability: number): string => {
+    if (stability < 7) {
+      return '刚开始';
+    } else if (stability < 14) {
+      return '学习中';
+    } else if (stability < 30) {
+      return '较稳定';
+    } else if (stability < 60) {
+      return '稳定';
+    } else {
+      return '很稳定';
     }
   };
   
