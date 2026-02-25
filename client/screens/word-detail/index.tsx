@@ -644,7 +644,7 @@ export default function WordDetailScreen() {
               style={[styles.input, styles.textArea]}
               value={sentence}
               onChangeText={handleSentenceChange}
-              placeholder="王（w）阿姨（ay）教我方法"
+              placeholder="例：王（w）阿姨（ay）教我方法"
               placeholderTextColor={theme.textMuted}
               multiline
             />
