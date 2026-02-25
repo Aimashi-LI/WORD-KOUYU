@@ -719,7 +719,7 @@ export default function AddWordScreen() {
           </View>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="输入助记句子，帮助记忆单词发音或拼写"
+            placeholder="王（w）阿姨（ay）教我方法"
             placeholderTextColor={theme.textMuted}
             value={sentence}
             onChangeText={handleSentenceChange}
