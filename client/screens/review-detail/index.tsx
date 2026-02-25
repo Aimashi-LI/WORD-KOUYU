@@ -63,6 +63,7 @@ export default function ReviewScreen() {
   const [totalScore, setTotalScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [masteredWords, setMasteredWords] = useState<Word[]>([]);
+  const [remainingWordsCount, setRemainingWordsCount] = useState(0); // 剩余待复习单词数
   
   // 新增：记录每个单词的得分
   const [wordScores, setWordScores] = useState<{ wordId: number; word: string; score: number; isQuick: boolean }[]>([]);
@@ -82,6 +83,38 @@ export default function ReviewScreen() {
   // 新增：记录开始时间
   const startTimeRef = useRef<number>(0);
   const reviewStartTimeRef = useRef<number>(0);
+
+  // 辅助函数：计算单词逾期小时数（用于智能排序）
+  const getOverdueHours = (word: Word): number => {
+    if (!word.next_review) return 0;
+    const now = new Date();
+    const nextReview = new Date(word.next_review);
+    const diffMs = now.getTime() - nextReview.getTime();
+    return diffMs / (1000 * 60 * 60); // 转换为小时
+  };
+
+  // 辅助函数：从数据库加载新单词（用于自动补充）
+  const loadNewWords = async (count: number = 1): Promise<Word[]> => {
+    try {
+      if (projectId) {
+        const allWords = await getWordsInWordbook(parseInt(projectId));
+        return allWords.filter(w => {
+          if (w.is_mastered === 1) return false;
+          if (!w.next_review) return true;
+          return new Date(w.next_review) <= new Date();
+        }).sort((a, b) => {
+          const overdueA = getOverdueHours(a);
+          const overdueB = getOverdueHours(b);
+          return overdueB - overdueA; // 降序，逾期越久越紧急
+        }).slice(0, count);
+      } else {
+        return await getReviewWords(count);
+      }
+    } catch (error) {
+      console.error('[loadNewWords] 加载新单词失败:', error);
+      return [];
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -106,7 +139,7 @@ export default function ReviewScreen() {
         console.log('[Review] 词库中的单词总数:', allWords.length);
 
         // 只加载需要复习且未掌握的单词
-        words = allWords.filter(w => {
+        const filteredWords = allWords.filter(w => {
           // 已掌握的单词不加载
           if (w.is_mastered === 1) return false;
 
@@ -114,8 +147,33 @@ export default function ReviewScreen() {
           const now = new Date();
           if (!w.next_review) return true;
           return new Date(w.next_review) <= now;
-        }).slice(0, 20);
-        console.log('[Review] 过滤后的待复习单词数:', words.length);
+        });
+        console.log('[Review] 过滤后的待复习单词数:', filteredWords.length);
+
+        // ✅ 智能优先级排序：按逾期时间排序（逾期越久越紧急）
+        const sortedWords = [...filteredWords].sort((a, b) => {
+          const overdueA = getOverdueHours(a);
+          const overdueB = getOverdueHours(b);
+          return overdueB - overdueA; // 降序
+        });
+
+        // 取前20个
+        words = sortedWords.slice(0, 20);
+
+        // 打印排序结果（前5个）
+        console.log('[Review] 排序后的前5个单词逾期时间:');
+        sortedWords.slice(0, 5).forEach((w, i) => {
+          console.log(`  ${i + 1}. ${w.word}: 逾期 ${getOverdueHours(w).toFixed(1)} 小时`);
+        });
+
+        // 取前20个
+        words = filteredWords.slice(0, 20);
+
+        // 打印排序结果（前5个）
+        console.log('[Review] 排序后的前5个单词逾期时间:');
+        words.slice(0, 5).forEach((w, i) => {
+          console.log(`  ${i + 1}. ${w.word}: 逾期 ${getOverdueHours(w).toFixed(1)} 小时`);
+        });
       } else {
         console.log('[Review] 从所有单词加载需要复习的单词');
         // 从所有单词加载需要复习的单词
@@ -364,10 +422,15 @@ export default function ReviewScreen() {
   // 进入下一个步骤
   const goToNextStep = async () => {
     const nextIndex = currentStepIndex + 1;
-    
+
     if (nextIndex >= reviewQueue.length) {
       // 所有步骤都完成了，提交所有单词的分数
       await submitAllScores();
+
+      // ✅ 计算剩余待复习单词数
+      const remaining = await loadNewWords(1);
+      setRemainingWordsCount(remaining.length > 0 ? 1 : 0); // 简化：只检查是否还有待复习单词
+
       setState('completed');
     } else {
       // 进入下一个步骤
@@ -514,6 +577,45 @@ export default function ReviewScreen() {
       if (isMastered && !word.is_mastered) {
         console.log(`[Review] 单词 ${word.word} 已掌握，添加到已掌握列表`);
         setMasteredWords(prev => [...prev, word]);
+
+        // ✅ 自动补充机制：从数据库加载新单词
+        const newWords = await loadNewWords(1);
+        if (newWords.length > 0) {
+          const newWord = newWords[0];
+          console.log(`[Review] 自动补充新单词: ${newWord.word}`);
+
+          // 添加到队列
+          setQueue(prev => [...prev, newWord]);
+
+          // 添加复习步骤
+          const newSteps: ReviewStep[] = [
+            { word: newWord, mode: 'type1', wordId: newWord.id },
+            { word: newWord, mode: 'type2', wordId: newWord.id }
+          ];
+
+          // 随机打乱新单词的两种方式
+          const shuffledNewSteps = shuffleArray([...newSteps]);
+
+          // 确保新单词的两种方式不连续出现
+          const finalNewSteps = ensureNonConsecutiveSameWord(shuffledNewSteps);
+
+          // 添加到复习队列
+          setReviewQueue(prev => [...prev, ...finalNewSteps]);
+
+          // 初始化新单词的完成状态
+          setWordCompletionStatus(prev => {
+            const newStatus = prev;
+            newStatus.set(newWord.id, {
+              wordId: newWord.id,
+              completedModes: new Set(),
+              type1Score: 0,
+              type2Score: 0
+            });
+            return new Map(newStatus);
+          });
+        } else {
+          console.log('[Review] 没有更多待复习单词');
+        }
       }
 
       // 累加总分
@@ -595,12 +697,59 @@ export default function ReviewScreen() {
         }
       ]);
 
+      // ✅ 如果单词已掌握，自动补充新单词
+      if (isMastered && !word.is_mastered) {
+        console.log(`[Review] 快速评分 - 单词 ${word.word} 已掌握，尝试补充新单词`);
+
+        const newWords = await loadNewWords(1);
+        if (newWords.length > 0) {
+          const newWord = newWords[0];
+          console.log(`[Review] 快速评分 - 自动补充新单词: ${newWord.word}`);
+
+          // 添加到队列
+          setQueue(prev => [...prev, newWord]);
+
+          // 添加复习步骤
+          const newSteps: ReviewStep[] = [
+            { word: newWord, mode: 'type1', wordId: newWord.id },
+            { word: newWord, mode: 'type2', wordId: newWord.id }
+          ];
+
+          // 随机打乱新单词的两种方式
+          const shuffledNewSteps = shuffleArray([...newSteps]);
+
+          // 确保新单词的两种方式不连续出现
+          const finalNewSteps = ensureNonConsecutiveSameWord(shuffledNewSteps);
+
+          // 添加到复习队列
+          setReviewQueue(prev => [...prev, ...finalNewSteps]);
+
+          // 初始化新单词的完成状态
+          setWordCompletionStatus(prev => {
+            const newStatus = prev;
+            newStatus.set(newWord.id, {
+              wordId: newWord.id,
+              completedModes: new Set(),
+              type1Score: 0,
+              type2Score: 0
+            });
+            return new Map(newStatus);
+          });
+        } else {
+          console.log('[Review] 快速评分 - 没有更多待复习单词');
+        }
+      }
+
       // 累加总分
       setTotalScore(prev => prev + finalScore);
 
       // 进入下一个步骤
       const nextIndex = currentStepIndex + 1;
       if (nextIndex >= reviewQueue.length) {
+        // ✅ 计算剩余待复习单词数
+        const remaining = await loadNewWords(1);
+        setRemainingWordsCount(remaining.length > 0 ? 1 : 0); // 简化：只检查是否还有待复习单词
+
         setState('completed');
       } else {
         setCurrentStepIndex(nextIndex);
@@ -1064,7 +1213,18 @@ export default function ReviewScreen() {
 
           {/* 按钮组 */}
           <View style={styles.buttonGroup}>
-            <TouchableOpacity 
+            {/* ✅ 继续复习按钮（如果有剩余单词） */}
+            {remainingWordsCount > 0 && (
+              <TouchableOpacity
+                style={[styles.completeButton, { backgroundColor: theme.accent }]}
+                onPress={loadReviewQueue}
+              >
+                <FontAwesome6 name="play" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
+                <ThemedText variant="h3" color={theme.buttonPrimaryText}>继续复习</ThemedText>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
               style={[styles.completeButton, { backgroundColor: theme.primary }]}
               onPress={() => {
                 setCurrentStepIndex(0);
@@ -1079,8 +1239,8 @@ export default function ReviewScreen() {
               <FontAwesome6 name="rotate-right" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
               <ThemedText variant="h3" color={theme.buttonPrimaryText}>再来一轮</ThemedText>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.secondaryButton, { backgroundColor: theme.backgroundTertiary, borderColor: theme.border }]}
               onPress={() => router.back()}
             >
