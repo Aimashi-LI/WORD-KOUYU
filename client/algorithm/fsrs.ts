@@ -140,7 +140,7 @@ export async function updateWithTimeWeight(
 /**
  * 计算复习时机和掌握率调整因子
  * 基于认知心理学理论：
- * - 提前复习（<6小时）：记忆痕迹未充分巩固，掌握率降低15%-30%
+ * - 提前复习（>3小时）：记忆痕迹未充分巩固，掌握率降低15%-30%
  * - 延后复习（>6小时）：遗忘曲线下降，掌握率降低30%-50%
  */
 function calculateReviewTiming(word: Word): {
@@ -158,14 +158,14 @@ function calculateReviewTiming(word: Word): {
   const currentTime = Date.now();
   const timeDiffHours = (currentTime - scheduledTime) / (1000 * 60 * 60);
 
-  // 提前复习（提前时间 < 6小时）
-  if (timeDiffHours < -6) {
+  // 提前复习（提前时间 > 3小时）
+  if (timeDiffHours < -3) {
     // 基于过度学习理论和间隔效应
     // 提前复习会导致记忆效果降低
-    // 根据认知心理学研究，提前6小时内复习，掌握率降低约20%-30%
+    // 根据认知心理学研究，提前3小时以上复习，掌握率降低约15%-30%
     const earlyHours = Math.abs(timeDiffHours);
     // 使用非线性惩罚：提前时间越长，调整因子越小
-    const penalty = Math.min(0.3, 0.05 * Math.log(earlyHours + 1));
+    const penalty = Math.min(0.3, 0.07 * Math.log(earlyHours + 1));
     return {
       masteryAdjustmentFactor: 1.0 - penalty,
       reviewStatus: 'early',
@@ -189,7 +189,7 @@ function calculateReviewTiming(word: Word): {
     };
   }
 
-  // 按时复习（±6小时内）
+  // 按时复习（提前≤3小时且延后≤6小时）
   return {
     masteryAdjustmentFactor: 1.0,
     reviewStatus: 'on-time',
