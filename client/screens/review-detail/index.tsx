@@ -81,7 +81,10 @@ export default function ReviewScreen() {
   const [type2Status, setType2Status] = useState<AnswerStatus>('none');
   const [quickScore, setQuickScore] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  
+
+  // 新增：记录复习时机提醒信息
+  const [timingWarning, setTimingWarning] = useState<{ early: number; late: number } | null>(null);
+
   // 新增：记录开始时间
   const startTimeRef = useRef<number>(0);
   const reviewStartTimeRef = useRef<number>(0);
@@ -256,18 +259,9 @@ export default function ReviewScreen() {
     return result;
   };
 
-  const handleStartReview = () => {
-    if (reviewQueue.length > 0) {
-      startReview(reviewQueue[0]);
-    }
-  };
-
   const startReview = (step: ReviewStep) => {
     console.log(`[Review] 开始复习步骤: ${step.word.word} (${step.mode})`);
-    
-    // 检查复习时机（每个单词都检查）
-    checkReviewTiming(step.word);
-    
+
     setCurrentWord(step.word);
     setReviewMode(step.mode);
     setType1Answer('');
@@ -278,22 +272,53 @@ export default function ReviewScreen() {
     setIsEditing(false);
     setState('reviewing');
     startTimeRef.current = Date.now();
-    
+
     // 记录复习开始时间（用于统计总耗时）
     if (currentStepIndex === 0) {
       reviewStartTimeRef.current = Date.now();
     }
   };
 
-  // 检查复习时机并提醒用户
-  const checkReviewTiming = (word: Word) => {
+  const handleStartReview = () => {
+    if (reviewQueue.length > 0) {
+      // 检查所有单词的复习时机
+      checkAllWordsTiming();
+
+      // 如果有复习时机警告，先弹窗提醒
+      if (timingWarning && (timingWarning.early > 0 || timingWarning.late > 0)) {
+        let message = '';
+        if (timingWarning.early > 0 && timingWarning.late > 0) {
+          message = `本次复习队列中有 ${timingWarning.early} 个单词提前复习，${timingWarning.late} 个单词延后复习。\n\n根据认知心理学研究，过早或过晚复习都会影响记忆效果。如果继续复习，掌握率的计算将适当调低。`;
+        } else if (timingWarning.early > 0) {
+          message = `本次复习队列中有 ${timingWarning.early} 个单词提前复习。\n\n根据认知心理学研究，过早复习会影响记忆效果，建议按推算时间进行复习。如果继续复习，掌握率的计算将适当调低。`;
+        } else {
+          message = `本次复习队列中有 ${timingWarning.late} 个单词延后复习。\n\n由于已超过推算的复习时间，单词的遗忘程度可能很大。根据遗忘曲线，掌握率的计算将适当调低。`;
+        }
+
+        Alert.alert(
+          '复习时机提醒',
+          message,
+          [
+            { text: '返回', onPress: () => router.back(), style: 'cancel' },
+            { text: '继续复习', onPress: () => startReview(reviewQueue[0]), style: 'default' }
+          ]
+        );
+      } else {
+        // 没有警告，直接开始复习
+        startReview(reviewQueue[0]);
+      }
+    }
+  };
+
+  // 检查单个单词的复习时机（返回提醒信息，不弹窗）
+  const checkReviewTiming = (word: Word): { early: number; late: number } => {
     console.log('[Review] 检查复习时机，单词:', word.word);
     console.log('[Review] next_review:', word.next_review);
     console.log('[Review] last_review:', word.last_review);
 
     if (!word.next_review || !word.last_review) {
       console.log('[Review] 单词缺少复习时间信息，跳过检查');
-      return;
+      return { early: 0, late: 0 };
     }
 
     const scheduledTime = new Date(word.next_review).getTime();
@@ -325,32 +350,43 @@ export default function ReviewScreen() {
     const timeDiffMinutes = timeDiffHours * 60;
     console.log('[Review] 时间差（分钟）:', timeDiffMinutes.toFixed(2));
 
+    let earlyCount = 0;
+    let lateCount = 0;
+
     // 提前复习（提前时间超过阈值）
     if (timeDiffMinutes < -earlyThresholdMinutes) {
       const earlyMinutes = Math.abs(timeDiffMinutes).toFixed(0);
       console.log('[Review] 检测到提前复习，提前分钟数:', earlyMinutes);
-      Alert.alert(
-        '提前复习提醒',
-        `您提前了 ${earlyMinutes} 分钟进行复习。\n\n根据认知心理学研究，过早复习会影响记忆效果，建议按推算时间进行复习。如果继续复习，掌握率的计算将适当调低。`,
-        [
-          { text: '返回', onPress: () => router.back(), style: 'cancel' },
-          { text: '继续复习', style: 'default' }
-        ]
-      );
+      earlyCount++;
     }
 
     // 延后复习（延后时间超过阈值）
     if (timeDiffMinutes > lateThresholdMinutes) {
       const lateMinutes = timeDiffMinutes.toFixed(0);
       console.log('[Review] 检测到延后复习，延后分钟数:', lateMinutes);
-      Alert.alert(
-        '延后复习提醒',
-        `您延后了 ${lateMinutes} 分钟进行复习。\n\n由于已超过推算的复习时间，单词的遗忘程度可能很大。根据遗忘曲线，掌握率的计算将适当调低。`,
-        [
-          { text: '返回', onPress: () => router.back(), style: 'cancel' },
-          { text: '继续复习', style: 'default' }
-        ]
-      );
+      lateCount++;
+    }
+
+    return { early: earlyCount, late: lateCount };
+  };
+
+  // 检查所有单词的复习时机（一次性检查）
+  const checkAllWordsTiming = () => {
+    let earlyCount = 0;
+    let lateCount = 0;
+
+    queue.forEach(word => {
+      const timing = checkReviewTiming(word);
+      earlyCount += timing.early;
+      lateCount += timing.late;
+    });
+
+    if (earlyCount > 0 || lateCount > 0) {
+      setTimingWarning({ early: earlyCount, late: lateCount });
+      console.log(`[Review] 发现 ${earlyCount} 个提前复习，${lateCount} 个延后复习的单词`);
+    } else {
+      setTimingWarning(null);
+      console.log('[Review] 所有单词复习时机正常');
     }
   };
 
