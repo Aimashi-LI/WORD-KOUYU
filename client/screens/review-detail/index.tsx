@@ -917,6 +917,9 @@ export default function ReviewScreen() {
                   onChangeText={setType1Answer}
                   onFocus={() => setIsEditing(true)}
                   onSubmitEditing={handleSubmitType1}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
                 />
               )}
 
@@ -990,6 +993,7 @@ export default function ReviewScreen() {
                   onSubmitEditing={handleSubmitType2}
                   multiline
                   numberOfLines={3}
+                  keyboardType="default"
                 />
               )}
 
