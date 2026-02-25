@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { EnglishInput, ChineseInput, AutoInput } from '@/components/SmartTextInput';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -549,7 +550,7 @@ export default function AddWordScreen() {
           <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
             单词 *
           </ThemedText>
-          <TextInput
+          <EnglishInput
             style={styles.input}
             placeholder="输入单词"
             placeholderTextColor={theme.textMuted}
@@ -612,7 +613,7 @@ export default function AddWordScreen() {
           <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
             释义 *
           </ThemedText>
-          <TextInput
+          <ChineseInput
             style={[styles.input, styles.textArea]}
             placeholder="输入释义"
             placeholderTextColor={theme.textMuted}
@@ -648,7 +649,7 @@ export default function AddWordScreen() {
             <View key={index} style={styles.splitItemContainer}>
               {/* 编码输入 */}
               <View style={styles.splitCodeRow}>
-                <TextInput
+                <EnglishInput
                   style={styles.splitCodeInput}
                   placeholder="编码"
                   placeholderTextColor={theme.textMuted}
@@ -658,7 +659,7 @@ export default function AddWordScreen() {
                   onBlur={() => setActiveCodeIndex(-1)}
                 />
                 <ThemedText variant="body" color={theme.textMuted}>-</ThemedText>
-                <TextInput
+                <ChineseInput
                   style={styles.splitContentInput}
                   placeholder="含义"
                   placeholderTextColor={theme.textMuted}
@@ -722,7 +723,7 @@ export default function AddWordScreen() {
               </ThemedText>
             </TouchableOpacity>
           </View>
-          <TextInput
+          <AutoInput
             style={[styles.input, styles.textArea]}
             placeholder="例：王（w）阿姨（ay）教我方法"
             placeholderTextColor={theme.textMuted}
@@ -738,7 +739,7 @@ export default function AddWordScreen() {
           <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
             例句（可选）
           </ThemedText>
-          <TextInput
+          <AutoInput
             style={[styles.input, styles.textArea]}
             placeholder="输入例句，帮助理解单词用法"
             placeholderTextColor={theme.textMuted}
