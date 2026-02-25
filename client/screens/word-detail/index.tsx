@@ -644,7 +644,7 @@ export default function WordDetailScreen() {
               style={[styles.input, styles.textArea]}
               value={sentence}
               onChangeText={handleSentenceChange}
-              placeholder="例：编码an对应多个含义（阿牛、一个），填写任一含义即可触发补全"
+              placeholder="王（w）阿姨（ay）教我方法"
               placeholderTextColor={theme.textMuted}
               multiline
             />

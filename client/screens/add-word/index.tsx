@@ -719,7 +719,7 @@ export default function AddWordScreen() {
           </View>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="例：编码an对应多个含义（阿牛、一个），填写任一含义即可触发补全"
+            placeholder="输入助记句子，帮助记忆单词发音或拼写"
             placeholderTextColor={theme.textMuted}
             value={sentence}
             onChangeText={handleSentenceChange}
