@@ -631,7 +631,7 @@ gradlew.bat clean
    ```
 
 2. 按 `Enter` 键
-
+  
 #### 7.4.2 等待构建完成
 
 1. Gradle 会开始下载依赖并构建应用
