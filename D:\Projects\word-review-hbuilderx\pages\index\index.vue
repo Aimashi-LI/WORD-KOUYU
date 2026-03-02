@@ -1,12 +1,7 @@
 <template>
   <view class="container">
-    <!-- 加载状态 -->
-    <view v-if="loading" class="loading-state">
-      <text>加载中...</text>
-    </view>
-
     <!-- 搜索栏 -->
-    <view v-else class="search-bar">
+    <view class="search-bar">
       <input
         v-model="searchText"
         placeholder="搜索单词..."
@@ -16,14 +11,14 @@
     </view>
 
     <!-- 排序按钮 -->
-    <view v-if="!loading" class="sort-buttons">
+    <view class="sort-buttons">
       <button size="mini" :type="sortBy === 'next_review' ? 'primary' : 'default'" @click="setSort('next_review')">按复习时间</button>
       <button size="mini" :type="sortBy === 'stability' ? 'primary' : 'default'" @click="setSort('stability')">按掌握程度</button>
       <button size="mini" :type="sortBy === 'review_count' ? 'primary' : 'default'" @click="setSort('review_count')">按复习次数</button>
     </view>
 
     <!-- 单词列表 -->
-    <scroll-view v-if="!loading" scroll-y="true" class="word-list" @scrolltolower="loadMore">
+    <scroll-view scroll-y="true" class="word-list" @scrolltolower="loadMore">
       <view v-if="wordList.length === 0" class="empty-state">
         <text>暂无单词，点击下方按钮添加</text>
       </view>
@@ -53,7 +48,7 @@
     </scroll-view>
 
     <!-- 添加单词按钮 -->
-    <view v-if="!loading" class="add-button">
+    <view class="add-button">
       <button type="primary" @click="showAddModal">+ 添加单词</button>
     </view>
 
@@ -103,7 +98,6 @@
 export default {
   data() {
     return {
-      loading: true,
       wordList: [],
       searchText: '',
       sortBy: 'next_review',
@@ -123,14 +117,12 @@ export default {
     }
   },
   onLoad() {
-    console.log('Index page loaded')
     // 延迟加载数据，确保数据库已初始化
     setTimeout(() => {
       this.loadWordList()
-    }, 1500)
+    }, 500)
   },
   onPullDownRefresh() {
-    console.log('Pull down refresh')
     this.page = 1
     this.wordList = []
     this.hasMore = true
@@ -141,27 +133,11 @@ export default {
   methods: {
     // 加载单词列表
     loadWordList(callback) {
-      console.log('Loading word list...')
-      
       try {
-        // 检查 plus 对象是否可用
-        if (typeof plus === 'undefined') {
-          console.log('plus 对象不可用')
-          uni.showToast({
-            title: '数据库不可用',
-            icon: 'none'
-          })
-          this.loading = false
-          callback && callback()
-          return
-        }
-
         const db = plus.sqlite.openDatabase({
           name: 'wordreview.db',
           path: '_doc/wordreview.db'
         })
-
-        console.log('Database opened')
 
         let sql = 'SELECT * FROM words WHERE 1=1'
         const params = []
@@ -186,12 +162,7 @@ export default {
 
         sql += ' LIMIT ' + this.pageSize + ' OFFSET ' + ((this.page - 1) * this.pageSize)
 
-        console.log('SQL:', sql)
-        console.log('Params:', params)
-
         const words = db.executeSql(sql, params)
-        console.log('Words loaded:', words.length)
-        
         db.close()
 
         if (words.length < this.pageSize) {
@@ -204,15 +175,13 @@ export default {
           this.wordList = [...this.wordList, ...words]
         }
 
-        console.log('Word list updated:', this.wordList.length)
-        this.loading = false
+        console.log('加载单词列表:', this.wordList.length)
       } catch (error) {
         console.error('加载单词列表失败:', error)
         uni.showToast({
-          title: '加载失败: ' + error.message,
+          title: '加载失败',
           icon: 'none'
         })
-        this.loading = false
       }
 
       callback && callback()
@@ -220,7 +189,6 @@ export default {
 
     // 加载更多
     loadMore() {
-      console.log('Loading more...')
       if (!this.hasMore) return
       this.page++
       this.loadWordList()
@@ -228,7 +196,6 @@ export default {
 
     // 搜索
     handleSearch() {
-      console.log('Searching:', this.searchText)
       this.page = 1
       this.wordList = []
       this.hasMore = true
@@ -237,7 +204,6 @@ export default {
 
     // 设置排序
     setSort(sortBy) {
-      console.log('Set sort:', sortBy)
       this.sortBy = sortBy
       this.page = 1
       this.wordList = []
@@ -247,7 +213,6 @@ export default {
 
     // 跳转到详情页
     goToDetail(id) {
-      console.log('Go to detail:', id)
       uni.navigateTo({
         url: '/pages/detail/detail?id=' + id
       })
@@ -255,7 +220,6 @@ export default {
 
     // 显示添加弹窗
     showAddModal() {
-      console.log('Show add modal')
       this.editingId = null
       this.formData = {
         word: '',
@@ -270,13 +234,11 @@ export default {
 
     // 关闭弹窗
     closeModal() {
-      console.log('Close modal')
       this.modalVisible = false
     },
 
     // 保存单词
     handleSave() {
-      console.log('Save word:', this.formData)
       if (!this.formData.word || !this.formData.meaning) {
         uni.showToast({
           title: '请填写单词和含义',
@@ -286,21 +248,13 @@ export default {
       }
 
       try {
-        if (typeof plus === 'undefined') {
-          uni.showToast({
-            title: '数据库不可用',
-            icon: 'none'
-          })
-          return
-        }
-
         const db = plus.sqlite.openDatabase({
           name: 'wordreview.db',
           path: '_doc/wordreview.db'
         })
 
         const now = new Date()
-        const nextReviewDate = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+        const nextReviewDate = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 1天后
 
         db.executeSql(
           'INSERT INTO words (word, meaning, pronunciation, example, split_parts, mnemonic_sentence, stability, difficulty, next_review_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -332,7 +286,7 @@ export default {
       } catch (error) {
         console.error('保存单词失败:', error)
         uni.showToast({
-          title: '保存失败: ' + error.message,
+          title: '保存失败',
           icon: 'none'
         })
       }
@@ -370,15 +324,6 @@ export default {
   min-height: 100vh;
   padding-bottom: 100rpx;
   background-color: #f5f5f5;
-}
-
-.loading-state {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  font-size: 32rpx;
-  color: #999;
 }
 
 .search-bar {
