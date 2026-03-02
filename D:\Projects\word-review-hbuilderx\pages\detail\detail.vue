@@ -1,6 +1,6 @@
 <template>
   <view class="container">
-    <scroll-view scroll-y class="content" v-if="word">
+    <scroll-view scroll-y="true" class="content" v-if="word">
       <!-- 单词信息 -->
       <view class="word-info-card">
         <view class="word-header">
@@ -70,7 +70,7 @@
             placeholder="输入助记句"
             class="form-textarea"
             @blur="saveMnemonic"
-          />
+          ></textarea>
         </view>
       </view>
 
@@ -106,24 +106,32 @@ export default {
   methods: {
     // 加载单词详情
     loadWordDetail() {
-      const db = plus.sqlite.openDatabase({
-        name: 'wordreview.db',
-        path: '_doc/wordreview.db'
-      })
+      try {
+        const db = plus.sqlite.openDatabase({
+          name: 'wordreview.db',
+          path: '_doc/wordreview.db'
+        })
 
-      const words = db.executeSql(
-        `SELECT * FROM words WHERE id = ?`,
-        [this.wordId]
-      )
+        const words = db.executeSql(
+          'SELECT * FROM words WHERE id = ?',
+          [this.wordId]
+        )
 
-      db.close()
+        db.close()
 
-      if (words.length > 0) {
-        this.word = words[0]
-        if (this.word.split_parts) {
-          this.splitParts = this.word.split_parts.split(' ')
-          this.splitInput = this.word.split_parts
+        if (words.length > 0) {
+          this.word = words[0]
+          if (this.word.split_parts) {
+            this.splitParts = this.word.split_parts.split(' ')
+            this.splitInput = this.word.split_parts
+          }
         }
+      } catch (error) {
+        console.error('加载单词详情失败:', error)
+        uni.showToast({
+          title: '加载失败',
+          icon: 'none'
+        })
       }
     },
 
@@ -131,47 +139,63 @@ export default {
     saveSplit() {
       if (!this.splitInput) return
 
-      const db = plus.sqlite.openDatabase({
-        name: 'wordreview.db',
-        path: '_doc/wordreview.db'
-      })
+      try {
+        const db = plus.sqlite.openDatabase({
+          name: 'wordreview.db',
+          path: '_doc/wordreview.db'
+        })
 
-      db.executeSql(
-        `UPDATE words SET split_parts = ? WHERE id = ?`,
-        [this.splitInput, this.wordId]
-      )
+        db.executeSql(
+          'UPDATE words SET split_parts = ? WHERE id = ?',
+          [this.splitInput, this.wordId]
+        )
 
-      db.close()
+        db.close()
 
-      this.word.split_parts = this.splitInput
-      this.splitParts = this.splitInput.split(' ')
+        this.word.split_parts = this.splitInput
+        this.splitParts = this.splitInput.split(' ')
 
-      uni.showToast({
-        title: '保存成功',
-        icon: 'success'
-      })
+        uni.showToast({
+          title: '保存成功',
+          icon: 'success'
+        })
+      } catch (error) {
+        console.error('保存拆分失败:', error)
+        uni.showToast({
+          title: '保存失败',
+          icon: 'none'
+        })
+      }
     },
 
     // 保存助记句
     saveMnemonic() {
       if (!this.word.mnemonic_sentence) return
 
-      const db = plus.sqlite.openDatabase({
-        name: 'wordreview.db',
-        path: '_doc/wordreview.db'
-      })
+      try {
+        const db = plus.sqlite.openDatabase({
+          name: 'wordreview.db',
+          path: '_doc/wordreview.db'
+        })
 
-      db.executeSql(
-        `UPDATE words SET mnemonic_sentence = ? WHERE id = ?`,
-        [this.word.mnemonic_sentence, this.wordId]
-      )
+        db.executeSql(
+          'UPDATE words SET mnemonic_sentence = ? WHERE id = ?',
+          [this.word.mnemonic_sentence, this.wordId]
+        )
 
-      db.close()
+        db.close()
 
-      uni.showToast({
-        title: '保存成功',
-        icon: 'success'
-      })
+        uni.showToast({
+          title: '保存成功',
+          icon: 'success'
+        })
+      } catch (error) {
+        console.error('保存助记句失败:', error)
+        uni.showToast({
+          title: '保存失败',
+          icon: 'none'
+        })
+      }
     },
 
     // 标记为已复习（使用 FSRS 算法）
@@ -181,43 +205,44 @@ export default {
       // FSRS 算法核心逻辑
       const fsrsResult = this.calculateFSRS(rating)
 
-      const db = plus.sqlite.openDatabase({
-        name: 'wordreview.db',
-        path: '_doc/wordreview.db'
-      })
+      try {
+        const db = plus.sqlite.openDatabase({
+          name: 'wordreview.db',
+          path: '_doc/wordreview.db'
+        })
 
-      const now = new Date()
-      const nextReviewDate = new Date(now.getTime() + fsrsResult.interval * 60 * 60 * 1000)
+        const now = new Date()
+        const nextReviewDate = new Date(now.getTime() + fsrsResult.interval * 60 * 60 * 1000)
 
-      db.executeSql(
-        `UPDATE words SET
-          stability = ?,
-          difficulty = ?,
-          review_count = review_count + 1,
-          mastery_level = ?,
-          last_review_date = ?,
-          next_review_date = ?
-        WHERE id = ?`,
-        [
-          fsrsResult.stability,
-          fsrsResult.difficulty,
-          fsrsResult.masteryLevel,
-          now.toISOString(),
-          nextReviewDate.toISOString(),
-          this.wordId
-        ]
-      )
+        db.executeSql(
+          'UPDATE words SET stability = ?, difficulty = ?, review_count = review_count + 1, mastery_level = ?, last_review_date = ?, next_review_date = ? WHERE id = ?',
+          [
+            fsrsResult.stability,
+            fsrsResult.difficulty,
+            fsrsResult.masteryLevel,
+            now.toISOString(),
+            nextReviewDate.toISOString(),
+            this.wordId
+          ]
+        )
 
-      db.close()
+        db.close()
 
-      uni.showToast({
-        title: '复习完成',
-        icon: 'success'
-      })
+        uni.showToast({
+          title: '复习完成',
+          icon: 'success'
+        })
 
-      setTimeout(() => {
-        uni.navigateBack()
-      }, 1000)
+        setTimeout(() => {
+          uni.navigateBack()
+        }, 1000)
+      } catch (error) {
+        console.error('复习失败:', error)
+        uni.showToast({
+          title: '复习失败',
+          icon: 'none'
+        })
+      }
     },
 
     // 重置进度
@@ -227,34 +252,35 @@ export default {
         content: '确定要重置这个单词的学习进度吗？',
         success: (res) => {
           if (res.confirm) {
-            const db = plus.sqlite.openDatabase({
-              name: 'wordreview.db',
-              path: '_doc/wordreview.db'
-            })
+            try {
+              const db = plus.sqlite.openDatabase({
+                name: 'wordreview.db',
+                path: '_doc/wordreview.db'
+              })
 
-            const now = new Date()
-            const nextReviewDate = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+              const now = new Date()
+              const nextReviewDate = new Date(now.getTime() + 24 * 60 * 60 * 1000)
 
-            db.executeSql(
-              `UPDATE words SET
-                stability = 0,
-                difficulty = 5,
-                review_count = 0,
-                mastery_level = 'low',
-                last_review_date = NULL,
-                next_review_date = ?
-              WHERE id = ?`,
-              [nextReviewDate.toISOString(), this.wordId]
-            )
+              db.executeSql(
+                'UPDATE words SET stability = 0, difficulty = 5, review_count = 0, mastery_level = \'low\', last_review_date = NULL, next_review_date = ? WHERE id = ?',
+                [nextReviewDate.toISOString(), this.wordId]
+              )
 
-            db.close()
+              db.close()
 
-            uni.showToast({
-              title: '已重置',
-              icon: 'success'
-            })
+              uni.showToast({
+                title: '已重置',
+                icon: 'success'
+              })
 
-            this.loadWordDetail()
+              this.loadWordDetail()
+            } catch (error) {
+              console.error('重置失败:', error)
+              uni.showToast({
+                title: '重置失败',
+                icon: 'none'
+              })
+            }
           }
         }
       })
@@ -267,26 +293,34 @@ export default {
         content: '确定要删除这个单词吗？',
         success: (res) => {
           if (res.confirm) {
-            const db = plus.sqlite.openDatabase({
-              name: 'wordreview.db',
-              path: '_doc/wordreview.db'
-            })
+            try {
+              const db = plus.sqlite.openDatabase({
+                name: 'wordreview.db',
+                path: '_doc/wordreview.db'
+              })
 
-            db.executeSql(
-              `DELETE FROM words WHERE id = ?`,
-              [this.wordId]
-            )
+              db.executeSql(
+                'DELETE FROM words WHERE id = ?',
+                [this.wordId]
+              )
 
-            db.close()
+              db.close()
 
-            uni.showToast({
-              title: '已删除',
-              icon: 'success'
-            })
+              uni.showToast({
+                title: '已删除',
+                icon: 'success'
+              })
 
-            setTimeout(() => {
-              uni.navigateBack()
-            }, 1000)
+              setTimeout(() => {
+                uni.navigateBack()
+              }, 1000)
+            } catch (error) {
+              console.error('删除失败:', error)
+              uni.showToast({
+                title: '删除失败',
+                icon: 'none'
+              })
+            }
           }
         }
       })
@@ -356,7 +390,12 @@ export default {
     formatDate(date) {
       if (!date) return '待安排'
       const d = new Date(date)
-      return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+      const year = d.getFullYear()
+      const month = (d.getMonth() + 1).toString().padStart(2, '0')
+      const day = d.getDate().toString().padStart(2, '0')
+      const hour = d.getHours().toString().padStart(2, '0')
+      const minute = d.getMinutes().toString().padStart(2, '0')
+      return year + '-' + month + '-' + day + ' ' + hour + ':' + minute
     }
   }
 }

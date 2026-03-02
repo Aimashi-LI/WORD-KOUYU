@@ -18,21 +18,23 @@
     </view>
 
     <!-- 单词列表 -->
-    <scroll-view scroll-y class="word-list" @scrolltolower="loadMore">
+    <scroll-view scroll-y="true" class="word-list" @scrolltolower="loadMore">
       <view v-if="wordList.length === 0" class="empty-state">
         <text>暂无单词，点击下方按钮添加</text>
       </view>
-      <view v-else v-for="word in wordList" :key="word.id" class="word-item" @click="goToDetail(word.id)">
-        <view class="word-header">
-          <text class="word-text">{{ word.word }}</text>
-          <text class="mastery-level" :class="'level-' + word.mastery_level">
-            {{ getMasteryLabel(word.mastery_level) }}
-          </text>
-        </view>
-        <view class="word-meaning">{{ word.meaning }}</view>
-        <view class="word-info">
-          <text v-if="word.pronunciation" class="pronunciation">[{{ word.pronunciation }}]</text>
-          <text class="next-review">下次复习: {{ formatNextReview(word.next_review_date) }}</text>
+      <view v-else>
+        <view v-for="word in wordList" :key="word.id" class="word-item" @click="goToDetail(word.id)">
+          <view class="word-header">
+            <text class="word-text">{{ word.word }}</text>
+            <text class="mastery-level" :class="'level-' + word.mastery_level">
+              {{ getMasteryLabel(word.mastery_level) }}
+            </text>
+          </view>
+          <view class="word-meaning">{{ word.meaning }}</view>
+          <view class="word-info">
+            <text v-if="word.pronunciation" class="pronunciation">[{{ word.pronunciation }}]</text>
+            <text class="next-review">下次复习: {{ formatNextReview(word.next_review_date) }}</text>
+          </view>
         </view>
       </view>
 
@@ -57,7 +59,7 @@
           <text class="modal-title">添加单词</text>
           <text class="modal-close" @click="closeModal">×</text>
         </view>
-        <scroll-view scroll-y class="modal-body">
+        <scroll-view scroll-y="true" class="modal-body">
           <view class="form-item">
             <text class="form-label">单词：</text>
             <input v-model="formData.word" placeholder="请输入单词" class="form-input" />
@@ -72,7 +74,7 @@
           </view>
           <view class="form-item">
             <text class="form-label">例句：</text>
-            <textarea v-model="formData.example" placeholder="请输入例句" class="form-textarea" />
+            <textarea v-model="formData.example" placeholder="请输入例句" class="form-textarea"></textarea>
           </view>
           <view class="form-item">
             <text class="form-label">拆分：</text>
@@ -137,28 +139,28 @@ export default {
           path: '_doc/wordreview.db'
         })
 
-        let sql = `SELECT * FROM words WHERE 1=1`
+        let sql = 'SELECT * FROM words WHERE 1=1'
         const params = []
 
         if (this.searchText) {
-          sql += ` AND word LIKE ?`
-          params.push(`%${this.searchText}%`)
+          sql += ' AND word LIKE ?'
+          params.push('%' + this.searchText + '%')
         }
 
         // 排序
         switch (this.sortBy) {
           case 'next_review':
-            sql += ` ORDER BY next_review_date ASC`
+            sql += ' ORDER BY next_review_date ASC'
             break
           case 'stability':
-            sql += ` ORDER BY stability DESC`
+            sql += ' ORDER BY stability DESC'
             break
           case 'review_count':
-            sql += ` ORDER BY review_count DESC`
+            sql += ' ORDER BY review_count DESC'
             break
         }
 
-        sql += ` LIMIT ${this.pageSize} OFFSET ${(this.page - 1) * this.pageSize}`
+        sql += ' LIMIT ' + this.pageSize + ' OFFSET ' + ((this.page - 1) * this.pageSize)
 
         const words = db.executeSql(sql, params)
         db.close()
@@ -212,7 +214,7 @@ export default {
     // 跳转到详情页
     goToDetail(id) {
       uni.navigateTo({
-        url: `/pages/detail/detail?id=${id}`
+        url: '/pages/detail/detail?id=' + id
       })
     },
 
@@ -255,8 +257,7 @@ export default {
         const nextReviewDate = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 1天后
 
         db.executeSql(
-          `INSERT INTO words (word, meaning, pronunciation, example, split_parts, mnemonic_sentence, stability, difficulty, next_review_date)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          'INSERT INTO words (word, meaning, pronunciation, example, split_parts, mnemonic_sentence, stability, difficulty, next_review_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             this.formData.word,
             this.formData.meaning,
@@ -312,7 +313,7 @@ export default {
       if (days < 0) return '立即复习'
       if (days === 0) return '今天'
       if (days === 1) return '明天'
-      return `${days}天后`
+      return days + '天后'
     }
   }
 }
