@@ -1,0 +1,34 @@
+# 忽略文件
+
+node_modules/
+.DS_Store
+dist/
+unpackage/
+.hbuilderx/
+
+# 日志
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 编辑器
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 本地环境
+.env.local
+.env.*.local
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 打包输出
+unpackage/
+dist/
