@@ -4,7 +4,7 @@
       "path": "pages/index/index",
       "style": {
         "navigationBarTitleText": "单词记忆",
-        "enablePullDownRefresh": false
+        "enablePullDownRefresh": true
       }
     },
     {
@@ -16,7 +16,8 @@
     {
       "path": "pages/review/review",
       "style": {
-        "navigationBarTitleText": "智能复习"
+        "navigationBarTitleText": "智能复习",
+        "enablePullDownRefresh": true
       }
     }
   ],
@@ -28,28 +29,18 @@
   },
   "tabBar": {
     "color": "#7A7E83",
-    "selectedColor": "#3cc51f",
+    "selectedColor": "#4CAF50",
     "borderStyle": "black",
     "backgroundColor": "#ffffff",
     "list": [
       {
         "pagePath": "pages/index/index",
-        "iconPath": "static/icon-word.png",
-        "selectedIconPath": "static/icon-word-active.png",
         "text": "单词列表"
       },
       {
         "pagePath": "pages/review/review",
-        "iconPath": "static/icon-review.png",
-        "selectedIconPath": "static/icon-review-active.png",
         "text": "智能复习"
       }
     ]
-  },
-  "easycom": {
-    "autoscan": true,
-    "custom": {
-      "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
-    }
   }
 }
