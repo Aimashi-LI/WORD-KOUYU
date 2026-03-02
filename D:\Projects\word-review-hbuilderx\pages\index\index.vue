@@ -2,10 +2,10 @@
   <view class="container">
     <!-- 搜索栏 -->
     <view class="search-bar">
-      <input
+      <uni-easyinput
         v-model="searchText"
         placeholder="搜索单词..."
-        class="search-input"
+        :clearable="true"
         @confirm="handleSearch"
       />
     </view>
@@ -19,10 +19,7 @@
 
     <!-- 单词列表 -->
     <scroll-view scroll-y class="word-list" @scrolltolower="loadMore">
-      <view v-if="wordList.length === 0" class="empty-state">
-        <text>暂无单词，点击下方按钮添加</text>
-      </view>
-      <view v-else v-for="word in wordList" :key="word.id" class="word-item" @click="goToDetail(word.id)">
+      <view v-for="word in wordList" :key="word.id" class="word-item" @click="goToDetail(word.id)">
         <view class="word-header">
           <text class="word-text">{{ word.word }}</text>
           <text class="mastery-level" :class="'level-' + word.mastery_level">
@@ -51,13 +48,13 @@
     </view>
 
     <!-- 添加单词弹窗 -->
-    <view v-if="modalVisible" class="modal-mask" @click="closeModal">
-      <view class="modal-content" @click.stop>
-        <view class="modal-header">
-          <text class="modal-title">添加单词</text>
-          <text class="modal-close" @click="closeModal">×</text>
+    <uni-popup ref="popup" type="center">
+      <view class="popup-content">
+        <view class="popup-header">
+          <text class="popup-title">添加单词</text>
+          <text class="popup-close" @click="closeModal">×</text>
         </view>
-        <scroll-view scroll-y class="modal-body">
+        <scroll-view scroll-y class="popup-body">
           <view class="form-item">
             <text class="form-label">单词：</text>
             <input v-model="formData.word" placeholder="请输入单词" class="form-input" />
@@ -83,12 +80,12 @@
             <input v-model="formData.mnemonic_sentence" placeholder="例：王(w)阿姨(ay)教我方法" class="form-input" />
           </view>
         </scroll-view>
-        <view class="modal-footer">
+        <view class="popup-footer">
           <button type="default" size="mini" @click="closeModal" class="cancel-btn">取消</button>
           <button type="primary" size="mini" @click="handleSave" class="save-btn">保存</button>
         </view>
       </view>
-    </view>
+    </uni-popup>
   </view>
 </template>
 
@@ -103,7 +100,6 @@ export default {
       pageSize: 20,
       hasMore: true,
       editingId: null,
-      modalVisible: false,
       formData: {
         word: '',
         meaning: '',
@@ -115,10 +111,7 @@ export default {
     }
   },
   onLoad() {
-    // 延迟加载数据，确保数据库已初始化
-    setTimeout(() => {
-      this.loadWordList()
-    }, 500)
+    this.loadWordList()
   },
   onPullDownRefresh() {
     this.page = 1
@@ -131,55 +124,45 @@ export default {
   methods: {
     // 加载单词列表
     loadWordList(callback) {
-      try {
-        const db = plus.sqlite.openDatabase({
-          name: 'wordreview.db',
-          path: '_doc/wordreview.db'
-        })
+      const db = plus.sqlite.openDatabase({
+        name: 'wordreview.db',
+        path: '_doc/wordreview.db'
+      })
 
-        let sql = `SELECT * FROM words WHERE 1=1`
-        const params = []
+      let sql = `SELECT * FROM words WHERE 1=1`
+      const params = []
 
-        if (this.searchText) {
-          sql += ` AND word LIKE ?`
-          params.push(`%${this.searchText}%`)
-        }
+      if (this.searchText) {
+        sql += ` AND word LIKE ?`
+        params.push(`%${this.searchText}%`)
+      }
 
-        // 排序
-        switch (this.sortBy) {
-          case 'next_review':
-            sql += ` ORDER BY next_review_date ASC`
-            break
-          case 'stability':
-            sql += ` ORDER BY stability DESC`
-            break
-          case 'review_count':
-            sql += ` ORDER BY review_count DESC`
-            break
-        }
+      // 排序
+      switch (this.sortBy) {
+        case 'next_review':
+          sql += ` ORDER BY next_review_date ASC`
+          break
+        case 'stability':
+          sql += ` ORDER BY stability DESC`
+          break
+        case 'review_count':
+          sql += ` ORDER BY review_count DESC`
+          break
+      }
 
-        sql += ` LIMIT ${this.pageSize} OFFSET ${(this.page - 1) * this.pageSize}`
+      sql += ` LIMIT ${this.pageSize} OFFSET ${(this.page - 1) * this.pageSize}`
 
-        const words = db.executeSql(sql, params)
-        db.close()
+      const words = db.executeSql(sql, params)
+      db.close()
 
-        if (words.length < this.pageSize) {
-          this.hasMore = false
-        }
+      if (words.length < this.pageSize) {
+        this.hasMore = false
+      }
 
-        if (this.page === 1) {
-          this.wordList = words
-        } else {
-          this.wordList = [...this.wordList, ...words]
-        }
-
-        console.log('加载单词列表:', this.wordList.length)
-      } catch (error) {
-        console.error('加载单词列表失败:', error)
-        uni.showToast({
-          title: '加载失败',
-          icon: 'none'
-        })
+      if (this.page === 1) {
+        this.wordList = words
+      } else {
+        this.wordList = [...this.wordList, ...words]
       }
 
       callback && callback()
@@ -227,12 +210,12 @@ export default {
         split_parts: '',
         mnemonic_sentence: ''
       }
-      this.modalVisible = true
+      this.$refs.popup.open()
     },
 
     // 关闭弹窗
     closeModal() {
-      this.modalVisible = false
+      this.$refs.popup.close()
     },
 
     // 保存单词
@@ -245,50 +228,42 @@ export default {
         return
       }
 
-      try {
-        const db = plus.sqlite.openDatabase({
-          name: 'wordreview.db',
-          path: '_doc/wordreview.db'
-        })
+      const db = plus.sqlite.openDatabase({
+        name: 'wordreview.db',
+        path: '_doc/wordreview.db'
+      })
 
-        const now = new Date()
-        const nextReviewDate = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 1天后
+      const now = new Date()
+      const nextReviewDate = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 1天后
 
-        db.executeSql(
-          `INSERT INTO words (word, meaning, pronunciation, example, split_parts, mnemonic_sentence, stability, difficulty, next_review_date)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            this.formData.word,
-            this.formData.meaning,
-            this.formData.pronunciation || null,
-            this.formData.example || null,
-            this.formData.split_parts || null,
-            this.formData.mnemonic_sentence || null,
-            0, // stability
-            5, // difficulty
-            nextReviewDate.toISOString()
-          ]
-        )
+      db.executeSql(
+        `INSERT INTO words (word, meaning, pronunciation, example, split_parts, mnemonic_sentence, stability, difficulty, next_review_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          this.formData.word,
+          this.formData.meaning,
+          this.formData.pronunciation || null,
+          this.formData.example || null,
+          this.formData.split_parts || null,
+          this.formData.mnemonic_sentence || null,
+          0, // stability
+          5, // difficulty
+          nextReviewDate.toISOString()
+        ]
+      )
 
-        db.close()
+      db.close()
 
-        uni.showToast({
-          title: '添加成功',
-          icon: 'success'
-        })
+      uni.showToast({
+        title: '添加成功',
+        icon: 'success'
+      })
 
-        this.closeModal()
-        this.page = 1
-        this.wordList = []
-        this.hasMore = true
-        this.loadWordList()
-      } catch (error) {
-        console.error('保存单词失败:', error)
-        uni.showToast({
-          title: '保存失败',
-          icon: 'none'
-        })
-      }
+      this.closeModal()
+      this.page = 1
+      this.wordList = []
+      this.hasMore = true
+      this.loadWordList()
     },
 
     // 获取掌握程度标签
@@ -322,21 +297,11 @@ export default {
 .container {
   min-height: 100vh;
   padding-bottom: 100rpx;
-  background-color: #f5f5f5;
 }
 
 .search-bar {
   padding: 20rpx;
   background-color: #fff;
-}
-
-.search-input {
-  width: 100%;
-  padding: 16rpx;
-  border: 2rpx solid #ddd;
-  border-radius: 8rpx;
-  font-size: 28rpx;
-  background-color: #f9f9f9;
 }
 
 .sort-buttons {
@@ -345,19 +310,11 @@ export default {
   padding: 20rpx;
   background-color: #fff;
   margin-bottom: 20rpx;
-  gap: 12rpx;
 }
 
 .word-list {
   padding: 0 20rpx;
-  height: calc(100vh - 350rpx);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 80rpx 20rpx;
-  color: #999;
-  font-size: 28rpx;
+  height: calc(100vh - 300rpx);
 }
 
 .word-item {
@@ -432,7 +389,7 @@ export default {
 
 .add-button {
   position: fixed;
-  bottom: 100rpx;
+  bottom: 0;
   left: 0;
   right: 0;
   padding: 20rpx;
@@ -441,30 +398,14 @@ export default {
 }
 
 /* 弹窗样式 */
-.modal-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
-}
-
-.modal-content {
+.popup-content {
   width: 600rpx;
-  max-height: 80vh;
   background-color: #fff;
   border-radius: 16rpx;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
-.modal-header {
+.popup-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -472,21 +413,20 @@ export default {
   border-bottom: 2rpx solid #eee;
 }
 
-.modal-title {
+.popup-title {
   font-size: 32rpx;
   font-weight: bold;
   color: #333;
 }
 
-.modal-close {
+.popup-close {
   font-size: 48rpx;
   color: #999;
   padding: 0 16rpx;
-  cursor: pointer;
 }
 
-.modal-body {
-  max-height: 500rpx;
+.popup-body {
+  max-height: 600rpx;
   padding: 24rpx;
 }
 
@@ -520,7 +460,7 @@ export default {
   background-color: #fff;
 }
 
-.modal-footer {
+.popup-footer {
   display: flex;
   justify-content: space-between;
   padding: 20rpx 24rpx;
