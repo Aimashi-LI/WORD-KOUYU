@@ -105,7 +105,6 @@ export default {
   },
   computed: {
     currentWord() {
-      if (this.reviewQueue.length === 0) return {}
       return this.reviewQueue[this.currentIndex] || {}
     }
   },
@@ -126,72 +125,74 @@ export default {
   methods: {
     // 加载复习统计
     loadReviewStats() {
-      try {
-        const db = plus.sqlite.openDatabase({
-          name: 'wordreview.db',
-          path: '_doc/wordreview.db'
-        })
+      const db = plus.sqlite.openDatabase({
+        name: 'wordreview.db',
+        path: '_doc/wordreview.db'
+      })
 
-        const now = new Date()
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const now = new Date()
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
-        // 待复习数量
-        const pending = db.executeSql(
-          'SELECT COUNT(*) as count FROM words WHERE next_review_date <= ? AND mastery_level != \'high\'',
-          [now.toISOString()]
-        )
+      // 待复习数量
+      const pending = db.executeSql(
+        `SELECT COUNT(*) as count FROM words
+         WHERE next_review_date <= ? AND mastery_level != 'high'`,
+        [now.toISOString()]
+      )
 
-        // 今日已完成数量
-        const completed = db.executeSql(
-          'SELECT COUNT(*) as count FROM words WHERE last_review_date >= ?',
-          [todayStart.toISOString()]
-        )
+      // 今日已完成数量
+      const completed = db.executeSql(
+        `SELECT COUNT(*) as count FROM words
+         WHERE last_review_date >= ?`,
+        [todayStart.toISOString()]
+      )
 
-        // 总掌握率
-        const total = db.executeSql('SELECT COUNT(*) as count FROM words')
-        const highMastery = db.executeSql(
-          'SELECT COUNT(*) as count FROM words WHERE mastery_level = \'high\''
-        )
+      // 总掌握率
+      const total = db.executeSql(`SELECT COUNT(*) as count FROM words`)
+      const highMastery = db.executeSql(
+        `SELECT COUNT(*) as count FROM words WHERE mastery_level = 'high'`
+      )
 
-        db.close()
+      db.close()
 
-        this.pendingCount = pending[0].count
-        this.completedCount = completed[0].count
-        this.masteryRate = total[0].count > 0
-          ? Math.round((highMastery[0].count / total[0].count) * 100)
-          : 0
-      } catch (error) {
-        console.error('加载复习统计失败:', error)
-      }
+      this.pendingCount = pending[0].count
+      this.completedCount = completed[0].count
+      this.masteryRate = total[0].count > 0
+        ? Math.round((highMastery[0].count / total[0].count) * 100)
+        : 0
     },
 
     // 加载复习队列（智能优先级排序）
     loadReviewQueue(callback) {
-      try {
-        const db = plus.sqlite.openDatabase({
-          name: 'wordreview.db',
-          path: '_doc/wordreview.db'
-        })
+      const db = plus.sqlite.openDatabase({
+        name: 'wordreview.db',
+        path: '_doc/wordreview.db'
+      })
 
-        const now = new Date()
+      const now = new Date()
 
-        // 智能排序：按照紧急程度（next_review_date - now）升序
-        const words = db.executeSql(
-          'SELECT * FROM words WHERE next_review_date <= ? AND mastery_level != \'high\' ORDER BY CASE WHEN next_review_date < ? THEN 0 ELSE 1 END, stability ASC, difficulty DESC LIMIT 20',
-          [now.toISOString(), now.toISOString()]
-        )
+      // 智能排序：按照紧急程度（next_review_date - now）升序
+      const words = db.executeSql(
+        `SELECT * FROM words
+         WHERE next_review_date <= ? AND mastery_level != 'high'
+         ORDER BY
+           CASE
+             WHEN next_review_date < ? THEN 0
+             ELSE 1
+           END,
+           stability ASC,
+           difficulty DESC
+         LIMIT 20`,
+        [now.toISOString(), now.toISOString()]
+      )
 
-        db.close()
+      db.close()
 
-        this.reviewQueue = words
-        this.currentIndex = 0
-        this.showAnswer = false
+      this.reviewQueue = words
+      this.currentIndex = 0
+      this.showAnswer = false
 
-        callback && callback()
-      } catch (error) {
-        console.error('加载复习队列失败:', error)
-        callback && callback()
-      }
+      callback && callback()
     },
 
     // 刷新队列
@@ -203,70 +204,69 @@ export default {
     // 评分单词
     rateWord(rating) {
       const word = this.currentWord
-      if (!word || !word.id) return
+      if (!word) return
 
       // FSRS 算法计算
       const fsrsResult = this.calculateFSRS(rating, word)
 
-      try {
-        const db = plus.sqlite.openDatabase({
-          name: 'wordreview.db',
-          path: '_doc/wordreview.db'
-        })
+      const db = plus.sqlite.openDatabase({
+        name: 'wordreview.db',
+        path: '_doc/wordreview.db'
+      })
 
-        const now = new Date()
-        const nextReviewDate = new Date(now.getTime() + fsrsResult.interval * 60 * 60 * 1000)
+      const now = new Date()
+      const nextReviewDate = new Date(now.getTime() + fsrsResult.interval * 60 * 60 * 1000)
 
-        db.executeSql(
-          'UPDATE words SET stability = ?, difficulty = ?, review_count = review_count + 1, mastery_level = ?, last_review_date = ?, next_review_date = ? WHERE id = ?',
-          [
-            fsrsResult.stability,
-            fsrsResult.difficulty,
-            fsrsResult.masteryLevel,
-            now.toISOString(),
-            nextReviewDate.toISOString(),
-            word.id
-          ]
-        )
+      db.executeSql(
+        `UPDATE words SET
+          stability = ?,
+          difficulty = ?,
+          review_count = review_count + 1,
+          mastery_level = ?,
+          last_review_date = ?,
+          next_review_date = ?
+        WHERE id = ?`,
+        [
+          fsrsResult.stability,
+          fsrsResult.difficulty,
+          fsrsResult.masteryLevel,
+          now.toISOString(),
+          nextReviewDate.toISOString(),
+          word.id
+        ]
+      )
 
-        db.close()
+      db.close()
 
-        // 显示反馈
-        let message = ''
-        switch (rating) {
-          case 0:
-            message = '没关系，下次加油！'
-            break
-          case 2:
-            message = '有点模糊，继续努力'
-            break
-          case 3:
-            message = '一般，还需加强'
-            break
-          case 4:
-            message = '记得不错！'
-            break
-          case 5:
-            message = '完全记住，太棒了！'
-            break
-        }
-
-        uni.showToast({
-          title: message,
-          icon: rating >= 4 ? 'success' : 'none'
-        })
-
-        // 延迟后切换到下一个
-        setTimeout(() => {
-          this.nextWord()
-        }, 500)
-      } catch (error) {
-        console.error('评分失败:', error)
-        uni.showToast({
-          title: '评分失败',
-          icon: 'none'
-        })
+      // 显示反馈
+      let message = ''
+      switch (rating) {
+        case 0:
+          message = '没关系，下次加油！'
+          break
+        case 2:
+          message = '有点模糊，继续努力'
+          break
+        case 3:
+          message = '一般，还需加强'
+          break
+        case 4:
+          message = '记得不错！'
+          break
+        case 5:
+          message = '完全记住，太棒了！'
+          break
       }
+
+      uni.showToast({
+        title: message,
+        icon: rating >= 4 ? 'success' : 'none'
+      })
+
+      // 延迟后切换到下一个
+      setTimeout(() => {
+        this.nextWord()
+      }, 500)
     },
 
     // 下一个单词
