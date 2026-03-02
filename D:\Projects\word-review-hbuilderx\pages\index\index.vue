@@ -26,7 +26,7 @@
             {{ getMasteryLabel(word.mastery_level) }}
           </text>
         </view>
-        <view class="word-meaning">{{ word.meaning }}</view>
+        <view class="word-meaning">{{ word.meaning }}</text>
         <view class="word-info">
           <text v-if="word.pronunciation" class="pronunciation">[{{ word.pronunciation }}]</text>
           <text class="next-review">下次复习: {{ formatNextReview(word.next_review_date) }}</text>
@@ -47,44 +47,39 @@
       <button type="primary" @click="showAddModal">+ 添加单词</button>
     </view>
 
-    <!-- 添加单词弹窗 -->
-    <uni-popup ref="popup" type="center">
-      <view class="popup-content">
-        <view class="popup-header">
-          <text class="popup-title">添加单词</text>
-          <text class="popup-close" @click="closeModal">×</text>
-        </view>
-        <scroll-view scroll-y class="popup-body">
-          <view class="form-item">
-            <text class="form-label">单词：</text>
-            <input v-model="formData.word" placeholder="请输入单词" class="form-input" />
-          </view>
+    <!-- 添加/编辑单词弹窗 -->
+    <uni-popup ref="popup" type="dialog">
+      <uni-popup-dialog
+        type="input"
+        title="添加单词"
+        :value="editingWord"
+        placeholder="请输入单词"
+        @confirm="handleAddWord"
+        @close="closeModal"
+      >
+        <view class="dialog-form">
           <view class="form-item">
             <text class="form-label">含义：</text>
-            <input v-model="formData.meaning" placeholder="请输入含义" class="form-input" />
+            <input v-model="formData.meaning" placeholder="请输入含义" />
           </view>
           <view class="form-item">
             <text class="form-label">发音：</text>
-            <input v-model="formData.pronunciation" placeholder="请输入发音" class="form-input" />
+            <input v-model="formData.pronunciation" placeholder="请输入发音" />
           </view>
           <view class="form-item">
             <text class="form-label">例句：</text>
-            <textarea v-model="formData.example" placeholder="请输入例句" class="form-textarea" />
+            <textarea v-model="formData.example" placeholder="请输入例句" />
           </view>
           <view class="form-item">
             <text class="form-label">拆分：</text>
-            <input v-model="formData.split_parts" placeholder="点击字母开始拆分" class="form-input" />
+            <input v-model="formData.split_parts" placeholder="点击字母开始拆分" />
           </view>
           <view class="form-item">
             <text class="form-label">助记：</text>
-            <input v-model="formData.mnemonic_sentence" placeholder="例：王(w)阿姨(ay)教我方法" class="form-input" />
+            <input v-model="formData.mnemonic_sentence" placeholder="例：王(w)阿姨(ay)教我方法" />
           </view>
-        </scroll-view>
-        <view class="popup-footer">
-          <button type="default" size="mini" @click="closeModal" class="cancel-btn">取消</button>
-          <button type="primary" size="mini" @click="handleSave" class="save-btn">保存</button>
         </view>
-      </view>
+      </uni-popup-dialog>
     </uni-popup>
   </view>
 </template>
@@ -99,6 +94,7 @@ export default {
       page: 1,
       pageSize: 20,
       hasMore: true,
+      editingWord: '',
       editingId: null,
       formData: {
         word: '',
@@ -201,6 +197,7 @@ export default {
 
     // 显示添加弹窗
     showAddModal() {
+      this.editingWord = ''
       this.editingId = null
       this.formData = {
         word: '',
@@ -218,9 +215,9 @@ export default {
       this.$refs.popup.close()
     },
 
-    // 保存单词
-    handleSave() {
-      if (!this.formData.word || !this.formData.meaning) {
+    // 添加单词
+    handleAddWord(value) {
+      if (!value || !this.formData.meaning) {
         uni.showToast({
           title: '请填写单词和含义',
           icon: 'none'
@@ -240,7 +237,7 @@ export default {
         `INSERT INTO words (word, meaning, pronunciation, example, split_parts, mnemonic_sentence, stability, difficulty, next_review_date)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          this.formData.word,
+          value,
           this.formData.meaning,
           this.formData.pronunciation || null,
           this.formData.example || null,
@@ -397,79 +394,31 @@ export default {
   border-top: 2rpx solid #eee;
 }
 
-/* 弹窗样式 */
-.popup-content {
-  width: 600rpx;
-  background-color: #fff;
-  border-radius: 16rpx;
-  overflow: hidden;
-}
-
-.popup-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24rpx;
-  border-bottom: 2rpx solid #eee;
-}
-
-.popup-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-}
-
-.popup-close {
-  font-size: 48rpx;
-  color: #999;
-  padding: 0 16rpx;
-}
-
-.popup-body {
-  max-height: 600rpx;
-  padding: 24rpx;
+.dialog-form {
+  margin-top: 20rpx;
 }
 
 .form-item {
-  margin-bottom: 24rpx;
+  margin-bottom: 20rpx;
 }
 
 .form-label {
   display: block;
   font-size: 28rpx;
   color: #333;
-  margin-bottom: 12rpx;
+  margin-bottom: 10rpx;
 }
 
-.form-input {
+.form-item input,
+.form-item textarea {
   width: 100%;
   padding: 16rpx;
   border: 2rpx solid #ddd;
   border-radius: 8rpx;
   font-size: 28rpx;
-  background-color: #fff;
 }
 
-.form-textarea {
-  width: 100%;
-  min-height: 150rpx;
-  padding: 16rpx;
-  border: 2rpx solid #ddd;
-  border-radius: 8rpx;
-  font-size: 28rpx;
-  background-color: #fff;
-}
-
-.popup-footer {
-  display: flex;
-  justify-content: space-between;
-  padding: 20rpx 24rpx;
-  border-top: 2rpx solid #eee;
-  gap: 20rpx;
-}
-
-.cancel-btn,
-.save-btn {
-  flex: 1;
+.form-item textarea {
+  height: 150rpx;
 }
 </style>
