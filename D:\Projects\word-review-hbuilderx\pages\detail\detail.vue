@@ -50,9 +50,10 @@
             </text>
           </view>
           <view class="split-input">
-            <uni-easyinput
+            <input
               v-model="splitInput"
               placeholder="输入拆分后的部分，用空格分隔"
+              class="form-input"
               @blur="saveSplit"
             />
           </view>
@@ -67,7 +68,7 @@
           <textarea
             v-model="word.mnemonic_sentence"
             placeholder="输入助记句"
-            class="mnemonic-input"
+            class="form-textarea"
             @blur="saveMnemonic"
           />
         </view>
@@ -299,7 +300,7 @@ export default {
       const reviewCount = this.word.review_count || 0
 
       // 计算新的难度
-      const newDifficulty = Math.max(1, Math.min(10, difficulty - 0.4 * (rating - 3)))
+      const newDifficulty = Math.max(1, Math.min(10, difficulty - 0.4 * (rating - 2.5)))
 
       // 根据稳定性分段计算
       let newStability
@@ -504,17 +505,23 @@ export default {
   font-weight: bold;
 }
 
-.split-input,
-.mnemonic-input {
+.form-input {
   width: 100%;
   padding: 16rpx;
   border: 2rpx solid #ddd;
   border-radius: 8rpx;
   font-size: 28rpx;
+  background-color: #fff;
 }
 
-.mnemonic-input {
+.form-textarea {
+  width: 100%;
   min-height: 150rpx;
+  padding: 16rpx;
+  border: 2rpx solid #ddd;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  background-color: #fff;
 }
 
 .action-buttons {
