@@ -2,10 +2,10 @@
   <view class="container">
     <!-- 搜索栏 -->
     <view class="search-bar">
-      <uni-easyinput
+      <input
         v-model="searchText"
         placeholder="搜索单词..."
-        :clearable="true"
+        class="search-input"
         @confirm="handleSearch"
       />
     </view>
@@ -48,13 +48,13 @@
     </view>
 
     <!-- 添加单词弹窗 -->
-    <uni-popup ref="popup" type="center">
-      <view class="popup-content">
-        <view class="popup-header">
-          <text class="popup-title">添加单词</text>
-          <text class="popup-close" @click="closeModal">×</text>
+    <view v-if="showModal" class="modal-mask" @click="closeModal">
+      <view class="modal-content" @click.stop>
+        <view class="modal-header">
+          <text class="modal-title">添加单词</text>
+          <text class="modal-close" @click="closeModal">×</text>
         </view>
-        <scroll-view scroll-y class="popup-body">
+        <scroll-view scroll-y class="modal-body">
           <view class="form-item">
             <text class="form-label">单词：</text>
             <input v-model="formData.word" placeholder="请输入单词" class="form-input" />
@@ -80,12 +80,12 @@
             <input v-model="formData.mnemonic_sentence" placeholder="例：王(w)阿姨(ay)教我方法" class="form-input" />
           </view>
         </scroll-view>
-        <view class="popup-footer">
+        <view class="modal-footer">
           <button type="default" size="mini" @click="closeModal" class="cancel-btn">取消</button>
           <button type="primary" size="mini" @click="handleSave" class="save-btn">保存</button>
         </view>
       </view>
-    </uni-popup>
+    </view>
   </view>
 </template>
 
@@ -100,6 +100,7 @@ export default {
       pageSize: 20,
       hasMore: true,
       editingId: null,
+      showModal: false,
       formData: {
         word: '',
         meaning: '',
@@ -210,12 +211,12 @@ export default {
         split_parts: '',
         mnemonic_sentence: ''
       }
-      this.$refs.popup.open()
+      this.showModal = true
     },
 
     // 关闭弹窗
     closeModal() {
-      this.$refs.popup.close()
+      this.showModal = false
     },
 
     // 保存单词
@@ -302,6 +303,15 @@ export default {
 .search-bar {
   padding: 20rpx;
   background-color: #fff;
+}
+
+.search-input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 24rpx;
+  background-color: #f5f5f5;
+  border-radius: 40rpx;
+  font-size: 28rpx;
 }
 
 .sort-buttons {
@@ -398,14 +408,27 @@ export default {
 }
 
 /* 弹窗样式 */
-.popup-content {
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal-content {
   width: 600rpx;
   background-color: #fff;
   border-radius: 16rpx;
   overflow: hidden;
 }
 
-.popup-header {
+.modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -413,19 +436,19 @@ export default {
   border-bottom: 2rpx solid #eee;
 }
 
-.popup-title {
+.modal-title {
   font-size: 32rpx;
   font-weight: bold;
   color: #333;
 }
 
-.popup-close {
+.modal-close {
   font-size: 48rpx;
   color: #999;
   padding: 0 16rpx;
 }
 
-.popup-body {
+.modal-body {
   max-height: 600rpx;
   padding: 24rpx;
 }
@@ -443,7 +466,8 @@ export default {
 
 .form-input {
   width: 100%;
-  padding: 16rpx;
+  height: 80rpx;
+  padding: 0 16rpx;
   border: 2rpx solid #ddd;
   border-radius: 8rpx;
   font-size: 28rpx;
@@ -460,7 +484,7 @@ export default {
   background-color: #fff;
 }
 
-.popup-footer {
+.modal-footer {
   display: flex;
   justify-content: space-between;
   padding: 20rpx 24rpx;
