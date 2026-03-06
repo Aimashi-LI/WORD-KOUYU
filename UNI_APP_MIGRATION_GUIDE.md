@@ -1,7 +1,7 @@
 # 单词记忆应用 - uni-app 迁移指南（修正版）
 
 ## 文档版本
-- 版本号：1.1.0
+- 版本号：1.2.0
 - 创建日期：2026-02-26
 - 修正日期：2026-02-26
 - 修正内容：
@@ -10,6 +10,10 @@
   - ✅ 修正复习计划页面的功能描述（日历视图）
   - ✅ 修正数据库默认值（stability默认为0，算法中MINIMUM_STABILITY为1.0）
   - ✅ 修正快速评分按钮的disabled属性说明
+  - ✅ 新增样式系统完整定义（颜色、间距、圆角、字体）
+  - ✅ 新增样式迁移指南（StyleSheet → SCSS）
+  - ✅ 修正复习详情页UI颜色值描述（提供准确的hex值和rgba值）
+  - ✅ 新增主题切换实现说明
 
 ---
 
@@ -743,14 +747,18 @@ function calculateLevenshteinDistance(str1: string, str2: string): number {
 - 顶部栏：返回按钮 + 进度条（单词 X / Y）
 - 进度条：可视化进度条 + 文字提示
 - 测试卡片：
-  - 模式一：浅蓝色背景
-  - 模式二：浅红色背景
-  - 正确：绿色背景
-  - 错误：红色背景
-  - "没印象"：红色背景
-  - "有印象"：粉色背景
-- 输入框：占位提示（"请输入单词"、"请输入释义"）
-- 快速评分按钮：位于输入框下方，横向排列
+  - 模式一容器：`rgba(59, 130, 246, 0.03)` 背景（浅蓝色）
+  - 模式二容器：`rgba(239, 68, 68, 0.03)` 背景（浅红色）
+  - 模式一卡片：`rgba(59, 130, 246, 0.06)` 背景 + `rgba(59, 130, 246, 0.19)` 边框
+  - 模式二卡片：`rgba(239, 68, 68, 0.06)` 背景 + `rgba(239, 68, 68, 0.19)` 边框
+  - 正确：主题色 + 20% 透明度背景 + 主题色边框
+  - 错误：错误色 + 20% 透明度背景 + 错误色边框
+  - 快速评分（"有印象"）：`rgba(255, 105, 180, 0.2)` 粉色背景
+  - 快速评分（"没印象"）：错误色背景
+- 输入框：
+  - 模式一输入框：`rgba(59, 130, 246, 0.08)` 背景 + `rgba(59, 130, 246, 0.25)` 边框
+  - 模式二输入框：`rgba(239, 68, 68, 0.08)` 背景 + `rgba(239, 68, 68, 0.25)` 边框
+- 快速评分按钮：横向排列，位于输入框下方
 
 **核心状态管理**：
 ```typescript
@@ -1367,7 +1375,131 @@ import { openDB } from 'idb';
 const db = await openDB('word_review', 1);
 ```
 
-### 10.3 路由迁移
+### 10.3 样式系统迁移
+
+**颜色系统定义**
+
+实际应用使用 Stone 色系（文字、背景）和 Amber 色系（主题色）。
+
+```typescript
+// 亮色主题
+const Colors = {
+  textPrimary: "#44403C",      // Stone-700
+  textSecondary: "#78716C",    // Stone-500
+  textMuted: "#A8A29E",        // Stone-400
+  primary: "#B45309",          // Amber-600（温暖护眼）
+  accent: "#D97706",           // Amber-500
+  success: "#10B981",          // Emerald-500
+  error: "#EF4444",            // Red-500
+  backgroundRoot: "#F5F5F4",   // Stone-100
+  backgroundDefault: "#FAFAF9",// Stone-50
+  backgroundTertiary: "#E7E5E4",// Stone-200
+  border: "#D6D3D1",           // Stone-300
+}
+
+// 暗色主题
+const Colors = {
+  textPrimary: "#FAFAF9",      // Stone-50
+  textSecondary: "#A8A29E",    // Stone-400
+  textMuted: "#78716C",        // Stone-500
+  primary: "#D97706",          // Amber-500
+  accent: "#F59E0B",           // Amber-400
+  success: "#34D399",          // Emerald-400
+  error: "#F87171",            // Red-400
+  backgroundRoot: "#1C1917",   // Stone-900
+  backgroundDefault: "#292524",// Stone-800
+  backgroundTertiary: "#44403C",// Stone-700
+  border: "#44403C",           // Stone-700
+}
+```
+
+**特殊颜色值（复习详情页）**
+
+```scss
+// 方式一（拼写测试）- 蓝色系
+.review-mode-container-type1 {
+  background-color: rgba(59, 130, 246, 0.03); // #3B82F608
+}
+.card-type1 {
+  background-color: rgba(59, 130, 246, 0.06); // #3B82F610
+  border-color: rgba(59, 130, 246, 0.19);    // #3B82F630
+}
+.input-type1 {
+  background-color: rgba(59, 130, 246, 0.08); // #3B82F615
+  border-color: rgba(59, 130, 246, 0.25);    // #3B82F640
+}
+
+// 方式二（释义填写）- 红色系
+.review-mode-container-type2 {
+  background-color: rgba(239, 68, 68, 0.03);  // #EF444408
+}
+.card-type2 {
+  background-color: rgba(239, 68, 68, 0.06);  // #EF444410
+  border-color: rgba(239, 68, 68, 0.19);     // #EF444430
+}
+.input-type2 {
+  background-color: rgba(239, 68, 68, 0.08);  // #EF444415
+  border-color: rgba(239, 68, 68, 0.25);     // #EF444440
+}
+
+// 快速评分 - 粉色
+.card-pink {
+  background-color: rgba(255, 105, 180, 0.2); // #FF69B433
+  border-color: #FF69B4;
+}
+```
+
+**React Native StyleSheet → uni-app SCSS**
+
+```typescript
+// React Native
+export const createStyles = (theme: Theme) => {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: Spacing.lg,
+      backgroundColor: theme.backgroundRoot,
+      borderRadius: BorderRadius.lg,
+    },
+  });
+};
+```
+
+```scss
+// uni-app
+:root {
+  --background-root: #F5F5F4;
+  --border-radius-lg: 16px;
+  --spacing-lg: 16px;
+}
+
+.container {
+  flex: 1;
+  padding: var(--spacing-lg);
+  background-color: var(--background-root);
+  border-radius: var(--border-radius-lg);
+}
+```
+
+**主题切换实现**
+
+```typescript
+// React Native
+const { isDark, toggleTheme } = useTheme();
+
+// uni-app (Pinia)
+import { useThemeStore } from '@/stores/theme';
+
+const { isDark, toggleTheme } = useThemeStore();
+
+// 切换时更新 CSS 变量
+toggleTheme();
+document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+```
+
+**注意**：详细样式系统定义请参考补充文档 `STYLE_SYSTEM_SUPPLEMENT.md`
+
+### 10.4 路由迁移
 
 **Expo Router → uni-app pages.json**
 
@@ -1693,6 +1825,11 @@ part - /pɑːrt/
 
 ### D. 版本历史
 
+- v1.2.0 (2026-02-26): 样式系统修正版
+  - ✅ 新增样式系统完整定义（Colors、Spacing、BorderRadius、Typography）
+  - ✅ 新增样式迁移指南（StyleSheet → SCSS、主题切换）
+  - ✅ 修正复习详情页UI颜色值描述（提供准确的rgba值）
+  - ✅ 新增补充文档 `STYLE_SYSTEM_SUPPLEMENT.md`
 - v1.1.0 (2026-02-26): 修正版
   - ✅ 添加 phonetics（音标表）的数据库表描述
   - ✅ 更新预置编码表为实际使用的136个复杂组合编码
