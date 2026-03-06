@@ -1,10 +1,15 @@
-# 单词记忆应用 - uni-app 迁移指南
+# 单词记忆应用 - uni-app 迁移指南（修正版）
 
 ## 文档版本
-- 版本号：1.0.0
+- 版本号：1.1.0
 - 创建日期：2026-02-26
-- 原始技术栈：Expo 54 + React Native + TypeScript
-- 目标技术栈：uni-app + Vue 3 + TypeScript
+- 修正日期：2026-02-26
+- 修正内容：
+  - ✅ 添加 phonetics（音标表）的数据库表描述
+  - ✅ 更新预置编码表为实际使用的136个复杂组合编码
+  - ✅ 修正复习计划页面的功能描述（日历视图）
+  - ✅ 修正数据库默认值（stability默认为0，算法中MINIMUM_STABILITY为1.0）
+  - ✅ 修正快速评分按钮的disabled属性说明
 
 ---
 
@@ -20,6 +25,10 @@
 8. [API设计](#8-api设计)
 9. [配置文件](#9-配置文件)
 10. [迁移要点](#10-迁移要点)
+11. [关键实现细节](#11-关键实现细节)
+12. [测试要点](#12-测试要点)
+13. [注意事项](#13-注意事项)
+14. [附录](#14-附录)
 
 ---
 
@@ -41,6 +50,7 @@
 - ✅ **自动补充**：掌握单词后自动从词库补充新单词
 - ✅ **主题系统**：支持亮色/暗色主题切换
 - ✅ **数据管理**：支持批量导入、导出、删除等操作
+- ✅ **日历视图**：日历视图展示复习计划，可查看特定日期的单词
 
 ### 1.3 应用架构
 
@@ -106,7 +116,7 @@ client/                          # 前端根目录
 │   ├── import-words.tsx         # 批量导入页
 │   ├── paste-import.tsx         # 文本粘贴导入页
 │   ├── review-detail.tsx        # 复习详情页
-│   ├── review-plan.tsx          # 复习计划页
+│   ├── review-plan.tsx          # 复习计划页（日历视图）
 │   ├── word-detail.tsx          # 单词详情页
 │   ├── splash.tsx               # 启动页
 │   └── about.tsx                # 关于页
@@ -123,6 +133,7 @@ client/                          # 前端根目录
 │   ├── ThemedText.tsx           # 主题文本组件
 │   ├── ThemedView.tsx           # 主题视图组件
 │   └── WordCard.tsx             # 单词卡片组件
+│   └── CalendarView.tsx         # 日历视图组件
 ├── contexts/                    # React Context
 │   ├── AuthContext.tsx          # 认证上下文
 │   └── ThemeContext.tsx         # 主题上下文
@@ -135,6 +146,7 @@ client/                          # 前端根目录
 │   ├── wordDao.ts               # 单词数据访问
 │   ├── wordbookDao.ts           # 词库数据访问
 │   ├── codeDao.ts               # 编码数据访问
+│   ├── reviewPlanDao.ts         # 复习计划数据访问
 │   └── types.ts                 # 数据类型定义
 ├── algorithm/                   # 算法相关
 │   └── fsrs.ts                  # FSRS 复习算法
@@ -162,7 +174,7 @@ src/                             # 源代码根目录
 │   ├── import-words/            # 批量导入页
 │   ├── paste-import/            # 文本粘贴导入页
 │   ├── review-detail/           # 复习详情页
-│   ├── review-plan/             # 复习计划页
+│   ├── review-plan/             # 复习计划页（日历视图）
 │   ├── word-detail/             # 单词详情页
 │   ├── splash/                  # 启动页
 │   └── about/                   # 关于页
@@ -170,7 +182,8 @@ src/                             # 源代码根目录
 │   ├── Screen.vue               # 页面容器组件
 │   ├── ThemedText.vue           # 主题文本组件
 │   ├── ThemedView.vue           # 主题视图组件
-│   └── WordCard.vue             # 单词卡片组件
+│   ├── WordCard.vue             # 单词卡片组件
+│   └── CalendarView.vue         # 日历视图组件
 ├── stores/                      # 状态管理（Pinia）
 │   ├── theme.ts                 # 主题状态
 │   ├── wordbook.ts              # 词库状态
@@ -180,6 +193,7 @@ src/                             # 源代码根目录
 │   ├── wordDao.ts               # 单词数据访问
 │   ├── wordbookDao.ts           # 词库数据访问
 │   ├── codeDao.ts               # 编码数据访问
+│   ├── reviewPlanDao.ts         # 复习计划数据访问
 │   └── types.ts                 # 数据类型定义
 ├── algorithm/                   # 算法相关
 │   └── fsrs.ts                  # FSRS 复习算法
@@ -241,9 +255,9 @@ interface NewWord {
   split?: string;               // 编码拆分
   mnemonic?: string;            // 助记句
   sentence?: string;            // 例句
-  difficulty?: number;          // 难度参数（默认0.5）
-  stability?: number;           // 稳定性（默认1.0）
-  avg_response_time?: number;   // 平均响应时间（默认20）
+  difficulty?: number;          // 难度参数（默认0）
+  stability?: number;           // 稳定性（默认0，算法中MINIMUM_STABILITY为1.0）
+  avg_response_time?: number;   // 平均响应时间（默认0）
   is_mastered?: number;         // 是否已掌握（默认0）
   review_count?: number;        // 复习次数（默认0）
 }
@@ -266,7 +280,7 @@ interface Wordbook {
 ```typescript
 interface Code {
   id: number;                   // 编码ID（主键）
-  letter: string;               // 字母
+  letter: string;               // 字母组合（如 'ab', 'ee', 'im'）
   chinese: string;              // 中文谐音
   created_at: string;           // 创建时间
 }
@@ -328,7 +342,8 @@ FSRS 是一个基于重复提取理论的间隔重复调度算法，通过跟踪
 
 2. **稳定性（Stability, S）**
    - 表示记忆保持的能力，单位：天
-   - 初始值：1.0天
+   - 数据库默认值：0
+   - 算法中最小值（MINIMUM_STABILITY）：1.0天（确保初次复习间隔合理）
    - 根据复习得分动态调整
 
 3. **可提取性（Retrievability, R）**
@@ -615,21 +630,6 @@ function calculateLevenshteinDistance(str1: string, str2: string): number {
 - 简洁的动画效果
 - 清晰的引导文案
 
-**实现逻辑**：
-```typescript
-// 检查是否已显示过启动页
-const hasShownSplash = await AsyncStorage.getItem('@app:splash_shown');
-if (!hasShownSplash) {
-  router.replace('/splash');
-} else {
-  router.replace('/(tabs)/index');
-}
-
-// 在启动页点击"开始使用"
-await AsyncStorage.setItem('@app:splash_shown', 'true');
-router.replace('/(tabs)/index');
-```
-
 ---
 
 ### 6.2 单词本首页 (index)
@@ -661,57 +661,6 @@ router.replace('/(tabs)/index');
 - 每个单词卡片显示：单词、词性、释义、拆分、掌握状态
 - 浮动按钮：快速添加单词
 
-**核心状态管理**：
-```typescript
-// 词库列表
-wordbooks: Wordbook[]
-currentWordbookId: number | null
-
-// 单词列表
-words: Word[]
-loading: boolean
-
-// 搜索状态
-showSearch: boolean
-searchKeyword: string
-searchResults: Word[]
-
-// 批量选择状态
-isSelectionMode: boolean
-selectedWordIds: Set<number>
-```
-
-**关键函数**：
-```typescript
-// 加载词库数据
-async loadWordbookData(wordbookId: number) {
-  const stats = await getWordbookStats(wordbookId);
-  const words = await getWordsInWordbook(wordbookId);
-  setStats(stats);
-  setWords(words);
-}
-
-// 搜索单词
-async handleSearch(keyword: string) {
-  if (keyword.trim() === '') {
-    setSearchResults([]);
-    return;
-  }
-  const results = await searchWordsInWordbook(currentWordbookId, keyword);
-  setSearchResults(results);
-}
-
-// 批量删除
-async handleBatchDelete() {
-  const ids = Array.from(selectedWordIds);
-  await deleteWords(ids);
-  await updateWordbookCount(currentWordbookId);
-  await loadWordbookData(currentWordbookId);
-  setIsSelectionMode(false);
-  setSelectedWordIds(new Set());
-}
-```
-
 ---
 
 ### 6.3 复习页 (review)
@@ -725,27 +674,6 @@ async handleBatchDelete() {
 1. 点击词库卡片进入复习详情页
 2. 显示每个词库的待复习单词数
 3. 显示词库描述
-
-**UI要点**：
-- 标题栏："复习"
-- 词库列表（卡片式布局）
-- 每个卡片显示：词库名称、描述、待复习单词数、图标
-
-**核心状态管理**：
-```typescript
-wordbooks: Wordbook[]
-loading: boolean
-```
-
-**关键函数**：
-```typescript
-// 加载需要复习的词库
-async loadReviewWordbooks() {
-  const allWordbooks = await getAllWordbooks();
-  const reviewWordbooks = allWordbooks.filter(wb => wb.word_count > 0);
-  setWordbooks(reviewWordbooks);
-}
-```
 
 ---
 
@@ -790,7 +718,7 @@ async loadReviewWordbooks() {
 ```
 - "没印象"按钮：得0分，红色背景
 - "有印象，但想不起来"按钮：得2分，粉色背景
-- 点击后立即清空输入框内容
+- 点击后立即清空输入框内容（如果输入框有内容）
 - 不受输入状态限制（即使输入后也可以点击）
 - 延迟1秒后自动提交分数
 ```
@@ -859,6 +787,9 @@ wordScores: Array<{               // 单词得分记录
 
 // 自动补充
 remainingWordsCount: number        // 剩余单词数
+
+// 复习时机提醒
+timingWarning: { early: number; late: number } | null
 ```
 
 **复习时机检查逻辑**：
@@ -880,44 +811,6 @@ function checkAllWordsTiming() {
     setTimingWarning(null);
   }
 }
-
-// 检查单个单词的复习时机
-function checkReviewTiming(word: Word): { early: number; late: number } {
-  if (!word.next_review || !word.last_review) {
-    return { early: 0, late: 0 };
-  }
-
-  const scheduledTime = new Date(word.next_review).getTime();
-  const currentTime = Date.now();
-  const lastReviewTime = new Date(word.last_review).getTime();
-  const timeDiffHours = (currentTime - scheduledTime) / (1000 * 60 * 60);
-  const reviewIntervalHours = (scheduledTime - lastReviewTime) / (1000 * 60 * 60);
-
-  // 判断是否是第一个复习节点
-  const isFirstReviewNode = reviewIntervalHours < 24;
-
-  // 设置阈值
-  let earlyThresholdMinutes = 30;
-  let lateThresholdMinutes = 30;
-
-  if (isFirstReviewNode) {
-    earlyThresholdMinutes = 1;
-    lateThresholdMinutes = 5;
-  }
-
-  const timeDiffMinutes = timeDiffHours * 60;
-  let earlyCount = 0;
-  let lateCount = 0;
-
-  if (timeDiffMinutes < -earlyThresholdMinutes) {
-    earlyCount++;
-  }
-  if (timeDiffMinutes > lateThresholdMinutes) {
-    lateCount++;
-  }
-
-  return { early: earlyCount, late: lateCount };
-}
 ```
 
 **快速评分实现**：
@@ -926,7 +819,7 @@ function checkReviewTiming(word: Word): { early: number; late: number } {
 function handleNoImpression() {
   const currentWordSnapshot = currentWord;
 
-  // 如果用户已在输入框输入文本，清空输入框
+  // ✅ 如果用户已在输入框输入文本，清空输入框
   if (reviewMode === 'type1' && type1Answer.trim().length > 0) {
     setType1Answer('');
   } else if (reviewMode === 'type2' && type2Answer.trim().length > 0) {
@@ -943,28 +836,6 @@ function handleNoImpression() {
     }
   }, 1000);
 }
-
-// 有印象，但想不起来（2分）
-function handleSomeImpression() {
-  const currentWordSnapshot = currentWord;
-
-  // 如果用户已在输入框输入文本，清空输入框
-  if (reviewMode === 'type1' && type1Answer.trim().length > 0) {
-    setType1Answer('');
-  } else if (reviewMode === 'type2' && type2Answer.trim().length > 0) {
-    setType2Answer('');
-  }
-
-  setQuickScore(SCORING_CONFIG.QUICK_SOME_IMPRESSION);
-  setIsEditing(false);
-
-  // 延迟提交
-  setTimeout(() => {
-    if (currentWordSnapshot) {
-      submitQuickScore(currentWordSnapshot, SCORING_CONFIG.QUICK_SOME_IMPRESSION);
-    }
-  }, 1000);
-}
 ```
 
 **进度条计算**：
@@ -977,41 +848,42 @@ const quickCompleted = Array.from(wordCompletionStatus.values())
 const completedWordCount = normalCompleted + quickCompleted;
 ```
 
-**自动补充机制**：
-```typescript
-// 加载新单词
-async loadNewWords(count: number = 1): Promise<Word[]> {
-  const allWords = await getWordsInWordbook(parseInt(projectId));
-  return allWords.filter(w => {
-    if (w.is_mastered === 1) return false;
-    if (!w.next_review) return true;
-    return new Date(w.next_review) <= new Date();
-  }).sort((a, b) => {
-    const overdueA = getOverdueHours(a);
-    const overdueB = getOverdueHours(b);
-    return overdueB - overdueA; // 逾期越久越紧急
-  }).slice(0, count);
-}
+---
 
-// 单词掌握后自动补充
-if (isMastered && !word.is_mastered) {
-  const newWords = await loadNewWords(1);
-  if (newWords.length > 0) {
-    const newWord = newWords[0];
-    setQueue(prev => [...prev, newWord]);
-    // 添加复习步骤
-    const newSteps = [
-      { word: newWord, mode: 'type1', wordId: newWord.id },
-      { word: newWord, mode: 'type2', wordId: newWord.id }
-    ];
-    setReviewQueue(prev => [...prev, ...shuffleArray(newSteps)]);
-  }
-}
+### 6.5 复习计划页 (review-plan) - **日历视图**
+
+**功能说明**：
+- 日历视图展示复习计划
+- 显示不同日期的待复习单词数
+- 可选择特定日期查看该日期的单词列表
+- 统计数据展示（总单词数、已掌握数、待复习数等）
+
+**关键交互**：
+1. 日历视图：显示未来60天的复习计划
+2. 日期标记：有复习计划的日期会显示标记
+3. 点击日期：查看该日期的单词列表
+4. 快速复习：点击"今天待复习"卡片开始复习
+5. 下拉刷新：刷新复习计划
+
+**UI要点**：
+- 顶部：统计数据卡片
+- 中间：日历视图组件
+- 下方：复习分组（今天待复习、本周待复习、未来待复习）
+- 每个分组显示单词数
+
+**核心状态管理**：
+```typescript
+stats: ReviewStats                     // 统计数据
+reviewGroups: ReviewGroup[]           // 复习分组
+selectedDate: Date | undefined        // 选中的日期
+markedDates: string[]                 // 有复习计划的日期
+markedDatesCount: Record<string, number>  // 每个日期的复习数量
+selectedDateWords: any[]              // 选中日期的单词列表
 ```
 
 ---
 
-### 6.5 添加单词页 (add-word)
+### 6.6 添加单词页 (add-word)
 
 **功能说明**：
 - 添加新单词到当前词库
@@ -1026,66 +898,9 @@ if (isMastered && !word.is_mastered) {
 5. 选择要保存的词库
 6. 点击"保存"按钮保存单词
 
-**UI要点**：
-- 表单布局，字段清晰标注
-- 必填项标红或加星号
-- "自动拆分"按钮：点击后调用拆分算法
-- 词库选择器：下拉选择
-- 保存按钮：底部固定
-
-**核心状态管理**：
-```typescript
-wordForm: {
-  word: string;
-  phonetic?: string;
-  definition: string;
-  partOfSpeech?: string;
-  split?: string;
-  mnemonic?: string;
-  sentence?: string;
-}
-selectedWordbookId: number | null
-loading: boolean
-```
-
-**关键函数**：
-```typescript
-// 自动拆分
-async handleAutoSplit() {
-  if (!wordForm.word) {
-    Alert.alert('提示', '请先输入单词');
-    return;
-  }
-  const split = await generateSplit(wordForm.word);
-  setWordForm({ ...wordForm, split });
-}
-
-// 保存单词
-async handleSave() {
-  if (!wordForm.word || !wordForm.definition) {
-    Alert.alert('提示', '请填写单词和释义');
-    return;
-  }
-
-  const newWord: NewWord = {
-    word: wordForm.word,
-    phonetic: wordForm.phonetic,
-    definition: wordForm.definition,
-    partOfSpeech: wordForm.partOfSpeech,
-    split: wordForm.split,
-    mnemonic: wordForm.mnemonic,
-    sentence: wordForm.sentence,
-  };
-
-  await addWord(newWord);
-  await addWordToWordbook(wordId, selectedWordbookId);
-  router.back();
-}
-```
-
 ---
 
-### 6.6 单词详情页 (word-detail)
+### 6.7 单词详情页 (word-detail)
 
 **功能说明**：
 - 显示单词的完整信息
@@ -1098,52 +913,9 @@ async handleSave() {
 3. 点击删除图标删除单词（确认弹窗）
 4. 显示最近5次复习记录
 
-**UI要点**：
-- 顶部：返回按钮 + 标题 + 编辑/删除图标
-- 中间：单词信息卡片（大字体显示单词）
-- 下方：复习历史列表
-
-**核心状态管理**：
-```typescript
-word: Word | null
-loading: boolean
-reviewLogs: ReviewLog[]
-```
-
-**关键函数**：
-```typescript
-// 加载单词详情
-async loadWordDetail() {
-  const word = await getWordById(wordId);
-  setWord(word);
-
-  const logs = await getRecentReviewLogs(wordId, 5);
-  setReviewLogs(logs);
-}
-
-// 删除单词
-async handleDelete() {
-  Alert.alert(
-    '确认删除',
-    '确定要删除这个单词吗？',
-    [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '删除',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteWord(wordId);
-          router.back();
-        }
-      }
-    ]
-  );
-}
-```
-
 ---
 
-### 6.7 批量导入页 (import-words)
+### 6.8 批量导入页 (import-words)
 
 **功能说明**：
 - 支持批量导入单词（CSV/JSON格式）
@@ -1157,24 +929,9 @@ async handleDelete() {
 4. 选择要保存的词库
 5. 点击"导入"按钮开始导入
 
-**UI要点**：
-- 文件选择器
-- 数据预览表格
-- 导入进度条
-- 导入结果提示
-
-**核心状态管理**：
-```typescript
-importType: 'csv' | 'json'
-importData: ImportWord[]
-selectedWordbookId: number | null
-importing: boolean
-importResult: { success: number; failed: number; errors: string[] }
-```
-
 ---
 
-### 6.8 刷单词页 (brush-words)
+### 6.9 刷单词页 (brush-words)
 
 **功能说明**：
 - 卡片式学习模式
@@ -1188,14 +945,9 @@ importResult: { success: number; failed: number; errors: string[] }
 4. 点击"未掌握"按钮标记为未掌握
 5. 自动进入下一个单词
 
-**UI要点**：
-- 全屏卡片布局
-- 点击翻转动画
-- 底部按钮：掌握 / 未掌握
-
 ---
 
-### 6.9 编码库页 (codebase)
+### 6.10 编码库页 (codebase)
 
 **功能说明**：
 - 展示字母编码对照表
@@ -1203,167 +955,169 @@ importResult: { success: number; failed: number; errors: string[] }
 - 用于辅助记忆
 
 **关键交互**：
-1. 显示所有字母编码（A-Z）
+1. 显示所有字母编码（136个预设编码）
 2. 点击编码查看详情
 3. 添加新编码
 4. 编辑现有编码
 5. 删除编码
+6. 重置编码库（恢复到预设）
 
 **UI要点**：
 - 网格布局（4列）
-- 每个卡片显示：字母、中文谐音
+- 每个卡片显示：字母组合、中文谐音
 
 ---
 
 ## 7. 数据库设计
 
-### 7.1 数据库初始化
+### 7.1 数据库表结构
+
+**1. database_version - 数据库版本表**
+```sql
+CREATE TABLE IF NOT EXISTS database_version (
+  id INTEGER PRIMARY KEY,
+  version INTEGER NOT NULL
+);
+```
+
+**2. words - 单词表**
+```sql
+CREATE TABLE IF NOT EXISTS words (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  word TEXT NOT NULL,
+  phonetic TEXT,
+  definition TEXT NOT NULL,
+  partOfSpeech TEXT,
+  split TEXT,
+  mnemonic TEXT,
+  sentence TEXT,
+  difficulty REAL DEFAULT 0,
+  stability REAL DEFAULT 0,
+  last_review TEXT,
+  next_review TEXT,
+  avg_response_time REAL DEFAULT 0,
+  is_mastered INTEGER DEFAULT 0,
+  review_count INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_words_next_review ON words(next_review);
+CREATE INDEX IF NOT EXISTS idx_words_is_mastered ON words(is_mastered);
+```
+
+**3. sentences - 句子表**
+```sql
+CREATE TABLE IF NOT EXISTS sentences (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  word_id INTEGER,
+  content TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('mnemonic', 'example')),
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE
+);
+```
+
+**4. wordbooks - 词库表**
+```sql
+CREATE TABLE IF NOT EXISTS wordbooks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT,
+  word_count INTEGER DEFAULT 0,
+  is_preset INTEGER DEFAULT 0
+);
+```
+
+**5. wordbook_words - 词库单词关联表**
+```sql
+CREATE TABLE IF NOT EXISTS wordbook_words (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  wordbook_id INTEGER NOT NULL,
+  word_id INTEGER NOT NULL,
+  FOREIGN KEY (wordbook_id) REFERENCES wordbooks(id) ON DELETE CASCADE,
+  FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE,
+  UNIQUE(wordbook_id, word_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wordbook_words_wordbook_id ON wordbook_words(wordbook_id);
+CREATE INDEX IF NOT EXISTS idx_wordbook_words_word_id ON wordbook_words(word_id);
+```
+
+**6. codes - 编码表**
+```sql
+CREATE TABLE IF NOT EXISTS codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  letter TEXT NOT NULL,
+  chinese TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(letter, chinese)
+);
+```
+
+**7. review_logs - 复习记录表**
+```sql
+CREATE TABLE IF NOT EXISTS review_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  word_id INTEGER NOT NULL,
+  score REAL NOT NULL,
+  response_time REAL NOT NULL,
+  reviewed_at TEXT NOT NULL,
+  FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_logs_word_id ON review_logs(word_id);
+CREATE INDEX IF NOT EXISTS idx_review_logs_reviewed_at ON review_logs(reviewed_at);
+```
+
+**8. phonetics - 音标表**
+```sql
+CREATE TABLE IF NOT EXISTS phonetics (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  word TEXT NOT NULL UNIQUE,
+  phonetic TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_phonetics_word ON phonetics(word);
+```
+
+### 7.2 数据库初始化
 
 ```typescript
-async function initDatabase() {
+async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   const db = await SQLite.openDatabaseAsync('word_review.db');
 
-  // 创建单词表
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS words (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      word TEXT NOT NULL UNIQUE,
-      phonetic TEXT,
-      definition TEXT NOT NULL,
-      partOfSpeech TEXT,
-      split TEXT,
-      mnemonic TEXT,
-      sentence TEXT,
-      difficulty REAL DEFAULT 0.5,
-      stability REAL DEFAULT 1.0,
-      last_review TEXT,
-      next_review TEXT,
-      avg_response_time REAL DEFAULT 20.0,
-      is_mastered INTEGER DEFAULT 0,
-      review_count INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
+  // 创建所有表（见上方的表结构）
 
-    CREATE INDEX IF NOT EXISTS idx_words_next_review ON words(next_review);
-    CREATE INDEX IF NOT EXISTS idx_words_is_mastered ON words(is_mastered);
-  `);
-
-  // 创建词库表
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS wordbooks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE,
-      description TEXT,
-      word_count INTEGER DEFAULT 0,
-      is_preset INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-  `);
-
-  // 创建词库-单词关联表
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS wordbook_words (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      wordbook_id INTEGER NOT NULL,
-      word_id INTEGER NOT NULL,
-      FOREIGN KEY (wordbook_id) REFERENCES wordbooks(id) ON DELETE CASCADE,
-      FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE,
-      UNIQUE(wordbook_id, word_id)
-    );
-  `);
-
-  // 创建编码表
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS codes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      letter TEXT NOT NULL UNIQUE,
-      chinese TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-  `);
-
-  // 创建复习记录表
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS review_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      word_id INTEGER NOT NULL,
-      score REAL NOT NULL,
-      response_time REAL NOT NULL,
-      reviewed_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_review_logs_word_id ON review_logs(word_id);
-    CREATE INDEX IF NOT EXISTS idx_review_logs_reviewed_at ON review_logs(reviewed_at);
-  `);
-
-  // 初始化预置词库
+  // 初始化预设词库
   await initPresetWordbook();
 
-  // 初始化编码表
+  // 初始化编码表（136个预设编码）
   await initCodes();
+
+  // 初始化基础音标数据（25个常用词）
+  await initDefaultPhonetics();
+
+  // 检查并执行数据库迁移
+  await migrateDatabase();
 
   return db;
 }
 ```
 
-### 7.2 数据库版本控制
+### 7.3 数据库版本控制
 
 ```typescript
 // 当前数据库版本
 const DB_VERSION = 6;
 
-// 升级数据库
-async function upgradeDatabase(db: SQLite.SQLiteDatabase, currentVersion: number) {
-  if (currentVersion < 2) {
-    // 版本2：添加 avg_response_time 字段
-    await db.execAsync(`ALTER TABLE words ADD COLUMN avg_response_time REAL DEFAULT 20.0`);
-  }
-
-  if (currentVersion < 3) {
-    // 版本3：添加 wordbook_words 表
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS wordbook_words (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        wordbook_id INTEGER NOT NULL,
-        word_id INTEGER NOT NULL,
-        UNIQUE(wordbook_id, word_id)
-      )
-    `);
-  }
-
-  if (currentVersion < 4) {
-    // 版本4：添加 codes 表
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS codes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        letter TEXT NOT NULL UNIQUE,
-        chinese TEXT NOT NULL
-      )
-    `);
-  }
-
-  if (currentVersion < 5) {
-    // 版本5：添加 review_logs 表
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS review_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        word_id INTEGER NOT NULL,
-        score REAL NOT NULL,
-        response_time REAL NOT NULL,
-        reviewed_at TEXT DEFAULT (datetime('now'))
-      )
-    `);
-  }
-
-  if (currentVersion < 6) {
-    // 版本6：调整稳定性初始值
-    await db.execAsync(`UPDATE words SET stability = 1.0 WHERE stability < 1.0`);
-  }
-
-  // 更新版本号
-  await db.execAsync(`INSERT OR REPLACE INTO meta (key, value) VALUES ('version', ${DB_VERSION})`);
-}
+// 版本历史
+// v1: 初始版本
+// v2: 添加 avg_response_time 字段
+// v3: 添加 wordbook_words 表
+// v4: 添加 codes 表
+// v5: 添加 review_logs 表
+// v6: 添加 review_count 字段，调整稳定性初始值
 ```
 
 ---
@@ -1449,11 +1203,20 @@ getCodeByLetter(letter: string): Promise<Code | null>
 // 添加编码
 addCode(letter: string, chinese: string): Promise<number>
 
+// 批量添加编码
+addCodes(codes: { letter: string; chinese: string }[]): Promise<number[]>
+
 // 更新编码
-updateCode(id: number, updates: Partial<Code>): Promise<void>
+updateCode(id: number, letter: string, chinese: string): Promise<void>
 
 // 删除编码
 deleteCode(id: number): Promise<void>
+
+// 重置编码库（恢复到预设）
+resetCodes(): Promise<number>
+
+// 初始化默认编码库
+initDefaultCodes(): Promise<void>
 ```
 
 **复习记录相关**
@@ -1467,6 +1230,29 @@ getRecentReviewLogs(wordId: number, limit?: number): Promise<ReviewLog[]>
 
 // 获取所有复习记录
 getAllReviewLogs(wordId: number): Promise<ReviewLog[]>
+```
+
+**复习计划相关**
+
+```typescript
+// 获取复习统计信息
+getReviewStats(): Promise<ReviewStats>
+
+// 获取复习计划（60天）
+getReviewPlan(days: number): Promise<ReviewPlan[]>
+
+// 获取分组的复习计划
+getReviewPlanGrouped(): Promise<ReviewGroup[]>
+
+// 根据日期范围获取单词
+getWordsByDateRange(startDate: Date, endDate: Date): Promise<Word[]>
+```
+
+**音标相关**
+
+```typescript
+// 初始化基础音标数据
+initDefaultPhonetics(): Promise<void>
 ```
 
 ---
@@ -1498,7 +1284,7 @@ export const MASTERY_CONFIG = {
 // FSRS 算法参数
 export const FSRS_PARAMS = {
   REQUEST_PRIOR: { ease: 0.5, stability: 0 },
-  MINIMUM_STABILITY: 1.0, // 初始稳定性设为1.0天
+  MINIMUM_STABILITY: 1.0, // 算法中最小稳定性设为1.0天
   DESIRED_RETENTION: 0.9,
   MAXIMUM_INTERVAL: 36500, // 100年
   EASE_FACTOR: 1.3,
@@ -1563,132 +1349,42 @@ export const TIME_CONFIG = {
 | SafeAreaView | - | 使用 uni.getSystemInfoSync().safeArea |
 | KeyboardAvoidingView | adjust-position | 键盘避让 |
 
-**示例：View 组件**
+### 10.2 数据库迁移
+
+**expo-sqlite → uni-app / plus.sqlite**
 
 ```typescript
-// React Native
-<View style={styles.container}>
-  <Text>Hello</Text>
-</View>
+// expo-sqlite
+import * as SQLite from 'expo-sqlite';
+const db = await SQLite.openDatabaseAsync('word_review.db');
 
-// uni-app
-<view class="container">
-  <text>Hello</text>
-</view>
-```
+// uni-app (App端)
+import Database from '@/utils/database/sqlite.js';
+const db = new Database('word_review.db');
 
-**示例：TouchableOpacity 组件**
-
-```typescript
-// React Native
-<TouchableOpacity onPress={handlePress}>
-  <Text>Click me</Text>
-</TouchableOpacity>
-
-// uni-app
-<view @click="handlePress">
-  <text>Click me</text>
-</view>
-```
-
-**示例：FlatList 组件**
-
-```typescript
-// React Native
-<FlatList
-  data={words}
-  renderItem={({ item }) => <WordCard word={item} />}
-  keyExtractor={item => item.id.toString()}
-/>
-
-// uni-app
-<scroll-view scroll-y>
-  <view v-for="word in words" :key="word.id">
-    <WordCard :word="word" />
-  </view>
-</scroll-view>
-```
-
-### 10.2 状态管理迁移
-
-**React Context → Pinia**
-
-```typescript
-// React Context
-const ThemeContext = createContext<ThemeContextType>(null);
-
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [isDark, setIsDark] = useState(false);
-
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-  };
-
-  return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-}
-
-// 使用
-const { isDark, toggleTheme } = useContext(ThemeContext);
-
-// Pinia (uni-app)
-// stores/theme.ts
-import { defineStore } from 'pinia';
-
-export const useThemeStore = defineStore('theme', {
-  state: () => ({
-    isDark: false,
-  }),
-
-  actions: {
-    toggleTheme() {
-      this.isDark = !this.isDark;
-    },
-  },
-});
-
-// 使用
-import { useThemeStore } from '@/stores/theme';
-
-const { isDark, toggleTheme } = useThemeStore();
+// uni-app (H5端)
+import { openDB } from 'idb';
+const db = await openDB('word_review', 1);
 ```
 
 ### 10.3 路由迁移
 
 **Expo Router → uni-app pages.json**
 
-```typescript
-// Expo Router (文件系统路由)
-client/app/
-├── _layout.tsx
-├── index.tsx
-├── review.tsx
-└── word-detail.tsx
-
-// uni-app (配置式路由)
-// pages.json
+```json
 {
   "pages": [
     {
       "path": "pages/index/index",
-      "style": {
-        "navigationBarTitleText": "单词本"
-      }
+      "style": { "navigationBarTitleText": "单词本" }
     },
     {
       "path": "pages/review/review",
-      "style": {
-        "navigationBarTitleText": "复习"
-      }
+      "style": { "navigationBarTitleText": "复习" }
     },
     {
-      "path": "pages/word-detail/word-detail",
-      "style": {
-        "navigationBarTitleText": "单词详情"
-      }
+      "path": "pages/review-plan/review-plan",
+      "style": { "navigationBarTitleText": "复习计划" }
     }
   ],
   "tabBar": {
@@ -1714,260 +1410,6 @@ client/app/
     ]
   }
 }
-```
-
-**路由跳转**
-
-```typescript
-// Expo Router
-import { useRouter } from 'expo-router';
-const router = useRouter();
-
-// 导航
-router.push('/word-detail', { id: 123 });
-router.replace('/index');
-router.back();
-
-// uni-app
-// 导航
-uni.navigateTo({
-  url: '/pages/word-detail/word-detail?id=123'
-});
-
-uni.redirectTo({
-  url: '/pages/index/index'
-});
-
-uni.navigateBack();
-```
-
-**获取路由参数**
-
-```typescript
-// Expo Router
-import { useLocalSearchParams } from 'expo-router';
-const { id } = useLocalSearchParams<{ id: string }>();
-
-// uni-app
-onLoad((options) => {
-  const id = options.id;
-});
-```
-
-### 10.4 数据库迁移
-
-**expo-sqlite → uni.sqlite**
-
-```typescript
-// expo-sqlite
-import * as SQLite from 'expo-sqlite';
-
-const db = await SQLite.openDatabaseAsync('word_review.db');
-const result = await db.getAllAsync<any>('SELECT * FROM words');
-await db.execAsync('INSERT INTO words (word) VALUES ("test")');
-
-// uni-app (H5)
-import { openDB } from 'idb';
-
-const db = await openDB('word_review', 1, {
-  upgrade(db) {
-    db.createObjectStore('words', { keyPath: 'id', autoIncrement: true });
-  }
-});
-
-const result = await db.getAll('words');
-await db.add('words', { word: 'test' });
-
-// uni-app (App)
-import Database from '@/utils/database/sqlite.js';
-
-const db = new Database('word_review.db');
-const result = await db.select('SELECT * FROM words');
-await db.execute('INSERT INTO words (word) VALUES (?)', ['test']);
-```
-
-### 10.5 本地存储迁移
-
-**AsyncStorage → uni.setStorage**
-
-```typescript
-// AsyncStorage
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-await AsyncStorage.setItem('key', 'value');
-const value = await AsyncStorage.getItem('key');
-
-// uni-app
-uni.setStorage({
-  key: 'key',
-  data: 'value',
-});
-
-uni.getStorage({
-  key: 'key',
-  success: (res) => {
-    const value = res.data;
-  }
-});
-```
-
-### 10.6 主题系统迁移
-
-```typescript
-// React Context
-const ThemeContext = createContext({
-  isDark: false,
-  theme: lightTheme,
-  toggleTheme: () => {},
-});
-
-// uni-app (CSS变量 + uni.getSystemInfo)
-// uni.scss
-:root {
-  --primary-color: #4CAF50;
-  --text-primary: #000000;
-  --text-secondary: #666666;
-  --background-root: #FFFFFF;
-  --border-color: #E0E0E0;
-}
-
-[data-theme="dark"] {
-  --primary-color: #81C784;
-  --text-primary: #FFFFFF;
-  --text-secondary: #AAAAAA;
-  --background-root: #121212;
-  --border-color: #333333;
-}
-
-// 使用
-<script setup>
-import { onMounted, ref } from 'vue';
-
-const isDark = ref(false);
-
-onMounted(() => {
-  const systemInfo = uni.getSystemInfoSync();
-  // 根据系统主题或用户设置切换主题
-});
-
-const toggleTheme = () => {
-  isDark.value = !isDark.value;
-  document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light');
-};
-</script>
-
-<template>
-  <view :style="{ backgroundColor: 'var(--background-root)' }">
-    <text :style="{ color: 'var(--text-primary)' }">Hello</text>
-  </view>
-</template>
-```
-
-### 10.7 图标库迁移
-
-**@expo/vector-icons → uni-icons**
-
-```typescript
-// @expo/vector-icons
-import { FontAwesome6 } from '@expo/vector-icons';
-
-<FontAwesome6 name="book" size={20} color="#4CAF50" />
-
-// uni-icons
-<uni-icons type="book" size="20" color="#4CAF50" />
-
-// 或使用自定义图标
-<image src="/static/icons/book.png" style="width: 20px; height: 20px;" />
-```
-
-### 10.8 手势处理迁移
-
-**react-native-gesture-handler → uni-app 手势事件**
-
-```typescript
-// react-native-gesture-handler
-import { PanResponder } from 'react-native-gesture-handler';
-
-const panResponder = PanResponder.create({
-  onStartShouldSetPanResponder: () => true,
-  onPanResponderMove: (evt) => {
-    // 处理手势
-  },
-});
-
-// uni-app
-<view
-  @touchstart="handleTouchStart"
-  @touchmove="handleTouchMove"
-  @touchend="handleTouchEnd"
->
-  <!-- 内容 -->
-</view>
-
-<script setup>
-const handleTouchStart = (e) => {
-  const touch = e.touches[0];
-  console.log('Touch start:', touch.x, touch.y);
-};
-
-const handleTouchMove = (e) => {
-  const touch = e.touches[0];
-  console.log('Touch move:', touch.x, touch.y);
-};
-
-const handleTouchEnd = (e) => {
-  console.log('Touch end');
-};
-</script>
-```
-
-### 10.9 加载提示迁移
-
-**ActivityIndicator → uni.showLoading**
-
-```typescript
-// React Native
-<ActivityIndicator size="large" color="#4CAF50" />
-
-// uni-app
-// 显示加载
-uni.showLoading({
-  title: '加载中...',
-  mask: true,
-});
-
-// 隐藏加载
-uni.hideLoading();
-```
-
-### 10.10 弹窗提示迁移
-
-**Alert.alert → uni.showModal**
-
-```typescript
-// React Native
-Alert.alert(
-  '提示',
-  '确定要删除吗？',
-  [
-    { text: '取消', style: 'cancel' },
-    { text: '删除', style: 'destructive', onPress: () => {} }
-  ]
-);
-
-// uni-app
-uni.showModal({
-  title: '提示',
-  content: '确定要删除吗？',
-  cancelText: '取消',
-  confirmText: '删除',
-  confirmColor: '#FF0000',
-  success: (res) => {
-    if (res.confirm) {
-      // 用户点击了删除
-    }
-  }
-});
 ```
 
 ---
@@ -2137,38 +1579,17 @@ if (isMastered && !word.is_mastered) {
    - ✅ 自动补充机制
    - ✅ 掌握判断（动态标准）
 
-4. **FSRS算法**
+4. **复习计划**
+   - ✅ 日历视图展示
+   - ✅ 日期标记
+   - ✅ 选择日期查看单词
+   - ✅ 统计数据正确
+
+5. **FSRS算法**
    - ✅ 稳定性计算（分段增长）
    - ✅ 间隔计算（分段）
    - ✅ 掌握判断（动态标准）
    - ✅ 时间权重调整
-
-### 12.2 UI测试
-
-1. **响应式布局**
-   - ✅ 不同屏幕尺寸适配
-   - ✅ 横竖屏适配
-
-2. **主题切换**
-   - ✅ 亮色主题
-   - ✅ 暗色主题
-   - ✅ 系统主题跟随
-
-3. **交互体验**
-   - ✅ 点击反馈
-   - ✅ 加载状态
-   - ✅ 错误提示
-
-### 12.3 性能测试
-
-1. **数据库性能**
-   - ✅ 大量单词加载速度
-   - ✅ 搜索性能
-   - ✅ 复习队列生成速度
-
-2. **内存管理**
-   - ✅ 大量单词的内存占用
-   - ✅ 图片缓存
 
 ---
 
@@ -2199,82 +1620,70 @@ if (isMastered && !word.is_mastered) {
    - 需要使用云数据库或服务器
    - 考虑使用云开发
 
-### 13.3 性能优化
-
-1. **列表渲染**
-   - 使用虚拟列表（uni-app 的 `scroll-view` + 分页）
-   - 避免一次性加载过多数据
-
-2. **数据库查询**
-   - 添加索引
-   - 使用分页查询
-   - 避免频繁查询
-
-3. **图片处理**
-   - 使用懒加载
-   - 压缩图片
-   - 使用 CDN
-
 ---
 
-## 14. 总结
+## 14. 附录
 
-本文档详细描述了单词记忆应用的所有关键信息，包括：
+### A. 预置编码表（136个复杂组合编码）
 
-1. **项目概述**：应用的核心特色和架构
-2. **技术栈对比**：React Native 到 uni-app 的映射关系
-3. **项目结构**：原项目和目标项目的目录结构
-4. **数据结构设计**：所有数据模型的详细定义
-5. **核心算法实现**：FSRS算法和相似度算法的完整代码
-6. **页面设计与功能**：每个页面的详细功能说明和实现逻辑
-7. **数据库设计**：数据库表结构和初始化代码
-8. **API设计**：所有数据访问接口的定义
-9. **配置文件**：复习配置常量的详细说明
-10. **迁移要点**：React Native 到 uni-app 的组件、状态管理、路由等迁移指南
-11. **关键实现细节**：复习队列生成、释义匹配、自动补充等核心逻辑
-12. **测试要点**：功能、UI、性能测试清单
-13. **注意事项**：uni-app 平台差异和优化建议
+实际应用中使用的是136个预设的组合编码（非简单的A-Z字母表）：
 
-使用本文档，其他AI应该能够准确理解应用的所有细节，并将其成功迁移到uni-app项目中。
+```
+ab - 阿爸          | al - 阿郎         | ali - 阿里       | ac - 一次
+adu - 阿杜        | ad - 阿弟、广告   | ap - 阿婆       | ar - 矮人、爱人
+ary - 一人妖      | adv - 一大碗      | anc - 一册       | an - 阿牛
+au - 遨游         | aw - 一碗         | bl - 玻璃       | br - 病人
+by - 表演         | ble - 伯乐        | ch - 彩虹、吃   | ck - 刺客
+cl - 成龙         | co - 可乐、错     | com - 电脑      | con - 葱、虫
+cr - 超人         | cu - 醋           | cy - 抽烟       | cir - 词人
+dis - 的士        | dy - 地狱         | dr - 敌人       | ee - 眼睛
+el - 饮料         | ele - 大象       | em - 姨妈、鹅毛 | ep - 硬盘
+en - 题难题       | ent - 疑难题      | er - 儿、耳     | es - 二十、恶少
+ef - 衣服         | eh - 遗憾         | ev - 一胃       | et - 外星人
+ex - 易错、恶心   | eq - 艺曲        | ence - 恩师     | fl - 风铃
+fe - 翻译、父爱   | fi - 父爱、飞     | gl - 公路       | gr - 工人
+gy - 观音         | gue - 故意       | hy - 花园       | ho - 猴
+hu - 湖           | im - 一毛        | ick - IC卡      | in - 老鹰
+io - 爱情         | ive - 夏威夷     | ir - 耳、儿     | je - 姐
+jo - 机灵         | kn - 困难        | la - 拉         | le - 乐
+lf - 雷锋         | li - 礼          | lib - 李白      | lm - 流氓
+ly - 老鹰、姥爷   | lay - 腊月       | mini - 迷你裙   | mir - 迷人
+mo - 魔           | mt - 模特        | mul - 木楼      | mn - 魔女
+mis - 密室        | ment - 门童      | non - 笑脸      | ne - 呢
+nu - 努力         | ob - 氧吧        | oo - 眼镜       | of - 零分
+olo - 火箭        | on - 罐          | op - 藕片       | or - 或、或者
+ot - 呕吐         | ou - 藕          | ow - 灯泡       | pa - 怕
+pe - 赔           | ph - 炮灰        | pl - 漂亮       | po - 破
+pr - 仆人         | pu - 扑          | pt - 皮特       | que - 问题
+ri - 日           | re - 热、花      | ro - 稍微       | ry - 日语
+rt - 软糖         | ru - 肉          | se - 蛇         | sh - 上海
+si - 四           | sk - 水库        | sl - 司令       | sm - 寺庙
+sp - 水瓶、山坡   | squ - 身躯       | ss - 双胞胎     | sis - 姐姐
+sion - 绳子       | sus - 宿舍       | st - 石头       | str - 石头人
+sw - 丝袜         | th - 天河、弹簧  | tion - 神、神仙 | tele - 泰勒
+tl - 铁路         | tr - 树、唐仁    | ty - 太阳       | tw - 台湾
+te - 特别         | ute - 夏威夷     | ur - 友人       | ue - 友谊
+udy - 邮递员      | um - 幼猫        | ut - 油条       | vo - 声音
+was - 瓦斯        | wo - 我          | wh - 武汉       | ...
+```
 
----
+完整编码列表请参考代码：`client/database/codeDao.ts`
 
-## 附录
+### B. 预置音标数据（25个常用词）
 
-### A. 预置编码表
+```
+hello - /həˈloʊ/      | world - /wɜːrld/      | apple - /ˈæpl/
+book - /bʊk/          | computer - /kəmˈpjuːtər/ | water - /ˈwɔːtər/
+time - /taɪm/         | people - /ˈpiːpl/   | year - /jɪr/
+good - /ɡʊd/          | make - /meɪk/        | word - /wɜːrd/
+new - /nuː/           | first - /fɜːrst/     | work - /wɜːrk/
+now - /naʊ/           | find - /faɪnd/      | long - /lɔːŋ/
+look - /lʊk/          | day - /deɪ/         | get - /ɡet/
+come - /kʌm/          | made - /meɪd/       | may - /meɪ/
+part - /pɑːrt/
+```
 
-字母编码对照表用于辅助记忆单词的拆分：
-
-| 字母 | 中文谐音 | 示例 |
-|-----|---------|------|
-| A | 阿姨 | apple (a-p-p-l-e) → 阿姨婆婆爱 |
-| B | 笔 | book (b-o-o-k) → 笔呜呜咳 |
-| C | 西 | cat (c-a-t) → 西阿姨特 |
-| D | 弟 | dog (d-o-g) → 弟呜鸡 |
-| E | 姨 | egg (e-g-g) → 姨鸡鸡 |
-| F | 佛 | fish (f-i-s-h) → 佛爱师海 |
-| G | 鸡 | girl (g-i-r-l) → 鸡阿姨热了 |
-| H | 喝 | house (h-o-u-s-e) → 喝呜屋师姨 |
-| I | 爱 | ice (i-c-e) → 爱师姨 |
-| J | 姐 | juice (j-u-i-c-e) → 姐又爱师姨 |
-| K | 客 | key (k-e-y) → 客姨外 |
-| L | 拉 | love (l-o-v-e) → 拉呜爱外 |
-| M | 妈 | mom (m-o-m) → 妈呜妈 |
-| N | 你 | name (n-a-m-e) → 你阿姨妈外 |
-| O | 呜 | orange (o-r-a-n-g-e) → 呜阿姨奶鸡外 |
-| P | 婆 | pen (p-e-n) → 婆姨你 |
-| Q | 妻 | question (q-u-e-s-t-i-o-n) → 妻又爱师体阿姨呜 |
-| R | 热 | red (r-e-d) → 热姨弟 |
-| S | 师 | sun (s-u-n) → 师又你 |
-| T | 特 | tea (t-e-a) → 特姨阿 |
-| U | 屋 | umbrella (u-m-b-r-e-l-l-a) → 屋妈笔热爱了阿姨 |
-| V | 五 | vase (v-a-s-e) → 五阿姨师姨 |
-| W | 我 | water (w-a-t-e-r) → 我阿姨特热 |
-| X | 蜥 | fox (f-o-x) → 佛呜蜥 |
-| Y | 外 | year (y-e-a-r) → 外姨阿姨热 |
-| Z | 则 | zoo (z-o-o) → 则呜呜 |
-
-### B. 参考资料
+### C. 参考资料
 
 1. [FSRS算法论文](https://arxiv.org/abs/2309.07472)
 2. [Expo Router文档](https://docs.expo.dev/router/introduction/)
@@ -2282,6 +1691,12 @@ if (isMastered && !word.is_mastered) {
 4. [Pinia文档](https://pinia.vuejs.org/)
 5. [SQLite文档](https://www.sqlite.org/docs.html)
 
-### C. 版本历史
+### D. 版本历史
 
-- v1.0.0 (2026-02-26): 初始版本，完整迁移文档
+- v1.1.0 (2026-02-26): 修正版
+  - ✅ 添加 phonetics（音标表）的数据库表描述
+  - ✅ 更新预置编码表为实际使用的136个复杂组合编码
+  - ✅ 修正复习计划页面的功能描述（日历视图）
+  - ✅ 修正数据库默认值（stability默认为0，算法中MINIMUM_STABILITY为1.0）
+  - ✅ 修正快速评分按钮的disabled属性说明
+- v1.0.0 (2026-02-26): 初始版本
