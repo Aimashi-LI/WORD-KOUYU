@@ -71,7 +71,7 @@
                 <text class="definition">{{ word.definition }}</text>
               </view>
 
-              <!-- 拆分 -->
+              <!-- 拆分 - 完全照搬刷单词页面 -->
               <view v-if="word.split" class="split-section" :style="{ backgroundColor: theme.backgroundTertiary }">
                 <uni-icons type="scissors" size="16" :color="theme.accent" />
                 <view class="split-row">
@@ -80,12 +80,16 @@
                 </view>
               </view>
 
-              <!-- 助记句 -->
+              <!-- 助记句 - 完全照搬刷单词页面 -->
               <view v-if="word.mnemonic" class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }">
                 <uni-icons type="lightbulb" size="16" :color="theme.accent" />
                 <text class="mnemonic-text">
                   <text class="mnemonic-label">助记：</text>{{ word.mnemonic }}
                 </text>
+              </view>
+              <view v-else class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }" @click="goToDetail(word.id)">
+                <uni-icons type="lightbulb" size="16" :color="theme.primary" />
+                <text class="mnemonic-text add-hint">+ 助记句</text>
               </view>
 
               <!-- 例句 -->
@@ -254,6 +258,13 @@ const onSwiperChange = (e) => {
 
 // 返回
 const goBack = () => uni.navigateBack();
+
+// 跳转到详情页
+const goToDetail = (wordId) => {
+  uni.navigateTo({
+    url: `/pages/word-detail?id=${wordId}`
+  });
+};
 
 // 打开保存弹窗
 const shareCurrentWord = () => {
@@ -665,8 +676,8 @@ const hexToRgba = (hex, alpha) => {
   color: v-bind('theme.textPrimary');
   line-height: 48rpx;
 }
+/* 拆分 - 完全照搬刷单词页面样式 */
 .split-section {
-  display: flex;
   flex-direction: row;
   align-items: center;
   gap: 16rpx;
@@ -676,9 +687,8 @@ const hexToRgba = (hex, alpha) => {
 }
 .split-row {
   flex: 1;
-  display: flex;
   flex-direction: row;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
 }
 .split-label {
@@ -691,13 +701,9 @@ const hexToRgba = (hex, alpha) => {
   font-size: 28rpx;
   color: v-bind('theme.textSecondary');
   text-align: left;
-  line-height: 40rpx;
-  word-wrap: break-word;
-  word-break: break-all;
-  white-space: normal;
 }
+/* 助记句 - 完全照搬刷单词页面样式 */
 .mnemonic-section {
-  display: flex;
   flex-direction: row;
   align-items: flex-start;
   gap: 16rpx;
@@ -710,14 +716,14 @@ const hexToRgba = (hex, alpha) => {
   font-size: 28rpx;
   color: v-bind('theme.textSecondary');
   text-align: left;
-  line-height: 40rpx;
-  word-wrap: break-word;
-  word-break: break-all;
-  white-space: normal;
+  line-height: 44rpx;
 }
 .mnemonic-label {
   font-size: 28rpx;
   color: v-bind('theme.textMuted');
+}
+.add-hint {
+  color: v-bind('theme.primary');
 }
 .sentence {
   font-size: 28rpx;
