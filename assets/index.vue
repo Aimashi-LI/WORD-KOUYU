@@ -182,7 +182,7 @@
       v-if="currentWord"
       canvas-id="shareCanvas"
       id="shareCanvas"
-      style="position: absolute; left: -9999px; top: 0; width: 700px; height: 1100px;"
+      style="position: absolute; left: -9999px; top: 0; width: 700px; height: 1150px;"
     ></canvas>
   </Screen>
 </template>
