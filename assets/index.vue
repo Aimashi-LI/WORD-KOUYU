@@ -182,7 +182,7 @@
       v-if="currentWord"
       canvas-id="shareCanvas"
       id="shareCanvas"
-      style="position: absolute; left: -9999px; top: 0; width: 600px; height: 800px;"
+      style="position: absolute; left: -9999px; top: 0; width: 700px; height: 900px;"
     ></canvas>
   </Screen>
 </template>
@@ -272,6 +272,29 @@ const shareCurrentWord = () => {
   sharePopup.value.open();
 };
 
+// 文本换行函数
+function wrapText(ctx, text, maxWidth, fontSize) {
+  const words = text.split('');
+  const lines = [];
+  let currentLine = '';
+  
+  for (let i = 0; i < words.length; i++) {
+    const testLine = currentLine + words[i];
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+    
+    if (testWidth > maxWidth && i > 0) {
+      lines.push(currentLine);
+      currentLine = words[i];
+    } else {
+      currentLine = testLine;
+    }
+  }
+  lines.push(currentLine);
+  
+  return lines;
+}
+
 // 生成图片并保存到相册 - 完全照搬刷单词页面的分享卡片样式
 const saveImageToAlbum = async () => {
   if (!currentWord.value) {
@@ -286,20 +309,20 @@ const saveImageToAlbum = async () => {
     await nextTick();
 
     const ctx = uni.createCanvasContext('shareCanvas');
-    const canvasWidth = 700; // 对应 SCREEN_WIDTH - 40 (假设 SCREEN_WIDTH = 740)
-    const canvasHeight = 500;
-    const padding = 32; // Spacing.xl
-    let y = padding + 10;
+    const canvasWidth = 700;
+    const canvasHeight = 900;
+    const padding = 32;
+    let y = padding + 20;
 
-    // 1. 绘制纯白背景（shareCardContainer）
+    // 1. 绘制纯白背景
     ctx.setFillStyle('#FFFFFF');
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // 2. 绘制阴影效果
-    ctx.setShadowOffsetX(0);
-    ctx.setShadowOffsetY(4);
-    ctx.setShadowBlur(12);
-    ctx.setShadowColor('rgba(0, 0, 0, 0.15)');
+    // 2. 绘制阴影效果（使用 uni-app 支持的方式）
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 4;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
 
     // 单词和词性 - 同排显示
     ctx.setFontSize(36);
@@ -334,7 +357,7 @@ const saveImageToAlbum = async () => {
       ctx.fillText(posText, posX + posPadding, posY + 16);
     }
 
-    y += 32;
+    y += 40;
 
     // 3. 音标
     if (currentWord.value.phonetic) {
@@ -344,18 +367,24 @@ const saveImageToAlbum = async () => {
       y += 32;
     }
 
-    // 4. 释义
+    // 4. 释义（支持自动换行）
     ctx.setFontSize(16);
     ctx.setFillStyle('#1F2937');
     const definitionText = `${currentWord.value.definition || '输入/导入'}`;
-    ctx.fillText(`释义：${definitionText}`, padding, y);
-    y += 40;
+    const maxWidth = canvasWidth - padding * 2 - 40;
+    const definitionLines = wrapText(ctx, `释义：${definitionText}`, maxWidth, 16);
+    
+    definitionLines.forEach(line => {
+      ctx.fillText(line, padding, y);
+      y += 24;
+    });
+    y += 16;
 
-    // 5. 拆分
+    // 5. 拆分（支持自动换行）
     if (currentWord.value.split) {
       // 绘制拆分背景
       ctx.setFillStyle('#F9FAFB');
-      const splitHeight = 80;
+      const splitHeight = 120;
       const splitY = y - 10;
       const radius = 8;
       
@@ -373,20 +402,30 @@ const saveImageToAlbum = async () => {
       ctx.setFontSize(16);
       ctx.fillText('✂️', padding + 8, y + 12);
 
-      // 绘制拆分文本
+      // 绘制拆分标签
+      ctx.setFontSize(14);
+      ctx.setFillStyle('#6B7280');
+      ctx.fillText('拆分：', padding + 32, y + 12);
+
+      // 绘制拆分内容（支持自动换行）
       ctx.setFontSize(14);
       ctx.setFillStyle('#374151');
-      const splitContent = `拆分：${formatSplit(currentWord.value.split)}`;
-      ctx.fillText(splitContent, padding + 32, y + 12);
+      const splitContent = formatSplit(currentWord.value.split);
+      const splitMaxWidth = canvasWidth - padding * 2 - 60;
+      const splitLines = wrapText(ctx, splitContent, splitMaxWidth, 14);
+      
+      splitLines.forEach((line, index) => {
+        ctx.fillText(line, padding + 75, y + 12 + index * 20);
+      });
       
       y = splitY + splitHeight + 16;
     }
 
-    // 6. 助记
+    // 6. 助记（支持自动换行）
     if (currentWord.value.mnemonic) {
       // 绘制助记背景
       ctx.setFillStyle('#F9FAFB');
-      const mnemonicHeight = 80;
+      const mnemonicHeight = 120;
       const mnemonicY = y - 10;
       const radius = 8;
       
@@ -404,22 +443,38 @@ const saveImageToAlbum = async () => {
       ctx.setFontSize(16);
       ctx.fillText('💡', padding + 8, y + 12);
 
-      // 绘制助记文本
+      // 绘制助记标签
+      ctx.setFontSize(14);
+      ctx.setFillStyle('#6B7280');
+      ctx.fillText('助记：', padding + 32, y + 12);
+
+      // 绘制助记内容（支持自动换行）
       ctx.setFontSize(14);
       ctx.setFillStyle('#374151');
-      const mnemonicContent = `助记：${currentWord.value.mnemonic}`;
-      ctx.fillText(mnemonicContent, padding + 32, y + 12);
+      const mnemonicContent = currentWord.value.mnemonic;
+      const mnemonicMaxWidth = canvasWidth - padding * 2 - 60;
+      const mnemonicLines = wrapText(ctx, mnemonicContent, mnemonicMaxWidth, 14);
+      
+      mnemonicLines.forEach((line, index) => {
+        ctx.fillText(line, padding + 75, y + 12 + index * 20);
+      });
       
       y = mnemonicY + mnemonicHeight + 16;
     }
 
-    // 7. 例句
+    // 7. 例句（支持自动换行）
     if (currentWord.value.sentence) {
       ctx.setFontSize(13);
       ctx.setFillStyle('#374151');
       const sentenceText = currentWord.value.sentence;
-      ctx.fillText(`例句：${sentenceText}`, padding, y);
-      y += 40;
+      const sentenceMaxWidth = canvasWidth - padding * 2;
+      const sentenceLines = wrapText(ctx, `例句：${sentenceText}`, sentenceMaxWidth, 13);
+      
+      sentenceLines.forEach(line => {
+        ctx.fillText(line, padding, y);
+        y += 20;
+      });
+      y += 16;
     }
 
     // 8. 底部分割线
@@ -432,7 +487,7 @@ const saveImageToAlbum = async () => {
     ctx.setFillStyle('#9CA3AF');
     const footerText = '来自单词学习助手';
     const footerWidth = ctx.measureText(footerText).width;
-    ctx.fillText(footerText, (canvasWidth - footerWidth) / 2, canvasHeight - 16);
+    ctx.fillText(footerText, (canvasWidth - footerWidth) / 2, canvasHeight - 24);
 
     // 绘制完成并保存
     ctx.draw(false, async () => {
