@@ -71,7 +71,7 @@
                 <text class="definition">{{ word.definition }}</text>
               </view>
 
-              <!-- 拆分 - 完全照搬刷单词页面 -->
+              <!-- 拆分 -->
               <view v-if="word.split" class="split-section" :style="{ backgroundColor: theme.backgroundTertiary }">
                 <uni-icons type="scissors" size="16" :color="theme.accent" />
                 <view class="split-row">
@@ -80,7 +80,7 @@
                 </view>
               </view>
 
-              <!-- 助记句 - 完全照搬刷单词页面 -->
+              <!-- 助记句 -->
               <view v-if="word.mnemonic" class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }">
                 <uni-icons type="lightbulb" size="16" :color="theme.accent" />
                 <text class="mnemonic-text">
@@ -177,7 +177,7 @@
       </view>
     </uni-popup>
 
-    <!-- 隐藏的 Canvas，用于绘制分享卡片 -->
+    <!-- 隐藏的 Canvas，用于绘制分享卡片（完全照搬刷单词页面样式） -->
     <canvas
       v-if="currentWord"
       canvas-id="shareCanvas"
@@ -246,7 +246,7 @@ const loadWords = async () => {
   }
 };
 
-// 格式化拆分显示 - 直接使用 formatSplitStringForDisplay 函数
+// 格式化拆分显示
 const formatSplit = (splitStr) => {
   return formatSplitStringForDisplay(splitStr);
 };
@@ -272,7 +272,7 @@ const shareCurrentWord = () => {
   sharePopup.value.open();
 };
 
-// 生成图片并保存到相册
+// 生成图片并保存到相册 - 完全照搬刷单词页面的分享卡片样式
 const saveImageToAlbum = async () => {
   if (!currentWord.value) {
     sharePopup.value.close();
@@ -286,133 +286,153 @@ const saveImageToAlbum = async () => {
     await nextTick();
 
     const ctx = uni.createCanvasContext('shareCanvas');
-    const canvasWidth = 900;
-    const canvasHeight = 1060;
-    const padding = 40;
-    let y = padding + 60;
+    const canvasWidth = 700; // 对应 SCREEN_WIDTH - 40 (假设 SCREEN_WIDTH = 740)
+    const canvasHeight = 500;
+    const padding = 32; // Spacing.xl
+    let y = padding + 10;
 
-    // 1. 绘制纯白背景
+    // 1. 绘制纯白背景（shareCardContainer）
     ctx.setFillStyle('#FFFFFF');
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // 2. 绘制单词（加粗大号字体）
-    ctx.setFontSize(60);
-    ctx.setFillStyle('#111827');
+    // 2. 绘制阴影效果
+    ctx.setShadowOffsetX(0);
+    ctx.setShadowOffsetY(4);
+    ctx.setShadowBlur(12);
+    ctx.setShadowColor('rgba(0, 0, 0, 0.15)');
+
+    // 单词和词性 - 同排显示
+    ctx.setFontSize(36);
+    ctx.setFillStyle('#1F2937');
     const wordText = currentWord.value.word || 'Word';
     ctx.fillText(wordText, padding, y);
     const wordWidth = ctx.measureText(wordText).width;
 
-    // 3. 绘制词性标签
-    const posAbbr = currentWord.value.partOfSpeech || 'n';
-    const posFullText = `${posAbbr}.`;
-    
-    ctx.setFontSize(26);
-    const labelWidth = ctx.measureText(posFullText).width;
-    
-    // 绘制圆角背景
-    ctx.setFillStyle('#EDE9FE');
-    const labelRadius = 16;
-    const labelX = padding + wordWidth + 20;
-    const labelY = y - 35;
-    const labelHeight = 40;
-    
-    ctx.beginPath();
-    ctx.moveTo(labelX + labelRadius, labelY);
-    ctx.arcTo(labelX + labelWidth + 20, labelY, labelX + labelWidth + 20, labelY + labelHeight, labelRadius);
-    ctx.arcTo(labelX + labelWidth + 20, labelY + labelHeight, labelX, labelY + labelHeight, labelRadius);
-    ctx.arcTo(labelX, labelY + labelHeight, labelX, labelY, labelRadius);
-    ctx.closePath();
-    ctx.fill();
-    
-    // 绘制词性文字
-    ctx.setFillStyle('#7C3AED');
-    ctx.fillText(posFullText, labelX + 10, labelY + 28);
-    
-    y += 60;
+    // 词性标签
+    if (currentWord.value.partOfSpeech) {
+      ctx.setFontSize(14);
+      const posText = currentWord.value.partOfSpeech;
+      const posWidth = ctx.measureText(posText).width;
+      
+      // 绘制圆角背景
+      ctx.setFillStyle('rgba(99, 102, 241, 0.1)');
+      const posPadding = 8;
+      const posHeight = 24;
+      const posX = padding + wordWidth + 8;
+      const posY = y - 20;
+      const radius = 8;
+      
+      ctx.beginPath();
+      ctx.moveTo(posX + radius, posY);
+      ctx.arcTo(posX + posWidth + posPadding * 2, posY, posX + posWidth + posPadding * 2, posY + posHeight, radius);
+      ctx.arcTo(posX + posWidth + posPadding * 2, posY + posHeight, posX, posY + posHeight, radius);
+      ctx.arcTo(posX, posY + posHeight, posX, posY, radius);
+      ctx.closePath();
+      ctx.fill();
+      
+      ctx.setFillStyle('#6366F1');
+      ctx.fillText(posText, posX + posPadding, posY + 16);
+    }
 
-    // 4. 绘制音标
-    const phoneticText = currentWord.value.phonetic || '';
-    const reversePhonetic = phoneticText.split('').reverse().join('');
-    ctx.setFontSize(32);
-    ctx.setFillStyle('#9CA3AF');
-    ctx.fillText(reversePhonetic, padding, y);
-    y += 50;
+    y += 32;
 
-    // 5. 绘制释义
-    ctx.setFontSize(32);
-    ctx.setFillStyle('#4B5563');
-    const definitionText = `释义：${currentWord.value.definition || '输入/导入'}`;
-    ctx.fillText(definitionText, padding, y);
-    y += 60;
+    // 3. 音标
+    if (currentWord.value.phonetic) {
+      ctx.setFontSize(16);
+      ctx.setFillStyle('#6B7280');
+      ctx.fillText(currentWord.value.phonetic, padding, y);
+      y += 32;
+    }
 
-    // 6. 绘制拆分模块
+    // 4. 释义
+    ctx.setFontSize(16);
+    ctx.setFillStyle('#1F2937');
+    const definitionText = `${currentWord.value.definition || '输入/导入'}`;
+    ctx.fillText(`释义：${definitionText}`, padding, y);
+    y += 40;
+
+    // 5. 拆分
     if (currentWord.value.split) {
+      // 绘制拆分背景
       ctx.setFillStyle('#F9FAFB');
-      const moduleRadius = 16;
-      const moduleX = padding;
-      const moduleY = y - 10;
-      const moduleW = canvasWidth - 2 * padding;
-      const moduleH = 100;
+      const splitHeight = 80;
+      const splitY = y - 10;
+      const radius = 8;
       
       ctx.beginPath();
-      ctx.moveTo(moduleX + moduleRadius, moduleY);
-      ctx.arcTo(moduleX + moduleW, moduleY, moduleX + moduleW, moduleY + moduleRadius, moduleRadius);
-      ctx.arcTo(moduleX + moduleW, moduleY + moduleH, moduleX + moduleW - moduleRadius, moduleY + moduleH, moduleRadius);
-      ctx.arcTo(moduleX, moduleY + moduleH, moduleX, moduleY + moduleH - moduleRadius, moduleRadius);
-      ctx.arcTo(moduleX, moduleY, moduleX + moduleRadius, moduleY, moduleRadius);
+      ctx.moveTo(padding + radius, splitY);
+      ctx.arcTo(canvasWidth - padding, splitY, canvasWidth - padding, splitY + radius, radius);
+      ctx.arcTo(canvasWidth - padding, splitY + splitHeight, canvasWidth - padding - radius, splitY + splitHeight, radius);
+      ctx.arcTo(padding, splitY + splitHeight, padding, splitY + splitHeight - radius, radius);
+      ctx.arcTo(padding, splitY, padding + radius, splitY, radius);
       ctx.closePath();
       ctx.fill();
 
-      ctx.setFillStyle('#A855F7');
-      ctx.setFontSize(32);
-      ctx.fillText('✂️', padding + 10, y + 25);
+      // 绘制剪刀图标
+      ctx.setFillStyle('#8B5CF6');
+      ctx.setFontSize(16);
+      ctx.fillText('✂️', padding + 8, y + 12);
+
+      // 绘制拆分文本
+      ctx.setFontSize(14);
+      ctx.setFillStyle('#374151');
+      const splitContent = `拆分：${formatSplit(currentWord.value.split)}`;
+      ctx.fillText(splitContent, padding + 32, y + 12);
       
-      ctx.setFontSize(28);
-      ctx.setFillStyle('#4B5563');
-      ctx.fillText('拆分：', padding + 50, y + 25);
-      
-      // 拆分内容格式化
-      let splitContent = formatSplit(currentWord.value.split);
-      ctx.fillText(splitContent, padding + 130, y + 25);
-      y = moduleY + moduleH + 30;
+      y = splitY + splitHeight + 16;
     }
 
-    // 7. 绘制助记模块
+    // 6. 助记
     if (currentWord.value.mnemonic) {
+      // 绘制助记背景
       ctx.setFillStyle('#F9FAFB');
-      const moduleRadius = 16;
-      const moduleX = padding;
-      const moduleY = y - 10;
-      const moduleW = canvasWidth - 2 * padding;
-      const moduleH = 100;
+      const mnemonicHeight = 80;
+      const mnemonicY = y - 10;
+      const radius = 8;
       
       ctx.beginPath();
-      ctx.moveTo(moduleX + moduleRadius, moduleY);
-      ctx.arcTo(moduleX + moduleW, moduleY, moduleX + moduleW, moduleY + moduleRadius, moduleRadius);
-      ctx.arcTo(moduleX + moduleW, moduleY + moduleH, moduleX + moduleW - moduleRadius, moduleY + moduleH, moduleRadius);
-      ctx.arcTo(moduleX, moduleY + moduleH, moduleX, moduleY + moduleH - moduleRadius, moduleRadius);
-      ctx.arcTo(moduleX, moduleY, moduleX + moduleRadius, moduleY, moduleRadius);
+      ctx.moveTo(padding + radius, mnemonicY);
+      ctx.arcTo(canvasWidth - padding, mnemonicY, canvasWidth - padding, mnemonicY + radius, radius);
+      ctx.arcTo(canvasWidth - padding, mnemonicY + mnemonicHeight, canvasWidth - padding - radius, mnemonicY + mnemonicHeight, radius);
+      ctx.arcTo(padding, mnemonicY + mnemonicHeight, padding, mnemonicY + mnemonicHeight - radius, radius);
+      ctx.arcTo(padding, mnemonicY, padding + radius, mnemonicY, radius);
       ctx.closePath();
       ctx.fill();
 
-      ctx.setFillStyle('#A855F7');
-      ctx.setFontSize(32);
-      ctx.fillText('💡', padding + 10, y + 25);
+      // 绘制灯泡图标
+      ctx.setFillStyle('#8B5CF6');
+      ctx.setFontSize(16);
+      ctx.fillText('💡', padding + 8, y + 12);
+
+      // 绘制助记文本
+      ctx.setFontSize(14);
+      ctx.setFillStyle('#374151');
+      const mnemonicContent = `助记：${currentWord.value.mnemonic}`;
+      ctx.fillText(mnemonicContent, padding + 32, y + 12);
       
-      ctx.setFontSize(28);
-      ctx.setFillStyle('#4B5563');
-      ctx.fillText('助记：', padding + 50, y + 25);
-      
-      ctx.fillText(currentWord.value.mnemonic, padding + 130, y + 25);
-      y = moduleY + moduleH + 40;
+      y = mnemonicY + mnemonicHeight + 16;
     }
 
-    // 8. 绘制底部来源
-    ctx.setFontSize(24);
+    // 7. 例句
+    if (currentWord.value.sentence) {
+      ctx.setFontSize(13);
+      ctx.setFillStyle('#374151');
+      const sentenceText = currentWord.value.sentence;
+      ctx.fillText(`例句：${sentenceText}`, padding, y);
+      y += 40;
+    }
+
+    // 8. 底部分割线
+    ctx.setFillStyle('#E5E7EB');
+    ctx.fillRect(padding, y, canvasWidth - padding * 2, 1);
+    y += 32;
+
+    // 9. 底部信息
+    ctx.setFontSize(12);
     ctx.setFillStyle('#9CA3AF');
-    const sourceText = '来自单词学习助手';
-    const sourceWidth = ctx.measureText(sourceText).width;
-    ctx.fillText(sourceText, (canvasWidth - sourceWidth) / 2, canvasHeight - 40);
+    const footerText = '来自单词学习助手';
+    const footerWidth = ctx.measureText(footerText).width;
+    ctx.fillText(footerText, (canvasWidth - footerWidth) / 2, canvasHeight - 16);
 
     // 绘制完成并保存
     ctx.draw(false, async () => {
