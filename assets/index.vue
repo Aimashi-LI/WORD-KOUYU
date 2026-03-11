@@ -105,11 +105,6 @@
         <text>分享卡片</text>
       </view>
 
-      <!-- 滑动提示 -->
-      <view class="hint">
-        <text>← 滑动切换单词 →</text>
-      </view>
-
       <!-- 完成学习按钮（仅在最后一个单词显示） -->
       <view v-if="currentIndex === words.length - 1" class="finish-container">
         <view class="finish-btn" :style="{ backgroundColor: theme.primary }" @click="finishBrowsing">
@@ -833,11 +828,6 @@ const hexToRgba = (hex, alpha) => {
   border-radius: 48rpx;
   background-color: v-bind('theme.backgroundTertiary');
   z-index: 9999;
-}
-.hint {
-  text-align: center;
-  color: v-bind('theme.textMuted');
-  margin-bottom: 32rpx;
 }
 .finish-container {
   padding: 32rpx;
