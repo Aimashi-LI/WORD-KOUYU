@@ -819,17 +819,18 @@ const hexToRgba = (hex, alpha) => {
   font-style: italic;
 }
 .share-btn {
+  position: fixed;
+  left: 32rpx;
+  right: 32rpx;
+  bottom: 48rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 16rpx;
-  margin-top: auto;
-  margin-left: 32rpx;
-  margin-right: 32rpx;
-  margin-bottom: 48rpx;
   padding: 24rpx;
   border-radius: 48rpx;
   background-color: v-bind('theme.backgroundTertiary');
+  z-index: 9999;
 }
 .hint {
   text-align: center;
