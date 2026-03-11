@@ -639,6 +639,7 @@ const hexToRgba = (hex, alpha) => {
 <style scoped>
 .container {
   flex: 1;
+  padding-bottom: 120rpx;
 }
 .top-bar {
   display: flex;
