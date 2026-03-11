@@ -687,6 +687,8 @@ const hexToRgba = (hex, alpha) => {
 .card-swiper {
   flex: 1;
   min-height: 700rpx;
+  z-index: 10000;
+  position: relative;
 }
 .card-wrapper {
   padding: 0 32rpx;
