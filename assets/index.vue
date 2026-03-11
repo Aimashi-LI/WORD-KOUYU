@@ -75,14 +75,14 @@
               <view v-if="word.split" class="split-section" :style="{ backgroundColor: theme.backgroundTertiary }">
                 <uni-icons type="scissors" size="16" :color="theme.accent" />
                 <text class="split-label">拆分：</text>
-                <text class="split-value">{{ formatSplit(word.split) }}</text>
+                <text class="split-value" style="word-wrap: break-word; word-break: break-all; white-space: normal;">{{ formatSplit(word.split) }}</text>
               </view>
 
               <!-- 助记句 -->
               <view v-if="word.mnemonic" class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }">
                 <uni-icons type="lightbulb" size="16" :color="theme.accent" />
                 <text class="mnemonic-label">助记：</text>
-                <text class="mnemonic">{{ word.mnemonic }}</text>
+                <text class="mnemonic" style="word-wrap: break-word; word-break: break-all; white-space: normal;">{{ word.mnemonic }}</text>
               </view>
 
               <!-- 例句 -->
@@ -713,6 +713,9 @@ const hexToRgba = (hex, alpha) => {
   font-size: 28rpx;
   color: v-bind('theme.textSecondary');
   line-height: 40rpx;
+  word-wrap: break-word;
+  word-break: break-all;
+  white-space: normal;
 }
 .sentence {
   font-size: 28rpx;
