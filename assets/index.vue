@@ -323,7 +323,7 @@ const saveImageToAlbum = async () => {
 
     const ctx = uni.createCanvasContext('shareCanvas');
     const canvasWidth = 700;
-    const canvasHeight = 1100; // 调整为1100px，更合适的高度
+    const canvasHeight = 1150; // 调整为1150px，增加区域间距
     const padding = 45; // 略微减小padding，增加可用空间
     let y = padding + 25;
 
@@ -370,14 +370,14 @@ const saveImageToAlbum = async () => {
       ctx.fillText(posText, posX + posPadding, posY + 22);
     }
 
-    y += 50;
+    y += 60;
 
     // 3. 音标
     if (currentWord.value.phonetic) {
       ctx.setFontSize(22); // 音标22px
       ctx.setFillStyle('#6B7280');
       ctx.fillText(currentWord.value.phonetic, padding, y);
-      y += 40;
+      y += 50;
     }
 
     // 4. 释义（每行最多15字，36px字体）
@@ -391,7 +391,7 @@ const saveImageToAlbum = async () => {
       ctx.fillText(`释义：${line}`, padding, y);
       y += 42; // 行间距
     });
-    y += 20;
+    y += 30;
 
     // 5. 拆分（每行最多15字，32px字体）
     if (currentWord.value.split) {
@@ -431,7 +431,7 @@ const saveImageToAlbum = async () => {
         ctx.fillText(line, padding + 95, y + 16 + index * 38);
       });
       
-      y = splitY + splitHeight + 20;
+      y = splitY + splitHeight + 30;
     }
 
     // 6. 助记（每行最多15字，32px字体）
@@ -472,7 +472,7 @@ const saveImageToAlbum = async () => {
         ctx.fillText(line, padding + 95, y + 16 + index * 38);
       });
       
-      y = mnemonicY + mnemonicHeight + 20;
+      y = mnemonicY + mnemonicHeight + 30;
     }
 
     // 7. 例句（每行最多15字，30px字体）
@@ -487,13 +487,13 @@ const saveImageToAlbum = async () => {
         ctx.fillText(`例句：${line}`, padding, y);
         y += 36;
       });
-      y += 20;
+      y += 30;
     }
 
     // 8. 底部分割线
     ctx.setFillStyle('#E5E7EB');
     ctx.fillRect(padding, y, canvasWidth - padding * 2, 1);
-    y += 40;
+    y += 50;
 
     // 9. 底部信息
     ctx.setFontSize(16);
