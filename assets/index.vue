@@ -823,7 +823,7 @@ const hexToRgba = (hex, alpha) => {
   align-items: center;
   justify-content: center;
   gap: 16rpx;
-  margin: 32rpx;
+  margin: 16rpx 32rpx 64rpx 32rpx;
   padding: 24rpx;
   border-radius: 48rpx;
   background-color: v-bind('theme.backgroundTertiary');
