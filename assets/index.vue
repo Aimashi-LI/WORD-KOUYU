@@ -687,12 +687,12 @@ const hexToRgba = (hex, alpha) => {
   position: relative;
 }
 .card-wrapper {
-  padding: 0 32rpx;
+  padding: 0 32rpx 150rpx 32rpx;
   box-sizing: border-box;
 }
 .word-card {
   border-radius: 32rpx;
-  padding: 40rpx;
+  padding: 40rpx 40rpx 120rpx 40rpx;
   box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.1);
 }
 .word-header {
