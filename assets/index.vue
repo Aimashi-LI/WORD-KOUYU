@@ -683,17 +683,22 @@ const hexToRgba = (hex, alpha) => {
 .card-swiper {
   flex: 1;
   min-height: 700rpx;
-  z-index: 10000;
+  z-index: 99999;
   position: relative;
+  overflow: visible;
 }
 .card-wrapper {
   padding: 0 32rpx 150rpx 32rpx;
   box-sizing: border-box;
+  z-index: 99999;
+  position: relative;
 }
 .word-card {
   border-radius: 32rpx;
   padding: 40rpx 40rpx 120rpx 40rpx;
   box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.1);
+  position: relative;
+  z-index: 99999;
 }
 .word-header {
   display: flex;
