@@ -778,6 +778,7 @@ const hexToRgba = (hex, alpha) => {
 .card-swiper {
   flex: 1;
   padding: 0 20rpx 24rpx;
+  height: 100%;
 }
 
 .card-wrapper {
@@ -786,7 +787,7 @@ const hexToRgba = (hex, alpha) => {
 
 .word-card {
   border-radius: 32rpx;
-  padding: 40rpx 40rpx 200rpx;
+  padding: 40rpx;
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
