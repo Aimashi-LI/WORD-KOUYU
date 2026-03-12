@@ -39,7 +39,7 @@
         :circular="false"
       >
         <swiper-item v-for="(word, idx) in words" :key="word.id">
-          <view class="card-wrapper">
+          <scroll-view class="card-wrapper" scroll-y>
             <view
               class="word-card"
               :style="{ backgroundColor: theme.backgroundDefault }"
@@ -95,7 +95,7 @@
               <!-- 例句 -->
               <text v-if="word.sentence" class="sentence">例句：{{ word.sentence }}</text>
             </view>
-          </view>
+          </scroll-view>
         </swiper-item>
       </swiper>
 
@@ -107,8 +107,8 @@
       <!-- 底部区域（占位，避免内容被固定按钮遮挡） -->
       <view class="bottom-spacer"></view>
 
-      <!-- 分享按钮（固定在底部） -->
-      <view class="share-btn-fixed" @click="shareCurrentWord">
+      <!-- 分享按钮（固定在底部，仅在非最后一个单词时显示） -->
+      <view v-if="currentIndex < words.length - 1" class="share-btn-fixed" @click="shareCurrentWord">
         <uni-icons type="image" size="20" :color="theme.primary" />
         <text>分享卡片</text>
       </view>
@@ -677,10 +677,12 @@ const hexToRgba = (hex, alpha) => {
 }
 .card-swiper {
   flex: 1;
-  overflow-y: auto;
+  height: 0;
 }
 .card-wrapper {
+  height: 100%;
   padding: 24rpx;
+  box-sizing: border-box;
 }
 .word-card {
   border-radius: 32rpx;
@@ -844,7 +846,7 @@ const hexToRgba = (hex, alpha) => {
   border-radius: 48rpx;
   background-color: v-bind('theme.primary');
   color: #fff;
-  z-index: 100;
+  z-index: 101;
 }
 .share-modal, .project-modal {
   border-top-left-radius: 32rpx;
