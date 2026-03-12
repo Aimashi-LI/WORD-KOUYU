@@ -71,11 +71,11 @@
                 <text class="definition">{{ word.definition }}</text>
               </view>
 
-              <!-- 拆分 -->
+              <!-- 拆分（修改点：使用 formatSplitGroups） -->
               <view v-if="word.split" class="split-section" :style="{ backgroundColor: theme.backgroundTertiary }">
                 <uni-icons type="scissors" size="16" :color="theme.accent" />
                 <text class="split-label">拆分：</text>
-                <text class="split-value">{{ formatSplit(word.split) }}</text>
+                <text class="split-value">{{ formatSplitGroups(word.split) }}</text>
               </view>
 
               <!-- 助记句 -->
@@ -92,7 +92,7 @@
         </swiper-item>
       </swiper>
 
-      <!-- 分享按钮（修改文案：保存单词卡片 → 分享卡片） -->
+      <!-- 分享按钮 -->
       <view class="share-btn" @click="shareCurrentWord">
         <uni-icons type="image" size="20" :color="theme.primary" />
         <text>分享卡片</text>
@@ -112,7 +112,7 @@
       </view>
     </view>
 
-    <!-- 分享选项弹窗（简化为仅保存相册） -->
+    <!-- 分享选项弹窗 -->
     <uni-popup ref="sharePopup" type="bottom">
       <view class="share-modal" :style="{ backgroundColor: theme.backgroundRoot }">
         <view class="share-header">
@@ -187,7 +187,8 @@ import { useThemeStore } from '@/stores/theme';
 import Screen from '@/components/Screen.vue';
 import * as wordDao from '@/utils/wordDao';
 import * as wordbookDao from '@/utils/wordbookDao';
-import { formatSplitStringForDisplay } from '@/utils/splitHelper';
+// 原 formatSplit 不再使用，改为自定义 formatSplitGroups
+// import { formatSplitStringForDisplay } from '@/utils/splitHelper';
 import { isWordIncomplete } from '@/utils';
 
 const themeStore = useThemeStore();
@@ -219,6 +220,32 @@ const progressPercent = computed(() => {
   return ((currentIndex.value + 1) / words.value.length) * 100;
 });
 
+// ---------- 新增：格式化拆分，每组“字母-含义”，组间四个空格 ----------
+const formatSplitGroups = (splitStr) => {
+  if (!splitStr) return '';
+  // 按常见分隔符（逗号、中文逗号、顿号、空格、换行）分割成组
+  const groups = splitStr.split(/[，,、\s\n]+/).filter(g => g.trim() !== '');
+  return groups.map(group => {
+    group = group.trim();
+    // 如果已包含连字符，假定格式正确，直接返回
+    if (group.includes('-')) {
+      return group;
+    }
+    // 尝试按空格分割
+    const parts = group.split(/\s+/);
+    if (parts.length >= 2) {
+      // 第一部分作为字母，剩余部分合并为含义
+      const letter = parts[0];
+      const meaning = parts.slice(1).join(' ');
+      return `${letter}-${meaning}`;
+    } else {
+      // 无法分割，整个作为字母，含义留空（展示为“字母-”）
+      return `${group}-`;
+    }
+  }).join('    '); // 四个空格分隔组
+};
+// ----------------------------------------------------------------
+
 // 加载单词
 const loadWords = async () => {
   loading.value = true;
@@ -236,38 +263,6 @@ const loadWords = async () => {
     uni.showToast({ title: '加载失败', icon: 'none' });
   } finally {
     loading.value = false;
-  }
-};
-
-// 格式化拆分显示
-const formatSplit = (splitStr) => {
-  if (!splitStr || !splitStr.trim()) {
-    return '';
-  }
-
-  try {
-    // 使用 '。' 分割每一组
-    const groups = splitStr.split('。').filter(g => g.trim());
-
-    // 对每一组，使用 ',' 分割英文和中文，然后用 '-' 连接
-    const formattedGroups = groups.map(group => {
-      const parts = group.split(',');
-      if (parts.length >= 2) {
-        const code = parts[0].trim();
-        const content = parts.slice(1).join(',').trim();
-        return `${code}-${content}`;
-      } else if (parts.length === 1) {
-        // 如果只有一部分，直接返回（容错处理）
-        return parts[0].trim();
-      }
-      return '';
-    });
-
-    // 使用四个空格连接所有组
-    return formattedGroups.filter(g => g).join('    ');
-  } catch (error) {
-    console.error('格式化拆分字符串失败:', error);
-    return splitStr; // 格式化失败时返回原字符串
   }
 };
 
@@ -292,7 +287,7 @@ const saveImageToAlbum = async () => {
     return;
   }
 
-  uni.showLoading({ title: '生成分享卡片...' }); // 修改文案：生成单词卡片 → 生成分享卡片
+  uni.showLoading({ title: '生成分享卡片...' });
   sharePopup.value.close();
 
   try {
@@ -315,20 +310,18 @@ const saveImageToAlbum = async () => {
     ctx.fillText(wordText, padding, y);
     const wordWidth = ctx.measureText(wordText).width;
 
-    // 3. 【核心修改】绘制词性标签
-    // 规则：严格按照传入的词性展示，不追加中文解释，完全还原参考图样式
-    const posAbbr = currentWord.value.partOfSpeech || 'n'; // 默认n
-    const posFullText = `${posAbbr}.`; // 格式改为：pron. / n. / v. （去掉多余的中文）
+    // 3. 绘制词性标签
+    const posAbbr = currentWord.value.partOfSpeech || 'n';
+    const posFullText = `${posAbbr}.`;
     
     ctx.setFontSize(26);
     const labelWidth = ctx.measureText(posFullText).width;
     
-    // 绘制圆角背景（浅紫/淡蓝色，和参考图一致）
-    ctx.setFillStyle('#EDE9FE'); // 浅紫色，可根据需要调整为 #F0F5FF 等浅蓝
+    ctx.setFillStyle('#EDE9FE');
     const labelRadius = 16;
     const labelX = padding + wordWidth + 20;
     const labelY = y - 35;
-    const labelHeight = 40; // 固定标签高度
+    const labelHeight = 40;
     
     ctx.beginPath();
     ctx.moveTo(labelX + labelRadius, labelY);
@@ -338,9 +331,8 @@ const saveImageToAlbum = async () => {
     ctx.closePath();
     ctx.fill();
     
-    // 绘制词性文字（紫色，和参考图一致）
     ctx.setFillStyle('#7C3AED');
-    ctx.fillText(posFullText, labelX + 10, labelY + 28); // 微调X轴偏移让文字居中
+    ctx.fillText(posFullText, labelX + 10, labelY + 28);
     
     y += 60;
 
@@ -359,7 +351,7 @@ const saveImageToAlbum = async () => {
     ctx.fillText(definitionText, padding, y);
     y += 60;
 
-    // 6. 绘制拆分模块（保持你要求的 4空格 分隔）
+    // 6. 绘制拆分模块（修改点：使用 formatSplitGroups 格式化）
     if (currentWord.value.split) {
       ctx.setFillStyle('#F9FAFB');
       const moduleRadius = 16;
@@ -385,8 +377,8 @@ const saveImageToAlbum = async () => {
       ctx.setFillStyle('#4B5563');
       ctx.fillText('拆分：', padding + 50, y + 25);
       
-      // 拆分内容格式化（使用与页面显示相同的逻辑）
-      let splitContent = formatSplit(currentWord.value.split);
+      // 使用新函数格式化拆分内容
+      let splitContent = formatSplitGroups(currentWord.value.split);
       ctx.fillText(splitContent, padding + 130, y + 25);
       y = moduleY + moduleH + 30;
     }
@@ -445,24 +437,21 @@ const saveImageToAlbum = async () => {
         await saveTempImageToAlbum(tempFilePath);
         uni.hideLoading();
 
-        // ✅ 兼容处理：判断 API 是否存在
         if (uni.share && uni.share.sendWithSystem) {
-          // 支持系统分享的环境：唤起原生分享面板
           uni.showToast({ title: '卡片已保存，可分享', icon: 'success', duration: 1000 });
           
           setTimeout(() => {
             uni.share.sendWithSystem({
               type: 'image',
-              href: '', // 分享图片时留空
+              href: '',
               title: `单词卡片 - ${currentWord.value.word}`,
               summary: `我在单词学习助手学到了 ${currentWord.value.word}，分享给你！`,
-              imageUrl: tempFilePath, // 要分享的图片路径
+              imageUrl: tempFilePath,
               success: () => {
                 uni.showToast({ title: '分享成功', icon: 'success' });
               },
               fail: (err) => {
                 console.error('分享失败', err);
-                // 分享取消不提示失败，仅真正失败时提示
                 if (!err.errMsg.includes('cancel')) {
                   uni.showToast({ title: '分享失败', icon: 'none' });
                 }
@@ -470,7 +459,6 @@ const saveImageToAlbum = async () => {
             });
           }, 1000);
         } else {
-          // 不支持系统分享的环境：提示用户手动分享
           uni.showModal({
             title: '分享成功',
             content: '单词卡片已保存到相册，你可以在相册中找到该图片并手动分享给好友~',
@@ -492,7 +480,7 @@ const saveImageToAlbum = async () => {
   }
 };
 
-// 保存权限方法不变
+// 保存权限方法
 const saveTempImageToAlbum = async (tempFilePath) => {
   try {
     await uni.saveImageToPhotosAlbum({ filePath: tempFilePath });
@@ -502,7 +490,7 @@ const saveTempImageToAlbum = async (tempFilePath) => {
       if (!settingRes.authSetting['scope.writePhotosAlbum']) {
         uni.showModal({
           title: '需要相册权限',
-          content: '请允许访问相册，以便保存分享卡片', // 修改文案：保存单词卡片 → 保存分享卡片
+          content: '请允许访问相册，以便保存分享卡片',
           confirmText: '去设置',
           success: (res) => {
             if (res.confirm) uni.openSetting();
@@ -519,10 +507,8 @@ const saveTempImageToAlbum = async (tempFilePath) => {
 // 完成学习
 const finishBrowsing = () => {
   if (projectId.value) {
-    // 在词库中刷单词，直接返回
     uni.navigateBack();
   } else {
-    // 询问是否创建复习项目
     uni.showModal({
       title: '学习完成',
       content: '您已浏览完所有单词。是否要将这些单词创建为一个复习项目？',
@@ -735,7 +721,7 @@ const hexToRgba = (hex, alpha) => {
   margin-bottom: 32rpx;
 }
 .finish-container {
-  padding: 32rpx;
+padding: 32rpx;
 }
 .finish-btn {
   display: flex;

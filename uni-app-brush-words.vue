@@ -957,10 +957,10 @@ const hexToRgba = (hex, alpha) => {
   align-items: center;
   justify-content: center;
   gap: 16rpx;
+  margin: 80rpx 32rpx 16rpx;
   padding: 24rpx;
   border-radius: 48rpx;
   background-color: v-bind('theme.backgroundTertiary');
-  margin: 0 32rpx 16rpx;
 }
 
 .share-btn text {
@@ -984,6 +984,7 @@ const hexToRgba = (hex, alpha) => {
 /* 完成按钮 */
 .finish-container {
   padding: 0 32rpx 32rpx;
+  margin-top: 40rpx;
 }
 
 .finish-btn {
