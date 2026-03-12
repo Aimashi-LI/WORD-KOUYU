@@ -1,0 +1,44 @@
+FROM node:18-bullseye
+
+# 安装 Android SDK
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    openjdk-17-jdk \
+    && rm -rf /var/lib/apt/lists/*
+
+# 设置 Java 环境
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV PATH=$PATH:$JAVA_HOME/bin
+
+# 安装 Android SDK
+RUN mkdir -p /opt/android-sdk && \
+    cd /opt/android-sdk && \
+    wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip && \
+    unzip commandlinetools-linux-9477386_latest.zip && \
+    rm commandlinetools-linux-9477386_latest.zip && \
+    mkdir -p cmdline-tools/latest && \
+    mv cmdline-tools/* cmdline-tools/latest/
+
+# 设置 Android SDK 路径
+ENV ANDROID_HOME=/opt/android-sdk
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+
+# 接受 Android SDK 许可
+RUN yes | sdkmanager --licenses || true
+
+# 安装 Android SDK 组件
+RUN sdkmanager \
+    "platform-tools" \
+    "platforms;android-34" \
+    "build-tools;34.0.0" \
+    "ndk;25.1.8937393"
+
+# 安装 Expo CLI 和依赖
+WORKDIR /workspace
+RUN npm install -g @expo/cli eas-cli
+
+# 设置工作目录
+WORKDIR /workspace/client
+
+CMD ["bash"]
