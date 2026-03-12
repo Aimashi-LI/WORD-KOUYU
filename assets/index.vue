@@ -28,90 +28,93 @@
         <text>暂无单词</text>
       </view>
 
-      <!-- 内容区域：单词卡片 + 分享按钮 + 完成按钮 -->
-      <view v-else class="content-area">
-        <!-- 单词卡片 (使用 swiper 实现滑动) -->
-        <swiper
-          class="card-swiper"
-          :current="currentIndex"
-          @change="onSwiperChange"
-          :indicator-dots="false"
-          :autoplay="false"
-          :circular="false"
-        >
-          <swiper-item v-for="(word, idx) in words" :key="word.id">
-            <view class="card-wrapper">
-              <view
-                class="word-card"
-                :style="{ backgroundColor: theme.backgroundDefault }"
-              >
-                <!-- 单词和词性 -->
-                <view class="word-header">
-                  <view class="word-info-left">
-                    <text class="word">{{ word.word }}</text>
-                    <text v-if="word.partOfSpeech" class="part-of-speech">{{ word.partOfSpeech }}</text>
+      <!-- 单词卡片 (使用 swiper 实现滑动) -->
+      <swiper
+        v-else
+        class="card-swiper"
+        :current="currentIndex"
+        @change="onSwiperChange"
+        :indicator-dots="false"
+        :autoplay="false"
+        :circular="false"
+      >
+        <swiper-item v-for="(word, idx) in words" :key="word.id">
+          <view class="card-wrapper">
+            <view
+              class="word-card"
+              :style="{ backgroundColor: theme.backgroundDefault }"
+            >
+              <!-- 单词和词性 -->
+              <view class="word-header">
+                <view class="word-info-left">
+                  <text class="word">{{ word.word }}</text>
+                  <text v-if="word.partOfSpeech" class="part-of-speech">{{ word.partOfSpeech }}</text>
+                </view>
+                <view class="status-tags">
+                  <view v-if="word.is_mastered === 1" class="mastered-tag">
+                    <uni-icons type="checkmarkempty" size="14" :color="theme.success" />
+                    <text>已掌握</text>
                   </view>
-                  <view class="status-tags">
-                    <view v-if="word.is_mastered === 1" class="mastered-tag">
-                      <uni-icons type="checkmarkempty" size="14" :color="theme.success" />
-                      <text>已掌握</text>
-                    </view>
-                    <view v-if="isWordIncomplete(word)" class="incomplete-tag">
-                      <uni-icons type="compose" size="14" :color="theme.warning" />
-                      <text>待编辑</text>
-                    </view>
+                  <view v-if="isWordIncomplete(word)" class="incomplete-tag">
+                    <uni-icons type="compose" size="14" :color="theme.warning" />
+                    <text>待编辑</text>
                   </view>
                 </view>
-
-                <!-- 音标 -->
-                <text v-if="word.phonetic" class="phonetic">{{ word.phonetic }}</text>
-
-                <!-- 释义 -->
-                <view class="definition-section">
-                  <text class="definition-label">释义：</text>
-                  <text class="definition">{{ word.definition }}</text>
-                </view>
-
-                <!-- 拆分 -->
-                <view v-if="word.split" class="split-section" :style="{ backgroundColor: theme.backgroundTertiary }">
-                  <uni-icons type="scissors" size="16" :color="theme.accent" />
-                  <view class="split-row">
-                    <text class="split-label">拆分：</text>
-                    <text class="split-value">{{ formatSplit(word.split) }}</text>
-                  </view>
-                </view>
-
-                <!-- 助记句 -->
-                <view v-if="word.mnemonic" class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }">
-                  <uni-icons type="lightbulb" size="16" :color="theme.accent" />
-                  <text class="mnemonic-text">
-                    <text class="mnemonic-label">助记：</text>{{ word.mnemonic }}
-                  </text>
-                </view>
-                <view v-else class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }" @click="goToDetail(word.id)">
-                  <uni-icons type="lightbulb" size="16" :color="theme.primary" />
-                  <text class="mnemonic-text add-hint">+ 助记句</text>
-                </view>
-
-                <!-- 例句 -->
-                <text v-if="word.sentence" class="sentence">例句：{{ word.sentence }}</text>
               </view>
+
+              <!-- 音标 -->
+              <text v-if="word.phonetic" class="phonetic">{{ word.phonetic }}</text>
+
+              <!-- 释义 -->
+              <view class="definition-section">
+                <text class="definition-label">释义：</text>
+                <text class="definition">{{ word.definition }}</text>
+              </view>
+
+              <!-- 拆分 -->
+              <view v-if="word.split" class="split-section" :style="{ backgroundColor: theme.backgroundTertiary }">
+                <uni-icons type="scissors" size="16" :color="theme.accent" />
+                <view class="split-row">
+                  <text class="split-label">拆分：</text>
+                  <text class="split-value">{{ formatSplit(word.split) }}</text>
+                </view>
+              </view>
+
+              <!-- 助记句 -->
+              <view v-if="word.mnemonic" class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }">
+                <uni-icons type="lightbulb" size="16" :color="theme.accent" />
+                <text class="mnemonic-text">
+                  <text class="mnemonic-label">助记：</text>{{ word.mnemonic }}
+                </text>
+              </view>
+              <view v-else class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }" @click="goToDetail(word.id)">
+                <uni-icons type="lightbulb" size="16" :color="theme.primary" />
+                <text class="mnemonic-text add-hint">+ 助记句</text>
+              </view>
+
+              <!-- 例句 -->
+              <text v-if="word.sentence" class="sentence">例句：{{ word.sentence }}</text>
             </view>
-          </swiper-item>
-        </swiper>
-
-        <!-- 分享按钮（正常流布局，非 fixed） -->
-        <view class="share-btn" @click="shareCurrentWord">
-          <uni-icons type="image" size="20" :color="theme.primary" />
-          <text>分享卡片</text>
-        </view>
-
-        <!-- 完成学习按钮（仅在最后一个单词显示） -->
-        <view v-if="currentIndex === words.length - 1" class="finish-container">
-          <view class="finish-btn" :style="{ backgroundColor: theme.primary }" @click="finishBrowsing">
-            <uni-icons type="checkmarkempty" size="20" color="#fff" />
-            <text>完成学习</text>
           </view>
+        </swiper-item>
+      </swiper>
+
+      <!-- 分享按钮 -->
+      <view class="share-btn" @click="shareCurrentWord">
+        <uni-icons type="image" size="20" :color="theme.primary" />
+        <text>分享卡片</text>
+      </view>
+
+      <!-- 滑动提示 -->
+      <view class="hint-container">
+        <text>← 滑动切换单词 →</text>
+      </view>
+
+      <!-- 完成学习按钮（仅在最后一个单词显示） -->
+      <view v-if="currentIndex === words.length - 1" class="finish-container">
+        <view class="finish-btn" :style="{ backgroundColor: theme.primary }" @click="finishBrowsing">
+          <uni-icons type="checkmarkempty" size="20" color="#fff" />
+          <text>完成学习</text>
         </view>
       </view>
     </view>
@@ -185,7 +188,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { useThemeStore } from '@/stores/theme';
 import Screen from '@/components/Screen.vue';
@@ -208,7 +211,7 @@ onLoad((query) => {
 const words = ref([]);
 const currentIndex = ref(0);
 const loading = ref(false);
-const browsingWords = ref([]); // 记录浏览过的单词ID
+const browsingWords = ref([]);
 const projectName = ref('');
 const projectDesc = ref('');
 const sharePopup = ref(null);
@@ -284,7 +287,6 @@ function wrapTextByChars(ctx, text, maxWidth, fontSize, maxCharsPerLine) {
     const metrics = ctx.measureText(testLine);
     const testWidth = metrics.width;
 
-    // 检查两个条件：宽度是否超过最大值，或者字符数是否超过限制
     const widthExceeded = testWidth > maxWidth;
     const charCountExceeded = currentLineChars >= maxCharsPerLine;
 
@@ -305,7 +307,7 @@ function wrapTextByChars(ctx, text, maxWidth, fontSize, maxCharsPerLine) {
   return lines;
 }
 
-// 生成图片并保存到相册 - 舒适的字体大小，每行最多15字
+// 生成图片并保存到相册
 const saveImageToAlbum = async () => {
   if (!currentWord.value) {
     sharePopup.value.close();
@@ -320,8 +322,8 @@ const saveImageToAlbum = async () => {
 
     const ctx = uni.createCanvasContext('shareCanvas');
     const canvasWidth = 700;
-    const canvasHeight = 1150; // 调整为1150px，增加区域间距
-    const padding = 45; // 略微减小padding，增加可用空间
+    const canvasHeight = 1150;
+    const padding = 45;
     let y = padding + 25;
 
     // 1. 绘制纯白背景
@@ -334,20 +336,18 @@ const saveImageToAlbum = async () => {
     ctx.shadowBlur = 15;
     ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
 
-    // 单词和词性 - 单词稍大
-    ctx.setFontSize(48); // 单词48px，突出重点
+    // 单词和词性
+    ctx.setFontSize(48);
     ctx.setFillStyle('#1F2937');
     const wordText = currentWord.value.word || 'Word';
     ctx.fillText(wordText, padding, y);
     const wordWidth = ctx.measureText(wordText).width;
 
-    // 词性标签
     if (currentWord.value.partOfSpeech) {
-      ctx.setFontSize(20); // 词性20px
+      ctx.setFontSize(20);
       const posText = currentWord.value.partOfSpeech;
       const posWidth = ctx.measureText(posText).width;
 
-      // 绘制圆角背景
       ctx.setFillStyle('rgba(99, 102, 241, 0.1)');
       const posPadding = 10;
       const posHeight = 32;
@@ -372,13 +372,13 @@ const saveImageToAlbum = async () => {
 
     // 3. 音标
     if (currentWord.value.phonetic) {
-      ctx.setFontSize(22); // 音标22px
+      ctx.setFontSize(22);
       ctx.setFillStyle('#6B7280');
       ctx.fillText(currentWord.value.phonetic, padding, y);
       y += 50;
     }
 
-    // 4. 释义（每行最多15字，36px字体）
+    // 4. 释义
     const definitionText = `${currentWord.value.definition || '输入/导入'}`;
     const definitionMaxWidth = canvasWidth - padding * 2;
     const definitionLines = wrapTextByChars(ctx, definitionText, definitionMaxWidth, 36, 15);
@@ -387,13 +387,12 @@ const saveImageToAlbum = async () => {
       ctx.setFontSize(36);
       ctx.setFillStyle('#1F2937');
       ctx.fillText(`释义：${line}`, padding, y);
-      y += 42; // 行间距
+      y += 42;
     });
     y += 30;
 
-    // 5. 拆分（每行最多15字，32px字体）
+    // 5. 拆分
     if (currentWord.value.split) {
-      // 绘制拆分背景
       ctx.setFillStyle('#F9FAFB');
       const splitHeight = 140;
       const splitY = y - 12;
@@ -408,17 +407,14 @@ const saveImageToAlbum = async () => {
       ctx.closePath();
       ctx.fill();
 
-      // 绘制剪刀图标
       ctx.setFillStyle('#8B5CF6');
       ctx.setFontSize(24);
       ctx.fillText('✂️', padding + 10, y + 16);
 
-      // 绘制拆分标签
       ctx.setFontSize(20);
       ctx.setFillStyle('#6B7280');
       ctx.fillText('拆分：', padding + 40, y + 16);
 
-      // 绘制拆分内容
       const splitContent = formatSplit(currentWord.value.split);
       const splitMaxWidth = canvasWidth - padding * 2 - 85;
       const splitLines = wrapTextByChars(ctx, splitContent, splitMaxWidth, 32, 15);
@@ -432,9 +428,8 @@ const saveImageToAlbum = async () => {
       y = splitY + splitHeight + 30;
     }
 
-    // 6. 助记（每行最多15字，32px字体）
+    // 6. 助记
     if (currentWord.value.mnemonic) {
-      // 绘制助记背景
       ctx.setFillStyle('#F9FAFB');
       const mnemonicHeight = 140;
       const mnemonicY = y - 12;
@@ -449,17 +444,14 @@ const saveImageToAlbum = async () => {
       ctx.closePath();
       ctx.fill();
 
-      // 绘制灯泡图标
       ctx.setFillStyle('#8B5CF6');
       ctx.setFontSize(24);
       ctx.fillText('💡', padding + 10, y + 16);
 
-      // 绘制助记标签
       ctx.setFontSize(20);
       ctx.setFillStyle('#6B7280');
       ctx.fillText('助记：', padding + 40, y + 16);
 
-      // 绘制助记内容
       const mnemonicContent = currentWord.value.mnemonic;
       const mnemonicMaxWidth = canvasWidth - padding * 2 - 85;
       const mnemonicLines = wrapTextByChars(ctx, mnemonicContent, mnemonicMaxWidth, 32, 15);
@@ -473,7 +465,7 @@ const saveImageToAlbum = async () => {
       y = mnemonicY + mnemonicHeight + 30;
     }
 
-    // 7. 例句（每行最多15字，30px字体）
+    // 7. 例句
     if (currentWord.value.sentence) {
       const sentenceText = currentWord.value.sentence;
       const sentenceMaxWidth = canvasWidth - padding * 2;
@@ -500,7 +492,6 @@ const saveImageToAlbum = async () => {
     const footerWidth = ctx.measureText(footerText).width;
     ctx.fillText(footerText, (canvasWidth - footerWidth) / 2, canvasHeight - 30);
 
-    // 绘制完成并保存
     ctx.draw(false, async () => {
       try {
         const tempFilePath = await new Promise((resolve, reject) => {
@@ -513,11 +504,9 @@ const saveImageToAlbum = async () => {
           });
         });
 
-        // 先保存到相册
         await saveTempImageToAlbum(tempFilePath);
         uni.hideLoading();
 
-        // 兼容处理：判断 API 是否存在
         if (uni.share && uni.share.sendWithSystem) {
           uni.showToast({ title: '卡片已保存，可分享', icon: 'success', duration: 1000 });
 
@@ -642,8 +631,6 @@ const hexToRgba = (hex, alpha) => {
 <style scoped>
 .container {
   flex: 1;
-  display: flex;
-  flex-direction: column;
 }
 .top-bar {
   display: flex;
@@ -684,20 +671,12 @@ const hexToRgba = (hex, alpha) => {
   gap: 24rpx;
   color: v-bind('theme.textMuted');
 }
-/* 内容区域：包含 swiper 和按钮 */
-.content-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
 .card-swiper {
   flex: 1;
-  min-height: 700rpx;
+  padding: 0 20rpx 24rpx 20rpx;
 }
 .card-wrapper {
-  padding: 0 32rpx;
-  box-sizing: border-box;
+  padding: 24rpx;
 }
 .word-card {
   border-radius: 32rpx;
@@ -771,7 +750,6 @@ const hexToRgba = (hex, alpha) => {
   color: v-bind('theme.textPrimary');
   line-height: 48rpx;
 }
-/* 拆分 - 完全照搬刷单词页面样式 */
 .split-section {
   flex-direction: row;
   align-items: center;
@@ -797,7 +775,6 @@ const hexToRgba = (hex, alpha) => {
   color: v-bind('theme.textSecondary');
   text-align: left;
 }
-/* 助记句 - 完全照搬刷单词页面样式 */
 .mnemonic-section {
   flex-direction: row;
   align-items: flex-start;
@@ -825,7 +802,6 @@ const hexToRgba = (hex, alpha) => {
   color: v-bind('theme.textMuted');
   font-style: italic;
 }
-/* 分享按钮 - 正常流布局，非 fixed */
 .share-btn {
   display: flex;
   align-items: center;
@@ -834,7 +810,15 @@ const hexToRgba = (hex, alpha) => {
   padding: 24rpx;
   border-radius: 48rpx;
   background-color: v-bind('theme.backgroundTertiary');
-  margin: 24rpx 32rpx;
+  margin: 0 32rpx 16rpx 32rpx;
+}
+.hint-container {
+  align-items: center;
+  padding: 16rpx 0;
+}
+.hint-container text {
+  font-size: 24rpx;
+  color: v-bind('theme.textMuted');
 }
 .finish-container {
   padding: 0 32rpx 32rpx 32rpx;
