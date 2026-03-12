@@ -1,0 +1,506 @@
+import { StyleSheet, Dimensions } from 'react-native';
+import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+export const createStyles = (theme: Theme) => {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: Spacing.md,
+    },
+    loadingText: {
+      marginTop: Spacing.sm,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    emptyTitle: {
+      marginTop: Spacing.lg,
+    },
+    emptyText: {
+      marginTop: Spacing.sm,
+      textAlign: 'center',
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: Spacing.lg,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    placeholder: {
+      width: 40,
+    },
+    progressContainer: {
+      paddingHorizontal: Spacing.lg,
+      marginBottom: Spacing.lg,
+    },
+    progressBar: {
+      height: 4,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.full,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: theme.primary,
+      borderRadius: BorderRadius.full,
+    },
+    cardContainer: {
+      flex: 1,
+      padding: Spacing.lg,
+      justifyContent: 'center',
+    },
+    scrollContainer: {
+      paddingHorizontal: 20, // 固定 20px padding，与 CARD_WIDTH 计算（SCREEN_WIDTH - 40）对应
+      paddingVertical: Spacing.lg,
+      flexGrow: 1,
+    },
+    cardWrapper: {
+      marginRight: 20, // 固定 20px，与 CARD_SPACING 对应
+    },
+    wordCard: {
+      padding: Spacing.xl,
+      borderRadius: BorderRadius.xl,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 8, // Android 阴影
+      gap: Spacing.md,
+    },
+    wordPartOfSpeechRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      flexWrap: 'wrap',
+    },
+    wordInfoLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      flex: 1,
+    },
+    wordText: {
+      textAlign: 'center',
+    },
+    inlinePartOfSpeech: {
+      fontSize: 14,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      backgroundColor: `${theme.primary}15`,
+      borderRadius: 8,
+    },
+    addPartOfSpeechButton: {
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      backgroundColor: `${theme.backgroundTertiary}`,
+      borderRadius: 8,
+    },
+    addPartOfSpeechText: {
+      fontSize: 14,
+    },
+    statusTags: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    // 已掌握标签
+    masteredTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: `${theme.success}15`,
+    },
+    masteredTagText: {
+      fontSize: 11,
+    },
+    // 待编辑标签
+    incompleteTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: `${theme.warning}15`,
+    },
+    incompleteTagText: {
+      fontSize: 11,
+    },
+    wordSection: {
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
+    phonetic: {
+      textAlign: 'center',
+    },
+    splitSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+    },
+    splitRow: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    splitLabel: {
+      minWidth: 60,
+    },
+    splitValue: {
+      flex: 1,
+      textAlign: 'left',
+    },
+    mnemonicSection: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+    },
+    mnemonicText: {
+      flex: 1,
+      lineHeight: 22,
+    },
+    partOfSpeech: {
+      marginBottom: Spacing.xs,
+    },
+    definitionSection: {
+      gap: Spacing.md,
+    },
+    sentence: {
+      marginTop: Spacing.sm,
+      fontStyle: 'italic',
+      color: theme.textMuted,
+    },
+    missingField: {
+      color: theme.primary,
+      textDecorationLine: 'underline',
+    },
+    hintContainer: {
+      alignItems: 'center',
+      paddingVertical: Spacing.md,
+    },
+    shareButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.xl,
+      borderRadius: BorderRadius.lg,
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+    },
+    finishButtonContainer: {
+      padding: Spacing.lg,
+    },
+    finishButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.lg,
+      paddingHorizontal: Spacing.xl,
+      borderRadius: BorderRadius.lg,
+    },
+    finishButtonText: {
+      fontWeight: '600',
+    },
+    // Alert Modal 样式
+    alertOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    alertContent: {
+      width: '100%',
+      maxWidth: 400,
+      padding: Spacing.xl,
+      borderRadius: BorderRadius['4xl'],
+      alignItems: 'center',
+    },
+    alertIconContainer: {
+      marginBottom: Spacing.md,
+    },
+    alertTitle: {
+      marginBottom: Spacing.sm,
+      textAlign: 'center',
+    },
+    alertMessage: {
+      marginBottom: Spacing.lg,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    alertButton: {
+      width: '100%',
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+    },
+    alertButtons: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      width: '100%',
+    },
+    alertButtonCancel: {
+      flex: 1,
+    },
+    // Modal 样式
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: theme.backgroundRoot,
+      borderTopLeftRadius: BorderRadius['4xl'],
+      borderTopRightRadius: BorderRadius['4xl'],
+      maxHeight: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: Spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
+    },
+    modalBody: {
+      padding: Spacing.lg,
+      maxHeight: 300,
+    },
+    modalFooter: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      padding: Spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderLight,
+    },
+    inputGroup: {
+      marginBottom: Spacing.lg,
+    },
+    inputLabel: {
+      marginBottom: Spacing.sm,
+    },
+    input: {
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    textArea: {
+      height: 80,
+      textAlignVertical: 'top',
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+    },
+    cancelButton: {
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    submitButton: {
+      borderWidth: 1,
+      borderColor: theme.primary,
+    },
+    // 分享弹窗样式
+    shareModalContent: {
+      width: '100%',
+      maxWidth: 400,
+      backgroundColor: theme.backgroundRoot,
+      borderRadius: BorderRadius['2xl'],
+      overflow: 'hidden',
+    },
+    shareModalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: Spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
+    },
+    shareOptionsContainer: {
+      padding: Spacing.md,
+    },
+    shareOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      backgroundColor: theme.backgroundTertiary,
+      marginBottom: Spacing.md,
+    },
+    shareOptionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: BorderRadius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: Spacing.md,
+    },
+    shareOptionInfo: {
+      flex: 1,
+    },
+    shareOptionTitle: {
+      marginBottom: 4,
+      fontWeight: '600',
+    },
+    shareOptionDesc: {
+      fontSize: 12,
+    },
+    shareCancelButton: {
+      padding: Spacing.md,
+      alignItems: 'center',
+      borderTopWidth: 1,
+      borderTopColor: theme.borderLight,
+    },
+    // 分享卡片样式（白色背景，深色字体）
+    shareCardContainer: {
+      width: SCREEN_WIDTH - 40,
+      backgroundColor: '#FFFFFF',
+      padding: Spacing.xl,
+      borderRadius: BorderRadius.xl,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    // 单词和词性 - 水平排列
+    shareWordPartOfSpeechRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    shareWordInfoLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
+    shareWord: {
+      fontSize: 36,
+      fontWeight: 'bold',
+      color: '#1F2937',
+    },
+    sharePartOfSpeech: {
+      fontSize: 14,
+      color: '#6366F1',
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+      borderRadius: 8,
+    },
+    shareStatusTags: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    shareMasteredTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      backgroundColor: 'rgba(5, 150, 105, 0.1)',
+      borderRadius: 8,
+    },
+    shareMasteredTagText: {
+      fontSize: 12,
+      color: '#059669',
+      fontWeight: '600',
+    },
+    sharePhonetic: {
+      fontSize: 16,
+      color: '#6B7280',
+      marginBottom: Spacing.md,
+    },
+    shareDefinitionSection: {
+      marginBottom: Spacing.md,
+    },
+    shareDefinition: {
+      fontSize: 16,
+      color: '#1F2937',
+      lineHeight: 24,
+    },
+    shareLabel: {
+      color: '#6B7280',
+      fontWeight: '600',
+    },
+    shareSplitSection: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+      backgroundColor: '#F9FAFB',
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.md,
+    },
+    shareSplitText: {
+      flex: 1,
+      fontSize: 14,
+      color: '#374151',
+      lineHeight: 20,
+    },
+    shareMnemonicSection: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+      backgroundColor: '#F9FAFB',
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.md,
+    },
+    shareMnemonicText: {
+      flex: 1,
+      fontSize: 14,
+      color: '#374151',
+      lineHeight: 20,
+    },
+    shareSentence: {
+      fontSize: 13,
+      color: '#374151',
+      lineHeight: 18,
+      marginBottom: Spacing.lg,
+      fontStyle: 'italic',
+    },
+    shareCardFooter: {
+      marginTop: Spacing.xl,
+      paddingTop: Spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: '#E5E7EB',
+      alignItems: 'center',
+    },
+    shareFooterText: {
+      fontSize: 12,
+      color: '#9CA3AF',
+    },
+  });
+};
