@@ -39,7 +39,7 @@
         :circular="false"
       >
         <swiper-item v-for="(word, idx) in words" :key="word.id">
-          <scroll-view class="card-wrapper" scroll-y>
+          <view class="card-wrapper">
             <view
               class="word-card"
               :style="{ backgroundColor: theme.backgroundDefault }"
@@ -74,53 +74,45 @@
               <!-- 拆分 -->
               <view v-if="word.split" class="split-section" :style="{ backgroundColor: theme.backgroundTertiary }">
                 <uni-icons type="scissors" size="16" :color="theme.accent" />
-                <view class="split-row">
-                  <text class="split-label">拆分：</text>
-                  <text class="split-value">{{ formatSplit(word.split) }}</text>
-                </view>
+                <text class="split-label">拆分：</text>
+                <text class="split-value">{{ formatSplit(word.split) }}</text>
               </view>
 
               <!-- 助记句 -->
               <view v-if="word.mnemonic" class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }">
                 <uni-icons type="lightbulb" size="16" :color="theme.accent" />
-                <text class="mnemonic-text">
-                  <text class="mnemonic-label">助记：</text>{{ word.mnemonic }}
-                </text>
-              </view>
-              <view v-else class="mnemonic-section" :style="{ backgroundColor: theme.backgroundTertiary }" @click="goToDetail(word.id)">
-                <uni-icons type="lightbulb" size="16" :color="theme.primary" />
-                <text class="mnemonic-text add-hint">+ 助记句</text>
+                <text class="mnemonic-label">助记：</text>
+                <text class="mnemonic">{{ word.mnemonic }}</text>
               </view>
 
               <!-- 例句 -->
               <text v-if="word.sentence" class="sentence">例句：{{ word.sentence }}</text>
             </view>
-          </scroll-view>
+          </view>
         </swiper-item>
       </swiper>
 
-      <!-- 滑动提示 -->
-      <view class="hint-container">
-        <text>← 滑动切换单词 →</text>
-      </view>
-
-      <!-- 底部区域（占位，避免内容被固定按钮遮挡） -->
-      <view class="bottom-spacer"></view>
-
-      <!-- 分享按钮（固定在底部，仅在非最后一个单词时显示） -->
-      <view v-if="currentIndex < words.length - 1" class="share-btn-fixed" @click="shareCurrentWord">
+      <!-- 分享按钮（修改文案：保存单词卡片 → 分享卡片） -->
+      <view class="share-btn" @click="shareCurrentWord">
         <uni-icons type="image" size="20" :color="theme.primary" />
         <text>分享卡片</text>
       </view>
 
-      <!-- 完成学习按钮（仅在最后一个单词显示，固定在底部） -->
-      <view v-if="currentIndex === words.length - 1" class="finish-btn-fixed" @click="finishBrowsing">
-        <uni-icons type="checkmarkempty" size="20" color="#fff" />
-        <text>完成学习</text>
+      <!-- 滑动提示 -->
+      <view class="hint">
+        <text>← 滑动切换单词 →</text>
+      </view>
+
+      <!-- 完成学习按钮（仅在最后一个单词显示） -->
+      <view v-if="currentIndex === words.length - 1" class="finish-container">
+        <view class="finish-btn" :style="{ backgroundColor: theme.primary }" @click="finishBrowsing">
+          <uni-icons type="checkmarkempty" size="20" color="#fff" />
+          <text>完成学习</text>
+        </view>
       </view>
     </view>
 
-    <!-- 分享选项弹窗 -->
+    <!-- 分享选项弹窗（简化为仅保存相册） -->
     <uni-popup ref="sharePopup" type="bottom">
       <view class="share-modal" :style="{ backgroundColor: theme.backgroundRoot }">
         <view class="share-header">
@@ -183,13 +175,13 @@
       v-if="currentWord"
       canvas-id="shareCanvas"
       id="shareCanvas"
-      style="position: absolute; left: -9999px; top: 0; width: 700px; height: 1150px;"
+      style="position: absolute; left: -9999px; top: 0; width: 600px; height: 800px;"
     ></canvas>
   </Screen>
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { useThemeStore } from '@/stores/theme';
 import Screen from '@/components/Screen.vue';
@@ -212,7 +204,7 @@ onLoad((query) => {
 const words = ref([]);
 const currentIndex = ref(0);
 const loading = ref(false);
-const browsingWords = ref([]);
+const browsingWords = ref([]); // 记录浏览过的单词ID
 const projectName = ref('');
 const projectDesc = ref('');
 const sharePopup = ref(null);
@@ -249,7 +241,34 @@ const loadWords = async () => {
 
 // 格式化拆分显示
 const formatSplit = (splitStr) => {
-  return formatSplitStringForDisplay(splitStr);
+  if (!splitStr || !splitStr.trim()) {
+    return '';
+  }
+
+  try {
+    // 使用 '。' 分割每一组
+    const groups = splitStr.split('。').filter(g => g.trim());
+
+    // 对每一组，使用 ',' 分割英文和中文，然后用 '-' 连接
+    const formattedGroups = groups.map(group => {
+      const parts = group.split(',');
+      if (parts.length >= 2) {
+        const code = parts[0].trim();
+        const content = parts.slice(1).join(',').trim();
+        return `${code}-${content}`;
+      } else if (parts.length === 1) {
+        // 如果只有一部分，直接返回（容错处理）
+        return parts[0].trim();
+      }
+      return '';
+    });
+
+    // 使用四个空格连接所有组
+    return formattedGroups.filter(g => g).join('    ');
+  } catch (error) {
+    console.error('格式化拆分字符串失败:', error);
+    return splitStr; // 格式化失败时返回原字符串
+  }
 };
 
 // swiper 切换事件
@@ -260,239 +279,156 @@ const onSwiperChange = (e) => {
 // 返回
 const goBack = () => uni.navigateBack();
 
-// 跳转到详情页
-const goToDetail = (wordId) => {
-  uni.navigateTo({
-    url: `/pages/word-detail?id=${wordId}`
-  });
-};
-
 // 打开保存弹窗
 const shareCurrentWord = () => {
   if (!currentWord.value) return;
   sharePopup.value.open();
 };
 
-// 文本自动换行函数（基于最大字符数限制）
-function wrapTextByChars(ctx, text, maxWidth, fontSize, maxCharsPerLine) {
-  const chars = text.split('');
-  const lines = [];
-  let currentLine = '';
-  let currentLineChars = 0;
-
-  ctx.setFontSize(fontSize);
-
-  for (let i = 0; i < chars.length; i++) {
-    const char = chars[i];
-    const testLine = currentLine + char;
-    const metrics = ctx.measureText(testLine);
-    const testWidth = metrics.width;
-
-    const widthExceeded = testWidth > maxWidth;
-    const charCountExceeded = currentLineChars >= maxCharsPerLine;
-
-    if ((widthExceeded || charCountExceeded) && currentLineChars > 0) {
-      lines.push(currentLine);
-      currentLine = char;
-      currentLineChars = 1;
-    } else {
-      currentLine = testLine;
-      currentLineChars++;
-    }
-  }
-
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  return lines;
-}
-
-// 生成图片并保存到相册
+// 生成图片并保存到相册 + 兼容式分享
 const saveImageToAlbum = async () => {
   if (!currentWord.value) {
     sharePopup.value.close();
     return;
   }
 
-  uni.showLoading({ title: '生成分享卡片...' });
+  uni.showLoading({ title: '生成分享卡片...' }); // 修改文案：生成单词卡片 → 生成分享卡片
   sharePopup.value.close();
 
   try {
     await nextTick();
 
     const ctx = uni.createCanvasContext('shareCanvas');
-    const canvasWidth = 700;
-    const canvasHeight = 1150;
-    const padding = 45;
-    let y = padding + 25;
+    const canvasWidth = 900;
+    const canvasHeight = 1060;
+    const padding = 40;
+    let y = padding + 60;
 
     // 1. 绘制纯白背景
     ctx.setFillStyle('#FFFFFF');
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // 2. 绘制阴影效果
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 5;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-
-    // 单词和词性
-    ctx.setFontSize(48);
-    ctx.setFillStyle('#1F2937');
+    // 2. 绘制单词（加粗大号字体）
+    ctx.setFontSize(60);
+    ctx.setFillStyle('#111827');
     const wordText = currentWord.value.word || 'Word';
     ctx.fillText(wordText, padding, y);
     const wordWidth = ctx.measureText(wordText).width;
 
-    if (currentWord.value.partOfSpeech) {
-      ctx.setFontSize(20);
-      const posText = currentWord.value.partOfSpeech;
-      const posWidth = ctx.measureText(posText).width;
-
-      ctx.setFillStyle('rgba(99, 102, 241, 0.1)');
-      const posPadding = 10;
-      const posHeight = 32;
-      const posX = padding + wordWidth + 10;
-      const posY = y - 26;
-      const radius = 10;
-
-      ctx.beginPath();
-      ctx.moveTo(posX + radius, posY);
-      ctx.arcTo(posX + posWidth + posPadding * 2, posY, posX + posWidth + posPadding * 2, posY + posHeight, radius);
-      ctx.arcTo(posX + posWidth + posPadding * 2, posY + posHeight, posX, posY + posHeight, radius);
-      ctx.arcTo(posX, posY + posHeight, posX, posY, radius);
-      ctx.arcTo(posX, posY, posX + radius, posY, radius);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.setFillStyle('#6366F1');
-      ctx.fillText(posText, posX + posPadding, posY + 22);
-    }
-
+    // 3. 【核心修改】绘制词性标签
+    // 规则：严格按照传入的词性展示，不追加中文解释，完全还原参考图样式
+    const posAbbr = currentWord.value.partOfSpeech || 'n'; // 默认n
+    const posFullText = `${posAbbr}.`; // 格式改为：pron. / n. / v. （去掉多余的中文）
+    
+    ctx.setFontSize(26);
+    const labelWidth = ctx.measureText(posFullText).width;
+    
+    // 绘制圆角背景（浅紫/淡蓝色，和参考图一致）
+    ctx.setFillStyle('#EDE9FE'); // 浅紫色，可根据需要调整为 #F0F5FF 等浅蓝
+    const labelRadius = 16;
+    const labelX = padding + wordWidth + 20;
+    const labelY = y - 35;
+    const labelHeight = 40; // 固定标签高度
+    
+    ctx.beginPath();
+    ctx.moveTo(labelX + labelRadius, labelY);
+    ctx.arcTo(labelX + labelWidth + 20, labelY, labelX + labelWidth + 20, labelY + labelHeight, labelRadius);
+    ctx.arcTo(labelX + labelWidth + 20, labelY + labelHeight, labelX, labelY + labelHeight, labelRadius);
+    ctx.arcTo(labelX, labelY + labelHeight, labelX, labelY, labelRadius);
+    ctx.closePath();
+    ctx.fill();
+    
+    // 绘制词性文字（紫色，和参考图一致）
+    ctx.setFillStyle('#7C3AED');
+    ctx.fillText(posFullText, labelX + 10, labelY + 28); // 微调X轴偏移让文字居中
+    
     y += 60;
 
-    // 3. 音标
-    if (currentWord.value.phonetic) {
-      ctx.setFontSize(22);
-      ctx.setFillStyle('#6B7280');
-      ctx.fillText(currentWord.value.phonetic, padding, y);
-      y += 50;
-    }
-
-    // 4. 释义
-    const definitionText = `${currentWord.value.definition || '输入/导入'}`;
-    const definitionMaxWidth = canvasWidth - padding * 2;
-    const definitionLines = wrapTextByChars(ctx, definitionText, definitionMaxWidth, 36, 15);
-
-    definitionLines.forEach(line => {
-      ctx.setFontSize(36);
-      ctx.setFillStyle('#1F2937');
-      ctx.fillText(`释义：${line}`, padding, y);
-      y += 42;
-    });
-    y += 30;
-
-    // 5. 拆分
-    if (currentWord.value.split) {
-      ctx.setFillStyle('#F9FAFB');
-      const splitHeight = 140;
-      const splitY = y - 12;
-      const radius = 10;
-
-      ctx.beginPath();
-      ctx.moveTo(padding + radius, splitY);
-      ctx.arcTo(canvasWidth - padding, splitY, canvasWidth - padding, splitY + radius, radius);
-      ctx.arcTo(canvasWidth - padding, splitY + splitHeight, canvasWidth - padding - radius, splitY + splitHeight, radius);
-      ctx.arcTo(padding, splitY + splitHeight, padding, splitY + splitHeight - radius, radius);
-      ctx.arcTo(padding, splitY, padding + radius, splitY, radius);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.setFillStyle('#8B5CF6');
-      ctx.setFontSize(24);
-      ctx.fillText('✂️', padding + 10, y + 16);
-
-      ctx.setFontSize(20);
-      ctx.setFillStyle('#6B7280');
-      ctx.fillText('拆分：', padding + 40, y + 16);
-
-      const splitContent = formatSplit(currentWord.value.split);
-      const splitMaxWidth = canvasWidth - padding * 2 - 85;
-      const splitLines = wrapTextByChars(ctx, splitContent, splitMaxWidth, 32, 15);
-
-      splitLines.forEach((line, index) => {
-        ctx.setFontSize(32);
-        ctx.setFillStyle('#374151');
-        ctx.fillText(line, padding + 95, y + 16 + index * 38);
-      });
-
-      y = splitY + splitHeight + 30;
-    }
-
-    // 6. 助记
-    if (currentWord.value.mnemonic) {
-      ctx.setFillStyle('#F9FAFB');
-      const mnemonicHeight = 140;
-      const mnemonicY = y - 12;
-      const radius = 10;
-
-      ctx.beginPath();
-      ctx.moveTo(padding + radius, mnemonicY);
-      ctx.arcTo(canvasWidth - padding, mnemonicY, canvasWidth - padding, mnemonicY + radius, radius);
-      ctx.arcTo(canvasWidth - padding, mnemonicY + mnemonicHeight, canvasWidth - padding - radius, mnemonicY + mnemonicHeight, radius);
-      ctx.arcTo(padding, mnemonicY + mnemonicHeight, padding, mnemonicY + mnemonicHeight - radius, radius);
-      ctx.arcTo(padding, mnemonicY, padding + radius, mnemonicY, radius);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.setFillStyle('#8B5CF6');
-      ctx.setFontSize(24);
-      ctx.fillText('💡', padding + 10, y + 16);
-
-      ctx.setFontSize(20);
-      ctx.setFillStyle('#6B7280');
-      ctx.fillText('助记：', padding + 40, y + 16);
-
-      const mnemonicContent = currentWord.value.mnemonic;
-      const mnemonicMaxWidth = canvasWidth - padding * 2 - 85;
-      const mnemonicLines = wrapTextByChars(ctx, mnemonicContent, mnemonicMaxWidth, 32, 15);
-
-      mnemonicLines.forEach((line, index) => {
-        ctx.setFontSize(32);
-        ctx.setFillStyle('#374151');
-        ctx.fillText(line, padding + 95, y + 16 + index * 38);
-      });
-
-      y = mnemonicY + mnemonicHeight + 30;
-    }
-
-    // 7. 例句
-    if (currentWord.value.sentence) {
-      const sentenceText = currentWord.value.sentence;
-      const sentenceMaxWidth = canvasWidth - padding * 2;
-      const sentenceLines = wrapTextByChars(ctx, sentenceText, sentenceMaxWidth, 30, 15);
-
-      sentenceLines.forEach(line => {
-        ctx.setFontSize(30);
-        ctx.setFillStyle('#374151');
-        ctx.fillText(`例句：${line}`, padding, y);
-        y += 36;
-      });
-      y += 30;
-    }
-
-    // 8. 底部分割线
-    ctx.setFillStyle('#E5E7EB');
-    ctx.fillRect(padding, y, canvasWidth - padding * 2, 1);
+    // 4. 绘制音标（反向显示）
+    const phoneticText = currentWord.value.phonetic || '';
+    const reversePhonetic = phoneticText.split('').reverse().join('');
+    ctx.setFontSize(32);
+    ctx.setFillStyle('#9CA3AF');
+    ctx.fillText(reversePhonetic, padding, y);
     y += 50;
 
-    // 9. 底部信息
-    ctx.setFontSize(16);
-    ctx.setFillStyle('#9CA3AF');
-    const footerText = '来自单词学习助手';
-    const footerWidth = ctx.measureText(footerText).width;
-    ctx.fillText(footerText, (canvasWidth - footerWidth) / 2, canvasHeight - 30);
+    // 5. 绘制释义
+    ctx.setFontSize(32);
+    ctx.setFillStyle('#4B5563');
+    const definitionText = `释义：${currentWord.value.definition || '输入/导入'}`;
+    ctx.fillText(definitionText, padding, y);
+    y += 60;
 
+    // 6. 绘制拆分模块（保持你要求的 4空格 分隔）
+    if (currentWord.value.split) {
+      ctx.setFillStyle('#F9FAFB');
+      const moduleRadius = 16;
+      const moduleX = padding;
+      const moduleY = y - 10;
+      const moduleW = canvasWidth - 2 * padding;
+      const moduleH = 100;
+      
+      ctx.beginPath();
+      ctx.moveTo(moduleX + moduleRadius, moduleY);
+      ctx.arcTo(moduleX + moduleW, moduleY, moduleX + moduleW, moduleY + moduleRadius, moduleRadius);
+      ctx.arcTo(moduleX + moduleW, moduleY + moduleH, moduleX + moduleW - moduleRadius, moduleY + moduleH, moduleRadius);
+      ctx.arcTo(moduleX, moduleY + moduleH, moduleX, moduleY + moduleH - moduleRadius, moduleRadius);
+      ctx.arcTo(moduleX, moduleY, moduleX + moduleRadius, moduleY, moduleRadius);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.setFillStyle('#A855F7');
+      ctx.setFontSize(32);
+      ctx.fillText('✂️', padding + 10, y + 25);
+      
+      ctx.setFontSize(28);
+      ctx.setFillStyle('#4B5563');
+      ctx.fillText('拆分：', padding + 50, y + 25);
+      
+      // 拆分内容格式化（使用与页面显示相同的逻辑）
+      let splitContent = formatSplit(currentWord.value.split);
+      ctx.fillText(splitContent, padding + 130, y + 25);
+      y = moduleY + moduleH + 30;
+    }
+
+    // 7. 绘制助记模块
+    if (currentWord.value.mnemonic) {
+      ctx.setFillStyle('#F9FAFB');
+      const moduleRadius = 16;
+      const moduleX = padding;
+      const moduleY = y - 10;
+      const moduleW = canvasWidth - 2 * padding;
+      const moduleH = 100;
+      
+      ctx.beginPath();
+      ctx.moveTo(moduleX + moduleRadius, moduleY);
+      ctx.arcTo(moduleX + moduleW, moduleY, moduleX + moduleW, moduleY + moduleRadius, moduleRadius);
+      ctx.arcTo(moduleX + moduleW, moduleY + moduleH, moduleX + moduleW - moduleRadius, moduleY + moduleH, moduleRadius);
+      ctx.arcTo(moduleX, moduleY + moduleH, moduleX, moduleY + moduleH - moduleRadius, moduleRadius);
+      ctx.arcTo(moduleX, moduleY, moduleX + moduleRadius, moduleY, moduleRadius);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.setFillStyle('#A855F7');
+      ctx.setFontSize(32);
+      ctx.fillText('💡', padding + 10, y + 25);
+      
+      ctx.setFontSize(28);
+      ctx.setFillStyle('#4B5563');
+      ctx.fillText('助记：', padding + 50, y + 25);
+      
+      ctx.fillText(currentWord.value.mnemonic, padding + 130, y + 25);
+      y = moduleY + moduleH + 40;
+    }
+
+    // 8. 绘制底部来源
+    ctx.setFontSize(24);
+    ctx.setFillStyle('#9CA3AF');
+    const sourceText = '来自单词学习助手';
+    const sourceWidth = ctx.measureText(sourceText).width;
+    ctx.fillText(sourceText, (canvasWidth - sourceWidth) / 2, canvasHeight - 40);
+
+    // 绘制完成并保存
     ctx.draw(false, async () => {
       try {
         const tempFilePath = await new Promise((resolve, reject) => {
@@ -505,24 +441,28 @@ const saveImageToAlbum = async () => {
           });
         });
 
+        // 先保存到相册
         await saveTempImageToAlbum(tempFilePath);
         uni.hideLoading();
 
+        // ✅ 兼容处理：判断 API 是否存在
         if (uni.share && uni.share.sendWithSystem) {
+          // 支持系统分享的环境：唤起原生分享面板
           uni.showToast({ title: '卡片已保存，可分享', icon: 'success', duration: 1000 });
-
+          
           setTimeout(() => {
             uni.share.sendWithSystem({
               type: 'image',
-              href: '',
+              href: '', // 分享图片时留空
               title: `单词卡片 - ${currentWord.value.word}`,
               summary: `我在单词学习助手学到了 ${currentWord.value.word}，分享给你！`,
-              imageUrl: tempFilePath,
+              imageUrl: tempFilePath, // 要分享的图片路径
               success: () => {
                 uni.showToast({ title: '分享成功', icon: 'success' });
               },
               fail: (err) => {
                 console.error('分享失败', err);
+                // 分享取消不提示失败，仅真正失败时提示
                 if (!err.errMsg.includes('cancel')) {
                   uni.showToast({ title: '分享失败', icon: 'none' });
                 }
@@ -530,6 +470,7 @@ const saveImageToAlbum = async () => {
             });
           }, 1000);
         } else {
+          // 不支持系统分享的环境：提示用户手动分享
           uni.showModal({
             title: '分享成功',
             content: '单词卡片已保存到相册，你可以在相册中找到该图片并手动分享给好友~',
@@ -551,7 +492,7 @@ const saveImageToAlbum = async () => {
   }
 };
 
-// 保存权限方法
+// 保存权限方法不变
 const saveTempImageToAlbum = async (tempFilePath) => {
   try {
     await uni.saveImageToPhotosAlbum({ filePath: tempFilePath });
@@ -561,7 +502,7 @@ const saveTempImageToAlbum = async (tempFilePath) => {
       if (!settingRes.authSetting['scope.writePhotosAlbum']) {
         uni.showModal({
           title: '需要相册权限',
-          content: '请允许访问相册，以便保存分享卡片',
+          content: '请允许访问相册，以便保存分享卡片', // 修改文案：保存单词卡片 → 保存分享卡片
           confirmText: '去设置',
           success: (res) => {
             if (res.confirm) uni.openSetting();
@@ -578,8 +519,10 @@ const saveTempImageToAlbum = async (tempFilePath) => {
 // 完成学习
 const finishBrowsing = () => {
   if (projectId.value) {
+    // 在词库中刷单词，直接返回
     uni.navigateBack();
   } else {
+    // 询问是否创建复习项目
     uni.showModal({
       title: '学习完成',
       content: '您已浏览完所有单词。是否要将这些单词创建为一个复习项目？',
@@ -632,9 +575,6 @@ const hexToRgba = (hex, alpha) => {
 <style scoped>
 .container {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  position: relative;
 }
 .top-bar {
   display: flex;
@@ -677,16 +617,15 @@ const hexToRgba = (hex, alpha) => {
 }
 .card-swiper {
   flex: 1;
-  height: 0;
+  min-height: 700rpx;
 }
 .card-wrapper {
-  height: 100%;
-  padding: 24rpx;
+  padding: 0 32rpx;
   box-sizing: border-box;
 }
 .word-card {
   border-radius: 32rpx;
-  padding: 40rpx 40rpx 200rpx 40rpx;
+  padding: 40rpx;
   box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.1);
 }
 .word-header {
@@ -756,97 +695,56 @@ const hexToRgba = (hex, alpha) => {
   color: v-bind('theme.textPrimary');
   line-height: 48rpx;
 }
-.split-section {
-  flex-direction: row;
-  align-items: center;
-  gap: 16rpx;
-  padding: 24rpx;
-  border-radius: 24rpx;
-  margin-bottom: 24rpx;
-}
-.split-row {
-  flex: 1;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-}
-.split-label {
-  min-width: 120rpx;
-  font-size: 28rpx;
-  color: v-bind('theme.textMuted');
-}
-.split-value {
-  flex: 1;
-  font-size: 28rpx;
-  color: v-bind('theme.textSecondary');
-  text-align: left;
-}
-.mnemonic-section {
-  flex-direction: row;
+.split-section, .mnemonic-section {
+  display: flex;
   align-items: flex-start;
   gap: 16rpx;
   padding: 24rpx;
   border-radius: 24rpx;
   margin-bottom: 24rpx;
 }
-.mnemonic-text {
+.split-label, .mnemonic-label {
+  font-size: 28rpx;
+  color: v-bind('theme.textMuted');
+  white-space: nowrap;
+}
+.split-value, .mnemonic {
   flex: 1;
   font-size: 28rpx;
   color: v-bind('theme.textSecondary');
-  text-align: left;
-  line-height: 44rpx;
-}
-.mnemonic-label {
-  font-size: 28rpx;
-  color: v-bind('theme.textMuted');
-}
-.add-hint {
-  color: v-bind('theme.primary');
+  line-height: 40rpx;
 }
 .sentence {
   font-size: 28rpx;
   color: v-bind('theme.textMuted');
   font-style: italic;
 }
-.hint-container {
-  align-items: center;
-  padding: 16rpx 0;
-}
-.hint-container text {
-  font-size: 24rpx;
-  color: v-bind('theme.textMuted');
-}
-.bottom-spacer {
-  height: 120rpx;
-}
-.share-btn-fixed {
-  position: fixed;
-  left: 32rpx;
-  right: 32rpx;
-  bottom: 32rpx;
+.share-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 16rpx;
+  margin: 32rpx;
   padding: 24rpx;
   border-radius: 48rpx;
   background-color: v-bind('theme.backgroundTertiary');
-  z-index: 100;
 }
-.finish-btn-fixed {
-  position: fixed;
-  left: 32rpx;
-  right: 32rpx;
-  bottom: 32rpx;
+.hint {
+  text-align: center;
+  color: v-bind('theme.textMuted');
+  margin-bottom: 32rpx;
+}
+.finish-container {
+  padding: 32rpx;
+}
+.finish-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 16rpx;
   padding: 24rpx;
   border-radius: 48rpx;
-  background-color: v-bind('theme.primary');
   color: #fff;
-  z-index: 101;
 }
 .share-modal, .project-modal {
   border-top-left-radius: 32rpx;
@@ -949,5 +847,8 @@ const hexToRgba = (hex, alpha) => {
 .cancel-btn {
   background-color: v-bind('theme.backgroundTertiary');
   color: v-bind('theme.textPrimary');
+}
+.submit-btn {
+  color: v-bind('theme.buttonPrimaryText');
 }
 </style>
