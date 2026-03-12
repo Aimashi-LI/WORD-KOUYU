@@ -99,23 +99,24 @@
         </swiper-item>
       </swiper>
 
-      <!-- 分享按钮 -->
-      <view class="share-btn" @click="shareCurrentWord">
-        <uni-icons type="image" size="20" :color="theme.primary" />
-        <text>分享卡片</text>
-      </view>
-
       <!-- 滑动提示 -->
       <view class="hint-container">
         <text>← 滑动切换单词 →</text>
       </view>
 
-      <!-- 完成学习按钮（仅在最后一个单词显示） -->
-      <view v-if="currentIndex === words.length - 1" class="finish-container">
-        <view class="finish-btn" :style="{ backgroundColor: theme.primary }" @click="finishBrowsing">
-          <uni-icons type="checkmarkempty" size="20" color="#fff" />
-          <text>完成学习</text>
-        </view>
+      <!-- 底部区域（占位，避免内容被固定按钮遮挡） -->
+      <view class="bottom-spacer"></view>
+
+      <!-- 分享按钮（固定在底部） -->
+      <view class="share-btn-fixed" @click="shareCurrentWord">
+        <uni-icons type="image" size="20" :color="theme.primary" />
+        <text>分享卡片</text>
+      </view>
+
+      <!-- 完成学习按钮（仅在最后一个单词显示，固定在底部） -->
+      <view v-if="currentIndex === words.length - 1" class="finish-btn-fixed" @click="finishBrowsing">
+        <uni-icons type="checkmarkempty" size="20" color="#fff" />
+        <text>完成学习</text>
       </view>
     </view>
 
@@ -631,6 +632,9 @@ const hexToRgba = (hex, alpha) => {
 <style scoped>
 .container {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 .top-bar {
   display: flex;
@@ -673,14 +677,14 @@ const hexToRgba = (hex, alpha) => {
 }
 .card-swiper {
   flex: 1;
-  padding: 0 20rpx 24rpx 20rpx;
+  overflow-y: auto;
 }
 .card-wrapper {
   padding: 24rpx;
 }
 .word-card {
   border-radius: 32rpx;
-  padding: 40rpx;
+  padding: 40rpx 40rpx 200rpx 40rpx;
   box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.1);
 }
 .word-header {
@@ -802,16 +806,6 @@ const hexToRgba = (hex, alpha) => {
   color: v-bind('theme.textMuted');
   font-style: italic;
 }
-.share-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16rpx;
-  padding: 24rpx;
-  border-radius: 48rpx;
-  background-color: v-bind('theme.backgroundTertiary');
-  margin: 0 32rpx 16rpx 32rpx;
-}
 .hint-container {
   align-items: center;
   padding: 16rpx 0;
@@ -820,17 +814,37 @@ const hexToRgba = (hex, alpha) => {
   font-size: 24rpx;
   color: v-bind('theme.textMuted');
 }
-.finish-container {
-  padding: 0 32rpx 32rpx 32rpx;
+.bottom-spacer {
+  height: 120rpx;
 }
-.finish-btn {
+.share-btn-fixed {
+  position: fixed;
+  left: 32rpx;
+  right: 32rpx;
+  bottom: 32rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 16rpx;
   padding: 24rpx;
   border-radius: 48rpx;
+  background-color: v-bind('theme.backgroundTertiary');
+  z-index: 100;
+}
+.finish-btn-fixed {
+  position: fixed;
+  left: 32rpx;
+  right: 32rpx;
+  bottom: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  padding: 24rpx;
+  border-radius: 48rpx;
+  background-color: v-bind('theme.primary');
   color: #fff;
+  z-index: 100;
 }
 .share-modal, .project-modal {
   border-top-left-radius: 32rpx;
