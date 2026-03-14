@@ -12,7 +12,9 @@ export interface SplitHistory {
 }
 
 /**
- * 自动拆分算法：使用动态规划在编码库中找到最佳拆分方案
+ * 自动拆分算法：使用贪婪算法在编码库中找到拆分方案
+ * 从左到右，尽可能找到最长的匹配编码
+ * 如果开头不匹配，跳过直到找到第一个匹配
  * @param word 要拆分的单词
  * @param codes 编码库
  * @returns 拆分后的数组，如果无法拆分返回 null
@@ -24,13 +26,8 @@ export function autoSplitByCodeLib(word: string, codes: Code[]): SplitItem[] | n
 
   const lowerWord = word.toLowerCase();
   const n = lowerWord.length;
-
-  // dp[i] 表示到位置 i 的最少拆分段数
-  const dp = Array(n + 1).fill(Infinity);
-  // path[i] 记录到达位置 i 的上一个位置
-  const path = Array(n + 1).fill(-1);
-  
-  dp[0] = 0;
+  const result: SplitItem[] = [];
+  let currentIndex = 0;
 
   // 预处理编码库，建立索引
   const codeMap = new Map<string, Code>();
@@ -38,63 +35,68 @@ export function autoSplitByCodeLib(word: string, codes: Code[]): SplitItem[] | n
     codeMap.set(code.letter.toLowerCase(), code);
   });
 
-  // 动态规划
-  for (let i = 0; i < n; i++) {
-    if (dp[i] === Infinity) continue;
+  // 贪婪算法：从左到右查找匹配
+  while (currentIndex < n) {
+    let matched = false;
+    let maxLength = 0;
+    let matchedCode: string | null = null;
 
-    for (let j = i + 1; j <= n; j++) {
-      const substring = lowerWord.substring(i, j);
-      
+    // 从当前位置向后查找最长的匹配编码
+    // 从最长的子串开始查找（优先匹配长编码）
+    const maxSubstringLength = Math.min(n - currentIndex, 10); // 限制最大匹配长度，避免性能问题
+
+    for (let length = maxSubstringLength; length >= 1; length--) {
+      const substring = lowerWord.substring(currentIndex, currentIndex + length);
       if (codeMap.has(substring)) {
-        if (dp[j] > dp[i] + 1) {
-          dp[j] = dp[i] + 1;
-          path[j] = i;
-        }
+        maxLength = length;
+        matchedCode = substring;
+        matched = true;
+        break; // 找到匹配，停止查找更短的
       }
     }
-  }
 
-  // 找到最远可达位置
-  let maxReachableIndex = 0;
-  for (let i = 1; i <= n; i++) {
-    if (dp[i] !== Infinity) {
-      maxReachableIndex = i;
+    if (matched && matchedCode) {
+      // 找到匹配，添加到结果
+      const code = codeMap.get(matchedCode);
+      result.push({
+        code: matchedCode,
+        content: code?.chinese || ''
+      });
+      currentIndex += maxLength;
+    } else {
+      // 未找到匹配，处理未匹配部分
+      const unmatchedStartIndex = currentIndex;
+
+      // 跳过未匹配的字母，直到找到下一个匹配
+      while (currentIndex < n) {
+        let foundMatch = false;
+        const maxSubstringLength = Math.min(n - currentIndex, 10);
+
+        for (let length = maxSubstringLength; length >= 1; length--) {
+          const substring = lowerWord.substring(currentIndex, currentIndex + length);
+          if (codeMap.has(substring)) {
+            foundMatch = true;
+            break;
+          }
+        }
+
+        if (foundMatch) {
+          break; // 找到下一个匹配，停止跳过
+        }
+
+        currentIndex++; // 跳过当前字母
+      }
+
+      // 将未匹配的部分作为独立的拆分项
+      if (unmatchedStartIndex < currentIndex) {
+        const unmatchedPart = word.substring(unmatchedStartIndex, currentIndex);
+        result.push({
+          code: unmatchedPart,
+          content: '' // 未匹配部分不显示含义
+        });
+      }
+      // 继续从当前位置开始查找
     }
-  }
-
-  // 如果无法拆分，返回 null
-  if (maxReachableIndex === 0) {
-    return null;
-  }
-
-  // 回溯构建拆分结果
-  const result: SplitItem[] = [];
-  let currentIndex = maxReachableIndex;
-
-  while (currentIndex > 0) {
-    const prevIndex = path[currentIndex];
-    if (prevIndex === -1) break;
-
-    const code = lowerWord.substring(prevIndex, currentIndex);
-    const matchedCode = codeMap.get(code);
-    
-    result.push({
-      code: code,
-      content: matchedCode?.chinese || ''
-    });
-
-    currentIndex = prevIndex;
-  }
-
-  result.reverse();
-
-  // 如果有剩余部分，添加到末尾
-  const remainingPart = word.substring(maxReachableIndex);
-  if (remainingPart.length > 0) {
-    result.push({
-      code: remainingPart,
-      content: autoFillMeaning(remainingPart, codes)
-    });
   }
 
   return result.length > 0 ? result : null;
