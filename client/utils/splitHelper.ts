@@ -282,27 +282,123 @@ export interface CodeSuggestion {
 }
 
 /**
- * 获取编码建议
+ * 编码建议列表接口
+ */
+export interface CodeSuggestionsList {
+  userInput: string;
+  suggestions: Array<{
+    code: string;
+    completedText: string;
+    matchedCode: Code;
+    matchType: 'exact' | 'prefix' | 'contains';
+  }>;
+}
+
+/**
+ * 获取编码建议（返回前缀匹配的第一个结果，保持向后兼容）
  */
 export function getCodeSuggestion(input: string, codes: Code[]): CodeSuggestion | null {
   if (!input || !codes || codes.length === 0) {
     return null;
   }
 
-  const lowerInput = input.toLowerCase();
-  
-  // 查找以输入开头的编码
-  const matchedCode = codes.find(code =>
-    code.letter.toLowerCase().startsWith(lowerInput)
-  );
-
-  if (matchedCode && input.length > 0) {
-    return {
-      userInput: input,
-      completedText: matchedCode.letter.substring(input.length),
-      matchedCode: matchedCode
-    };
+  const suggestions = getCodeSuggestionsList(input, codes);
+  if (suggestions.suggestions.length === 0) {
+    return null;
   }
 
-  return null;
+  // 返回第一个建议（优先级最高）
+  const firstSuggestion = suggestions.suggestions[0];
+  return {
+    userInput: input,
+    completedText: firstSuggestion.completedText,
+    matchedCode: firstSuggestion.matchedCode
+  };
+}
+
+/**
+ * 获取编码建议列表（支持多种匹配方式）
+ * @param input 用户输入
+ * @param codes 编码库
+ * @returns 建议列表，按匹配优先级排序
+ */
+export function getCodeSuggestionsList(input: string, codes: Code[]): CodeSuggestionsList {
+  const result: CodeSuggestionsList = {
+    userInput: input,
+    suggestions: []
+  };
+
+  if (!input || !codes || codes.length === 0) {
+    return result;
+  }
+
+  const lowerInput = input.toLowerCase();
+  const matchedSuggestions = new Map<string, Array<{ code: Code; matchType: 'exact' | 'prefix' | 'contains' }>>();
+
+  // 遍历所有编码，查找匹配项
+  for (const code of codes) {
+    const lowerCode = code.letter.toLowerCase();
+
+    // 精确匹配
+    if (lowerCode === lowerInput) {
+      addSuggestion(matchedSuggestions, code, 'exact');
+    }
+    // 前缀匹配（但不是精确匹配）
+    else if (lowerCode.startsWith(lowerInput) && lowerCode !== lowerInput) {
+      addSuggestion(matchedSuggestions, code, 'prefix');
+    }
+    // 包含匹配（前3个字符匹配时才触发）
+    else if (lowerInput.length >= 3 && lowerCode.includes(lowerInput)) {
+      addSuggestion(matchedSuggestions, code, 'contains');
+    }
+  }
+
+  // 去重：每个编码只保留优先级最高的匹配
+  const uniqueSuggestions = Array.from(matchedSuggestions.values())
+    .map(matches => {
+      // 优先级：exact > prefix > contains
+      matches.sort((a, b) => {
+        const priority = { 'exact': 3, 'prefix': 2, 'contains': 1 };
+        return priority[b.matchType] - priority[a.matchType];
+      });
+      return matches[0];
+    });
+
+  // 按优先级和编码长度排序（优先级高的在前，同优先级短的在前）
+  uniqueSuggestions.sort((a, b) => {
+    const priority = { 'exact': 3, 'prefix': 2, 'contains': 1 };
+    if (a.matchType !== b.matchType) {
+      return priority[b.matchType] - priority[a.matchType];
+    }
+    // 同优先级时，短的在前
+    return a.code.letter.length - b.code.letter.length;
+  });
+
+  // 限制返回数量，最多5个
+  const suggestions = uniqueSuggestions.slice(0, 5).map(item => ({
+    code: item.code.letter,
+    completedText: item.code.letter.substring(input.length),
+    matchedCode: item.code,
+    matchType: item.matchType
+  }));
+
+  return {
+    userInput: input,
+    suggestions
+  };
+}
+
+/**
+ * 辅助函数：添加建议到 Map
+ */
+function addSuggestion(
+  map: Map<string, Array<{ code: Code; matchType: 'exact' | 'prefix' | 'contains' }>>,
+  code: Code,
+  matchType: 'exact' | 'prefix' | 'contains'
+) {
+  const key = code.letter.toLowerCase();
+  if (!map.has(key)) {
+    map.set(key, []);
+  }
+  map.get(key)!.push({ code, matchType });
 }

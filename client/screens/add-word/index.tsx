@@ -30,7 +30,9 @@ import {
   convertSplitItemsToString,
   parseSplitString,
   getCodeSuggestion,
-  CodeSuggestion
+  getCodeSuggestionsList,
+  CodeSuggestion,
+  CodeSuggestionsList
 } from '@/utils/splitHelper';
 import { fetchPhoneticByWord } from '@/utils';
 import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
@@ -212,8 +214,7 @@ export default function AddWordScreen() {
     };
 
     // 对每个拆分项进行检查
-    for (let splitIndex = 0; splitIndex < validSplits.length; splitIndex++) {
-      const split = validSplits[splitIndex];
+    for (const split of validSplits) {
       const { code, content } = split;
       if (!code || !content) continue;
 
@@ -228,18 +229,24 @@ export default function AddWordScreen() {
       // 检查每个含义
       for (const meaning of meanings) {
         // 检查是否已经包含了"中文（字母）"或"中文(字母)"的形式
-        const patternWithBrackets = new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`);
-        if (patternWithBrackets.test(newText)) {
-          continue; // 已经有了括号补全，跳过这个含义
+        const patterns = [
+          new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`),
+          new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`),
+        ];
+
+        // 如果文本中已经存在任何一种已补全的形式，跳过
+        if (patterns.some(pattern => pattern.test(newText))) {
+          continue;
         }
 
-        // 检查是否包含该含义（不限制边界，任何位置都可以补全）
-        if (newText.includes(meaning)) {
-          // 替换为"中文（字母）"形式（不限制边界，任何位置都可以补全）
-          newText = newText.replace(
-            new RegExp(`${escapeRegex(meaning)}`, 'g'),
-            `${meaning}（${code}）`
-          );
+        // 查找第一个匹配位置（只查找第一个，避免全局替换）
+        const searchIndex = newText.indexOf(meaning);
+        if (searchIndex !== -1) {
+          // 替换第一个匹配项为"中文（字母）"形式
+          newText =
+            newText.substring(0, searchIndex) +
+            `${meaning}（${code}）` +
+            newText.substring(searchIndex + meaning.length);
           hasChanges = true;
           // 标记该编码为已补全
           completedCodesRef.current.add(code.toLowerCase());
