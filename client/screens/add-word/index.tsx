@@ -634,7 +634,8 @@ export default function AddWordScreen() {
             value={phonetic}
             onChangeText={setPhonetic}
             onFocus={() => setShowPhoneticKeyboard(true)}
-            onBlur={() => setShowPhoneticKeyboard(false)}
+            showSoftInputOnFocus={false}
+            selectTextOnFocus={false}
           />
         </ThemedView>
 
@@ -838,7 +839,9 @@ export default function AddWordScreen() {
           <TouchableOpacity
             style={styles.keyboardCloseArea}
             activeOpacity={1}
-            onPress={() => setShowPhoneticKeyboard(false)}
+            onPress={() => {
+              setShowPhoneticKeyboard(false);
+            }}
           >
             <View style={styles.keyboardDragHandle} />
           </TouchableOpacity>
@@ -846,7 +849,7 @@ export default function AddWordScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             keyboardVerticalOffset={0}
           >
-            <View style={styles.keyboardContainer}>
+            <View style={styles.keyboardContainer} pointerEvents="box-none">
               <PhoneticKeyboard
                 onKeyPress={(symbol) => setPhonetic(phonetic + symbol)}
                 onDelete={() => setPhonetic(phonetic.slice(0, -1))}

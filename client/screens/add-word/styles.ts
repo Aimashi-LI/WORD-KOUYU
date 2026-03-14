@@ -265,11 +265,12 @@ export const createStyles = (theme: Theme) => {
     keyboardModalOverlay: {
       flex: 1,
       justifyContent: 'flex-end',
-      backgroundColor: 'transparent',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     keyboardCloseArea: {
       flex: 1,
-      justifyContent: 'center',
+      minHeight: 100,
+      justifyContent: 'flex-end',
       alignItems: 'center',
     },
     keyboardDragHandle: {
