@@ -822,71 +822,61 @@ export default function BrushWordsScreen() {
         <View style={{ position: 'absolute', left: -9999, top: 0 }}>
           <ViewShot ref={shareCardRef} options={{ format: 'png', quality: 1 }}>
             <View style={styles.shareCardContainer}>
-              {/* 单词和词性 - 同排显示 */}
-              <View style={styles.shareWordPartOfSpeechRow}>
-                <View style={styles.shareWordInfoLeft}>
-                  <Text style={styles.shareWord}>{currentWord.word}</Text>
-                  {currentWord.partOfSpeech && (
-                    <Text style={styles.sharePartOfSpeech}>{currentWord.partOfSpeech}</Text>
-                  )}
-                </View>
-                {/* 状态标签 */}
-                <View style={styles.shareStatusTags}>
-                  {currentWord.is_mastered === 1 && (
-                    <View style={styles.shareMasteredTag}>
-                      <FontAwesome6 name="circle-check" size={14} color="#059669" />
-                      <Text style={styles.shareMasteredTagText}>已掌握</Text>
-                    </View>
-                  )}
-                </View>
+              {/* 单词 */}
+              <View style={styles.shareWordContainer}>
+                <Text style={styles.shareWord}>{currentWord.word}</Text>
               </View>
 
-              {/* 音标 */}
-              {currentWord.phonetic && (
-                <Text style={styles.sharePhonetic}>{currentWord.phonetic}</Text>
+              {/* 词性 */}
+              {currentWord.partOfSpeech && (
+                <View style={styles.sharePartOfSpeechContainer}>
+                  <Text style={styles.sharePartOfSpeech}>{currentWord.partOfSpeech}</Text>
+                </View>
               )}
+
+              {/* 橙色分隔线 */}
+              <View style={styles.shareDivider} />
 
               {/* 释义 */}
               <View style={styles.shareDefinitionSection}>
+                <Text style={styles.shareDefinitionLabel}>释义：</Text>
                 <Text style={styles.shareDefinition}>
-                  <Text style={styles.shareLabel}>释义：</Text>
-                  {currentWord.definition}
+                  {currentWord.definition || '单词'}
                 </Text>
               </View>
 
               {/* 拆分 */}
               {currentWord.split && (
                 <View style={styles.shareSplitSection}>
-                  <FontAwesome6 name="scissors" size={16} color="#8B5CF6" />
-                  <Text style={styles.shareSplitText}>
-                    <Text style={styles.shareLabel}>拆分：</Text>
-                    {formatSplitStringForDisplay(currentWord.split)}
-                  </Text>
+                  <Text style={styles.shareSectionTitle}>拆分</Text>
+                  <View style={styles.shareSplitCardsContainer}>
+                    {formatSplitStringForDisplay(currentWord.split).split('-').map((item, index) => {
+                      const [code, meaning] = item.split(/[（[]/);
+                      return (
+                        <View key={index} style={styles.shareSplitCard}>
+                          <Text style={styles.shareSplitCode}>{code}</Text>
+                          <Text style={styles.shareSplitMeaning}>
+                            {meaning ? meaning.replace(/[）\]]/, '') : ''}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
                 </View>
               )}
 
-              {/* 助记 */}
+              {/* 助记短句 */}
               {currentWord.mnemonic && (
                 <View style={styles.shareMnemonicSection}>
-                  <FontAwesome6 name="lightbulb" size={16} color="#8B5CF6" />
-                  <Text style={styles.shareMnemonicText}>
-                    <Text style={styles.shareLabel}>助记：</Text>
-                    {currentWord.mnemonic}
-                  </Text>
+                  <Text style={styles.shareMnemonicLabel}>短句：</Text>
+                  <Text style={styles.shareMnemonicText}>{currentWord.mnemonic}</Text>
                 </View>
-              )}
-
-              {/* 例句 */}
-              {currentWord.sentence && (
-                <Text style={styles.shareSentence}>
-                  <Text style={styles.shareLabel}>例句：</Text>
-                  {currentWord.sentence}
-                </Text>
               )}
 
               {/* 底部信息 */}
               <View style={styles.shareCardFooter}>
-                <Text style={styles.shareFooterText}>来自单词学习助手</Text>
+                <Text style={styles.shareFooterUser}>来自 玛卡巴卡 的分享</Text>
+                <Text style={styles.shareFooterDate}>{new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
               </View>
             </View>
           </ViewShot>

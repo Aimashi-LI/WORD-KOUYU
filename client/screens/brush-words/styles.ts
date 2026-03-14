@@ -382,125 +382,140 @@ export const createStyles = (theme: Theme) => {
       borderTopWidth: 1,
       borderTopColor: theme.borderLight,
     },
-    // 分享卡片样式（白色背景，深色字体）
+    // 分享卡片样式（暖橙色主题）
     shareCardContainer: {
       width: SCREEN_WIDTH - 40,
       backgroundColor: '#FFFFFF',
-      padding: Spacing.xl,
-      borderRadius: BorderRadius.xl,
+      borderRadius: 20,
+      borderWidth: 4,
+      borderColor: '#F97316',
+      padding: 20,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.15,
       shadowRadius: 12,
       elevation: 8,
+      overflow: 'hidden',
     },
-    // 单词和词性 - 水平排列
-    shareWordPartOfSpeechRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    // 单词容器
+    shareWordContainer: {
       alignItems: 'center',
-      marginBottom: Spacing.md,
-    },
-    shareWordInfoLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.sm,
+      marginBottom: 12,
     },
     shareWord: {
-      fontSize: 36,
+      fontSize: 48,
       fontWeight: 'bold',
       color: '#1F2937',
     },
+    // 词性
+    sharePartOfSpeechContainer: {
+      alignItems: 'center',
+      marginBottom: 8,
+    },
     sharePartOfSpeech: {
       fontSize: 14,
-      color: '#6366F1',
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: 2,
-      backgroundColor: 'rgba(99, 102, 241, 0.1)',
-      borderRadius: 8,
-    },
-    shareStatusTags: {
-      flexDirection: 'row',
-      gap: Spacing.sm,
-    },
-    shareMasteredTag: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: 4,
-      backgroundColor: 'rgba(5, 150, 105, 0.1)',
-      borderRadius: 8,
-    },
-    shareMasteredTagText: {
-      fontSize: 12,
-      color: '#059669',
-      fontWeight: '600',
-    },
-    sharePhonetic: {
-      fontSize: 16,
       color: '#6B7280',
-      marginBottom: Spacing.md,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      backgroundColor: '#F3F4F6',
+      borderRadius: 12,
     },
+    // 橙色分隔线
+    shareDivider: {
+      width: '80%',
+      height: 2,
+      backgroundColor: '#F97316',
+      alignSelf: 'center',
+      marginBottom: 16,
+    },
+    // 释义
     shareDefinitionSection: {
-      marginBottom: Spacing.md,
+      backgroundColor: '#F3F4F6',
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    shareDefinitionLabel: {
+      fontSize: 14,
+      color: '#9CA3AF',
+      marginBottom: 4,
     },
     shareDefinition: {
       fontSize: 16,
       color: '#1F2937',
-      lineHeight: 24,
+      lineHeight: 22,
     },
-    shareLabel: {
-      color: '#6B7280',
-      fontWeight: '600',
-    },
+    // 拆分
     shareSplitSection: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: Spacing.sm,
-      padding: Spacing.md,
-      backgroundColor: '#F9FAFB',
-      borderRadius: BorderRadius.md,
-      marginBottom: Spacing.md,
+      backgroundColor: '#DBEAFE',
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 12,
     },
-    shareSplitText: {
-      flex: 1,
-      fontSize: 14,
-      color: '#374151',
-      lineHeight: 20,
-    },
-    shareMnemonicSection: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: Spacing.sm,
-      padding: Spacing.md,
-      backgroundColor: '#F9FAFB',
-      borderRadius: BorderRadius.md,
-      marginBottom: Spacing.md,
-    },
-    shareMnemonicText: {
-      flex: 1,
-      fontSize: 14,
-      color: '#374151',
-      lineHeight: 20,
-    },
-    shareSentence: {
-      fontSize: 13,
-      color: '#374151',
-      lineHeight: 18,
-      marginBottom: Spacing.lg,
-      fontStyle: 'italic',
-    },
-    shareCardFooter: {
-      marginTop: Spacing.xl,
-      paddingTop: Spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: '#E5E7EB',
-      alignItems: 'center',
-    },
-    shareFooterText: {
+    shareSectionTitle: {
       fontSize: 12,
       color: '#9CA3AF',
+      marginBottom: 8,
+    },
+    shareSplitCardsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    shareSplitCard: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+      padding: 10,
+      borderRadius: 10,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    shareSplitCode: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: '#1F2937',
+      marginBottom: 4,
+    },
+    shareSplitMeaning: {
+      fontSize: 14,
+      color: '#F97316',
+      textAlign: 'center',
+    },
+    // 助记短句
+    shareMnemonicSection: {
+      backgroundColor: '#FEF3C7',
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    shareMnemonicLabel: {
+      fontSize: 14,
+      color: '#9CA3AF',
+    },
+    shareMnemonicText: {
+      fontSize: 16,
+      color: '#F97316',
+      lineHeight: 22,
+    },
+    // 底部信息
+    shareCardFooter: {
+      backgroundColor: '#F97316',
+      padding: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    shareFooterUser: {
+      fontSize: 12,
+      color: '#1F2937',
+      marginBottom: 2,
+    },
+    shareFooterDate: {
+      fontSize: 10,
+      color: '#1F2937',
     },
   });
 };
