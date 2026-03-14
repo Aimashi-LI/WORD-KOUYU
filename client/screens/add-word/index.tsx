@@ -110,9 +110,6 @@ export default function AddWordScreen() {
   // 音标键盘
   const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
   
-  // 追踪已补全的编码（同一编码只补全最先填写的含义）
-  const completedCodesRef = React.useRef<Set<string>>(new Set());
-  
   // 初始化：如果从拍照识别页面传入单词，自动填充
   useEffect(() => {
     if (initialWord && initialWord.trim()) {
@@ -196,6 +193,24 @@ export default function AddWordScreen() {
   const [loading, setLoading] = useState(false);
   const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true); // 控制自动补全的开关
 
+  // 加载编码库
+  useEffect(() => {
+    loadCodes();
+  }, []);
+
+  const loadCodes = async () => {
+    try {
+      await initDatabase();
+      const allCodes = await getAllCodes();
+      setCodes(allCodes);
+    } catch (error) {
+      console.error('加载编码库失败:', error);
+    }
+  };
+
+  // 追踪已识别的含义（每个含义只识别一次）
+  const completedMeaningsRef = React.useRef<Set<string>>(new Set());
+
   // 助记自动补全功能
   useEffect(() => {
     // 如果自动补全被禁用或文本为空，跳过
@@ -218,24 +233,24 @@ export default function AddWordScreen() {
       const { code, content } = split;
       if (!code || !content) continue;
 
-      // 检查该编码是否已经被补全过（同一编码只补全最先填写的含义）
-      if (completedCodesRef.current.has(code.toLowerCase())) {
-        continue; // 已补全，跳过该编码的所有含义
-      }
-
       // 将 content 拆分为多个含义（用顿号分隔）
       const meanings = content.split(/、/).map(m => m.trim()).filter(m => m);
 
       // 检查每个含义
       for (const meaning of meanings) {
+        // 检查该含义是否已经被识别过
+        if (completedMeaningsRef.current.has(meaning)) {
+          continue; // 已识别过，跳过
+        }
+
         // 检查是否已经包含了"中文（字母）"或"中文(字母)"的形式
         const patterns = [
           new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`),
-          new RegExp(`${escapeRegex(meaning)}[\\(（]${escapeRegex(code)}[\\)）]`),
         ];
 
-        // 如果文本中已经存在任何一种已补全的形式，跳过
+        // 如果文本中已经存在任何一种已补全的形式，标记为已识别
         if (patterns.some(pattern => pattern.test(newText))) {
+          completedMeaningsRef.current.add(meaning);
           continue;
         }
 
@@ -248,51 +263,74 @@ export default function AddWordScreen() {
             `${meaning}（${code}）` +
             newText.substring(searchIndex + meaning.length);
           hasChanges = true;
-          // 标记该编码为已补全
-          completedCodesRef.current.add(code.toLowerCase());
+          // 标记该含义为已识别
+          completedMeaningsRef.current.add(meaning);
           // 找到一个匹配就停止该编码的其他含义
           break;
         }
       }
     }
 
-    // 如果有变化，更新 sentence 并禁用自动补全（避免重复触发）
+    // 如果有变化，更新 sentence
     if (hasChanges) {
-      setAutoCompleteEnabled(false);
       setSentence(newText);
-      // 短暂延迟后重新启用自动补全
-      setTimeout(() => setAutoCompleteEnabled(true), 100);
+    }
+  }, [sentence, splitItems, autoCompleteEnabled]);
+
+  // 智能控制自动补全开关
+  useEffect(() => {
+    if (!sentence.trim()) return;
+
+    // 获取有中文内容的拆分项
+    const validSplits = splitItems.filter(item => item.code && item.content);
+    if (validSplits.length === 0) return;
+
+    // 收集所有可能的含义
+    const allMeanings = new Set<string>();
+    for (const split of validSplits) {
+      if (split.content) {
+        const meanings = split.content.split(/、/).map(m => m.trim()).filter(m => m);
+        meanings.forEach(m => allMeanings.add(m));
+      }
+    }
+
+    // 检查当前文本是否包含任何含义
+    let containsAnyMeaning = false;
+    let foundNewMeaning = false;
+
+    for (const meaning of allMeanings) {
+      if (sentence.includes(meaning)) {
+        containsAnyMeaning = true;
+
+        // 检查这个含义是否已经被识别过
+        if (!completedMeaningsRef.current.has(meaning)) {
+          foundNewMeaning = true;
+        }
+      }
+    }
+
+    // 如果没有找到任何含义，自动打开自动补全开关
+    if (!containsAnyMeaning && !autoCompleteEnabled) {
+      console.log('[智能开关] 未检测到含义，打开自动补全开关');
+      setAutoCompleteEnabled(true);
+    }
+    // 如果找到了新的未识别的含义，且自动补全开关关闭，打开开关
+    else if (foundNewMeaning && !autoCompleteEnabled) {
+      console.log('[智能开关] 检测到新含义，打开自动补全开关');
+      setAutoCompleteEnabled(true);
     }
   }, [sentence, splitItems]);
 
-  // 处理助记句子输入（检测删除行为和输入内容）
+  // 处理助记句子输入
   const handleSentenceChange = (text: string) => {
     // 检测删除行为：文本长度减少
     if (text.length < sentence.length) {
-      // 检测到删除，关闭自动补全并重置已补全编码集合
-      setAutoCompleteEnabled(false);
-      completedCodesRef.current.clear(); // 清空已补全编码，允许重新补全
-    } else if (text.length > sentence.length) {
-      // 检测到输入，恢复自动补全
-      setAutoCompleteEnabled(true);
+      // 检测到删除，重置已识别含义集合，允许重新识别
+      console.log('[句子输入] 检测到删除，重置已识别含义');
+      completedMeaningsRef.current.clear();
     }
-    
+
     setSentence(text);
-  };
-
-  // 加载编码库
-  useEffect(() => {
-    loadCodes();
-  }, []);
-
-  const loadCodes = async () => {
-    try {
-      await initDatabase();
-      const allCodes = await getAllCodes();
-      setCodes(allCodes);
-    } catch (error) {
-      console.error('加载编码库失败:', error);
-    }
   };
 
   // 处理单词输入
