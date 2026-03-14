@@ -457,34 +457,19 @@ export const createStyles = (theme: Theme) => {
       color: '#9CA3AF',
       marginBottom: 8,
     },
-    shareSplitCardsContainer: {
+    shareSplitTextContainer: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      justifyContent: 'flex-start',
-      gap: 6,
-    },
-    shareSplitCard: {
-      backgroundColor: '#FFFFFF',
-      paddingHorizontal: 8,
-      paddingVertical: 6,
-      borderRadius: 8,
       alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 4,
-      minWidth: 50,
     },
-    shareSplitCode: {
+    shareSplitItem: {
       fontSize: 14,
       color: '#1F2937',
-      marginBottom: 2,
+      lineHeight: 20,
     },
-    shareSplitMeaning: {
-      fontSize: 12,
-      color: '#F97316',
-      textAlign: 'center',
+    shareSplitSeparator: {
+      fontSize: 14,
+      color: '#1F2937',
     },
     // 助记短句
     shareMnemonicSection: {

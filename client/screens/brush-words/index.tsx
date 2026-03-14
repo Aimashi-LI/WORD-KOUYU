@@ -849,18 +849,18 @@ export default function BrushWordsScreen() {
               {currentWord.split && (
                 <View style={styles.shareSplitSection}>
                   <Text style={styles.shareSectionTitle}>拆分</Text>
-                  <View style={styles.shareSplitCardsContainer}>
-                    {formatSplitStringForDisplay(currentWord.split).split('-').map((item, index) => {
-                      const [code, meaning] = item.split(/[（[]/);
-                      return (
-                        <View key={index} style={styles.shareSplitCard}>
-                          <Text style={styles.shareSplitCode}>{code}</Text>
-                          <Text style={styles.shareSplitMeaning}>
-                            {meaning ? meaning.replace(/[）\]]/, '') : ''}
-                          </Text>
-                        </View>
-                      );
-                    })}
+                  <View style={styles.shareSplitTextContainer}>
+                    {(() => {
+                      const splitText = formatSplitStringForDisplay(currentWord.split!);
+                      return splitText.split('。').filter(item => item.trim()).map((item, index) => (
+                        <React.Fragment key={index}>
+                          <Text style={styles.shareSplitItem}>{item}</Text>
+                          {index < splitText.split('。').filter(item => item.trim()).length - 1 && (
+                            <Text style={styles.shareSplitSeparator}> </Text>
+                          )}
+                        </React.Fragment>
+                      ));
+                    })()}
                   </View>
                 </View>
               )}
