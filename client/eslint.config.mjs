@@ -5,9 +5,9 @@ import pluginReact from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import regexp from 'eslint-plugin-regexp';
 import pluginImport from 'eslint-plugin-import';
-import fontawesome6 from './eslint-plugins/fontawesome6/index.js';
-import reanimated from './eslint-plugins/reanimated/index.js';
-import reactnative from './eslint-plugins/react-native/index.js';
+import fontawesome6 from '../eslint-plugins/fontawesome6/index.js';
+import reanimated from '../eslint-plugins/reanimated/index.js';
+import reactnative from '../eslint-plugins/react-native/index.js';
 
 export default [
   {
