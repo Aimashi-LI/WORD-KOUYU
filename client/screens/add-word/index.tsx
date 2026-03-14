@@ -202,19 +202,22 @@ export default function AddWordScreen() {
   const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true); // 控制自动补全的开关
 
   // 加载编码库
-  useEffect(() => {
-    loadCodes();
-  }, []);
-
   const loadCodes = async () => {
     try {
       await initDatabase();
       const allCodes = await getAllCodes();
       setCodes(allCodes);
+      console.log('[编码库] 加载成功，共', allCodes.length, '条编码');
     } catch (error) {
-      console.error('加载编码库失败:', error);
+      console.error('[编码库] 加载失败:', error);
+      setCodes([]); // 设置为空数组，避免后续操作出错
     }
   };
+
+  // 加载编码库（只在组件挂载时执行一次）
+  useEffect(() => {
+    loadCodes();
+  }, []);
 
   // 追踪已识别的含义（每个含义只识别一次）
   const completedMeaningsRef = React.useRef<Set<string>>(new Set());
@@ -366,11 +369,13 @@ export default function AddWordScreen() {
       Alert.alert('提示', '仅允许输入英文字母');
     }
     setWord(filteredText);
-    
+
     // 自动填充拆分
     if (filteredText.length > 0) {
-      setSplitItems([{ code: filteredText, content: autoFillMeaning(filteredText, codes) }]);
-      
+      // 如果编码库未加载，使用空含义
+      const meaning = codes ? autoFillMeaning(filteredText, codes) : '';
+      setSplitItems([{ code: filteredText, content: meaning }]);
+
       // 自动获取音标
       const phoneticText = await fetchPhoneticByWord(filteredText);
       if (phoneticText) {
@@ -386,12 +391,19 @@ export default function AddWordScreen() {
   // 处理单词失焦（触发自动拆分）
   const handleWordBlur = () => {
     if (!word) return;
-    
+
+    // 如果编码库未加载，跳过自动拆分
+    if (!codes || codes.length === 0) {
+      console.log('[单词失焦] 编码库未加载，跳过自动拆分');
+      return;
+    }
+
     const autoSplitResult = autoSplitByCodeLib(word, codes);
     if (autoSplitResult && autoSplitResult.length > 0) {
       // 保存历史记录
       setSplitHistory(prev => [...prev, [...splitItems]]);
       setSplitItems(autoSplitResult);
+      console.log('[单词失焦] 自动拆分成功:', autoSplitResult);
     }
   };
 
@@ -400,7 +412,10 @@ export default function AddWordScreen() {
     const newSplitItems = [...splitItems];
     newSplitItems[index].code = text;
     setSplitItems(newSplitItems);
-    
+
+    // 如果编码库未加载，跳过建议查找
+    if (!codes || codes.length === 0) return;
+
     // 查找编码建议
     const suggestion = getCodeSuggestion(text, codes);
     if (suggestion) {
@@ -408,7 +423,7 @@ export default function AddWordScreen() {
         ...prev,
         [`code_${index}`]: suggestion
       }));
-      
+
       // 如果完全匹配，自动填充含义
       if (text.toLowerCase() === suggestion.matchedCode.letter.toLowerCase()) {
         newSplitItems[index].content = suggestion.matchedCode.chinese;
