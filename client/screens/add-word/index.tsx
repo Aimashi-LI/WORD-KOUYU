@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -109,7 +109,15 @@ export default function AddWordScreen() {
   
   // 音标键盘
   const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
-  
+  const phoneticInputRef = useRef<TextInput>(null);
+
+  // 关闭音标键盘
+  const handleHidePhoneticKeyboard = () => {
+    setShowPhoneticKeyboard(false);
+    // 移除输入框焦点，防止再次触发 onFocus
+    phoneticInputRef.current?.blur();
+  };
+
   // 初始化：如果从拍照识别页面传入单词，自动填充
   useEffect(() => {
     if (initialWord && initialWord.trim()) {
@@ -628,6 +636,7 @@ export default function AddWordScreen() {
             音标
           </ThemedText>
           <TextInput
+            ref={phoneticInputRef}
             style={styles.input}
             placeholder="点击输入音标"
             placeholderTextColor={theme.textMuted}
@@ -839,9 +848,7 @@ export default function AddWordScreen() {
           <TouchableOpacity
             style={styles.keyboardCloseArea}
             activeOpacity={1}
-            onPress={() => {
-              setShowPhoneticKeyboard(false);
-            }}
+            onPress={handleHidePhoneticKeyboard}
           >
             <View style={styles.keyboardDragHandle} />
           </TouchableOpacity>
@@ -856,7 +863,7 @@ export default function AddWordScreen() {
               />
               <TouchableOpacity
                 style={styles.keyboardHideButton}
-                onPress={() => setShowPhoneticKeyboard(false)}
+                onPress={handleHidePhoneticKeyboard}
               >
                 <ThemedText variant="body" color={theme.buttonPrimaryText}>完成</ThemedText>
               </TouchableOpacity>
