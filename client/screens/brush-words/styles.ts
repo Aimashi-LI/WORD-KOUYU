@@ -459,17 +459,21 @@ export const createStyles = (theme: Theme) => {
     },
     shareSplitTextContainer: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'center',
+      alignItems: 'flex-start',
+      gap: 10,
+    },
+    shareSplitColumn: {
+      flexDirection: 'column',
+      gap: 4,
     },
     shareSplitItem: {
       fontSize: 14,
       color: '#1F2937',
       lineHeight: 20,
     },
-    shareSplitSeparator: {
-      fontSize: 14,
-      color: '#1F2937',
+    shareSplitItemSmall: {
+      fontSize: 12,
+      lineHeight: 16,
     },
     // 助记短句
     shareMnemonicSection: {

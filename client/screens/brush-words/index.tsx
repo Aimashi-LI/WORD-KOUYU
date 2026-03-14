@@ -849,19 +849,53 @@ export default function BrushWordsScreen() {
               {currentWord.split && (
                 <View style={styles.shareSplitSection}>
                   <Text style={styles.shareSectionTitle}>拆分</Text>
-                  <View style={styles.shareSplitTextContainer}>
-                    {(() => {
-                      const splitText = formatSplitStringForDisplay(currentWord.split!);
-                      return splitText.split('。').filter(item => item.trim()).map((item, index) => (
-                        <React.Fragment key={index}>
-                          <Text style={styles.shareSplitItem}>{item}</Text>
-                          {index < splitText.split('。').filter(item => item.trim()).length - 1 && (
-                            <Text style={styles.shareSplitSeparator}> </Text>
-                          )}
-                        </React.Fragment>
-                      ));
-                    })()}
-                  </View>
+                  {(() => {
+                    const splitText = formatSplitStringForDisplay(currentWord.split!);
+                    const items = splitText.split('。').filter(item => item.trim());
+                    const itemsPerColumn = 4;
+                    const numColumns = Math.ceil(items.length / itemsPerColumn);
+
+                    // 列优先排序：重新排列数组
+                    const sortedItems: string[] = [];
+                    for (let row = 0; row < itemsPerColumn; row++) {
+                      for (let col = 0; col < numColumns; col++) {
+                        const index = row + col * itemsPerColumn;
+                        if (index < items.length) {
+                          sortedItems.push(items[index]);
+                        }
+                      }
+                    }
+
+                    // 将重新排列的项分组到列中
+                    const columns: string[][] = [];
+                    for (let col = 0; col < numColumns; col++) {
+                      const columnItems: string[] = [];
+                      for (let row = 0; row < itemsPerColumn; row++) {
+                        const originalIndex = row + col * itemsPerColumn;
+                        if (originalIndex < items.length) {
+                          columnItems.push(items[originalIndex]);
+                        }
+                      }
+                      columns.push(columnItems);
+                    }
+
+                    return (
+                      <View style={styles.shareSplitTextContainer}>
+                        {columns.map((columnItems, colIndex) => (
+                          <View key={colIndex} style={styles.shareSplitColumn}>
+                            {columnItems.map((item, rowIndex) => (
+                              <Text key={rowIndex} style={[
+                                styles.shareSplitItem,
+                                numColumns >= 3 && styles.shareSplitItemSmall
+                              ]}>
+                                {item}
+                              </Text>
+                            ))}
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  })()}
                 </View>
               )}
 
