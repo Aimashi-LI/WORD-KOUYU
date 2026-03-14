@@ -211,8 +211,14 @@ export default function AddWordScreen() {
   // 追踪已识别的含义（每个含义只识别一次）
   const completedMeaningsRef = React.useRef<Set<string>>(new Set());
 
+  // 标记是否正在删除文本（避免删除时触发智能开关）
+  const isDeletingRef = React.useRef(false);
+
   // 助记自动补全功能
   useEffect(() => {
+    // 如果正在删除文本，跳过自动补全
+    if (isDeletingRef.current) return;
+
     // 如果自动补全被禁用或文本为空，跳过
     if (!autoCompleteEnabled || !sentence.trim()) return;
 
@@ -279,6 +285,9 @@ export default function AddWordScreen() {
 
   // 智能控制自动补全开关
   useEffect(() => {
+    // 如果正在删除文本，跳过智能开关控制
+    if (isDeletingRef.current) return;
+
     if (!sentence.trim()) return;
 
     // 获取有中文内容的拆分项
@@ -325,9 +334,17 @@ export default function AddWordScreen() {
   const handleSentenceChange = (text: string) => {
     // 检测删除行为：文本长度减少
     if (text.length < sentence.length) {
+      // 标记为删除中，防止智能开关触发
+      isDeletingRef.current = true;
+
       // 检测到删除，重置已识别含义集合，允许重新识别
       console.log('[句子输入] 检测到删除，重置已识别含义');
       completedMeaningsRef.current.clear();
+
+      // 短暂延迟后重置删除标记
+      setTimeout(() => {
+        isDeletingRef.current = false;
+      }, 100);
     }
 
     setSentence(text);
