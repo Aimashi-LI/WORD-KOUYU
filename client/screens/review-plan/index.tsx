@@ -383,36 +383,40 @@ export default function ReviewPlanScreen() {
                                 </ThemedText>
                               </View>
                             </TouchableOpacity>
-                            {isExpanded && wb.words.map((word) => (
-                              <TouchableOpacity 
-                                key={word.id}
-                                style={styles.wordItem}
-                                onPress={() => router.push('/word-detail', { id: word.id.toString() })}
-                              >
-                                <View style={styles.wordInfo}>
-                                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                                    {word.word}
-                                  </ThemedText>
-                                  {word.partOfSpeech && (
-                                    <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
-                                      {word.partOfSpeech}
-                                    </ThemedText>
-                                  )}
-                                  <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
-                                    {word.definition}
-                                  </ThemedText>
-                                </View>
-                                
-                                <View style={styles.wordStatus}>
-                                  <ThemedText variant="caption" color={theme.textMuted}>
-                                    {formatStability(word.stability)}
-                                  </ThemedText>
-                                  {word.is_mastered && (
-                                    <FontAwesome6 name="circle-check" size={16} color={theme.success} />
-                                  )}
-                                </View>
-                              </TouchableOpacity>
-                            ))}
+                            {isExpanded ? (
+                              wb.words && wb.words.length > 0 ? (
+                                wb.words.map((word) => (
+                                  <TouchableOpacity 
+                                    key={word.id}
+                                    style={styles.wordItem}
+                                    onPress={() => router.push('/word-detail', { id: word.id.toString() })}
+                                  >
+                                    <View style={styles.wordInfo}>
+                                      <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                                        {word.word}
+                                      </ThemedText>
+                                      {word.partOfSpeech && (
+                                        <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
+                                          {word.partOfSpeech}
+                                        </ThemedText>
+                                      )}
+                                      <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
+                                        {word.definition}
+                                      </ThemedText>
+                                    </View>
+                                    
+                                    <View style={styles.wordStatus}>
+                                      <ThemedText variant="caption" color={theme.textMuted}>
+                                        {formatStability(word.stability)}
+                                      </ThemedText>
+                                      {word.is_mastered && (
+                                        <FontAwesome6 name="circle-check" size={16} color={theme.success} />
+                                      )}
+                                    </View>
+                                  </TouchableOpacity>
+                                ))
+                              ) : null
+                            ) : null}
                           </View>
                         );
                       })}
