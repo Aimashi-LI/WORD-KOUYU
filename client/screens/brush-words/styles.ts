@@ -504,7 +504,7 @@ export const createStyles = (theme: Theme) => {
       padding: 12,
       borderRadius: 8,
       alignItems: 'center',
-      marginTop: 16,
+      marginTop: 32,
     },
     shareFooterUser: {
       fontSize: 10,
