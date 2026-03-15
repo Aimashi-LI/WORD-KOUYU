@@ -36,10 +36,9 @@ export default function ReviewPlanScreen() {
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderTime, setReminderTime] = useState('09:00');
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [bestReviewTime, setBestReviewTime] = useState('09:00');
   const [loading, setLoading] = useState(true);
-  
+
   // 新增：存储每个日期的待复习单词列表
   const [dailyPendingWords, setDailyPendingWords] = useState<Map<string, Word[]>>(new Map());
   
@@ -361,10 +360,6 @@ export default function ReviewPlanScreen() {
   // 选择日期
   const onDayPress = (date: Date) => {
     setSelectedDate(date);
-    const stats = getStatsForDate(date);
-    if (stats && stats.totalReview > 0) {
-      setShowHistoryModal(true);
-    }
   };
 
   useFocusEffect(
@@ -843,79 +838,6 @@ export default function ReviewPlanScreen() {
                 onPress={saveReminderSettings}
               >
                 <ThemedText variant="body" color={theme.buttonPrimaryText}>保存</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-        </View>
-      </Modal>
-
-      {/* 复习历史弹窗 */}
-      <Modal
-        visible={showHistoryModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowHistoryModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <ThemedView level="default" style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <ThemedText variant="h3" color={theme.textPrimary}>
-                {selectedDateStats ? formatDateDisplay(selectedDate) : ''} 复习详情
-              </ThemedText>
-              <TouchableOpacity onPress={() => setShowHistoryModal(false)}>
-                <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              {selectedDateStats ? (
-                <View>
-                  <View style={styles.historyStatsContainer}>
-                    <View style={styles.historyStatItem}>
-                      <ThemedText variant="h2" color={theme.textPrimary}>
-                        {selectedDateStats.totalReview}
-                      </ThemedText>
-                      <ThemedText variant="caption" color={theme.textMuted}>总单词</ThemedText>
-                    </View>
-                    <View style={styles.historyStatItem}>
-                      <ThemedText variant="h2" color={theme.success}>
-                        {selectedDateStats.completedReview}
-                      </ThemedText>
-                      <ThemedText variant="caption" color={theme.textMuted}>已完成</ThemedText>
-                    </View>
-                    <View style={styles.historyStatItem}>
-                      <ThemedText variant="h2" color={theme.warning}>
-                        {selectedDateStats.pendingReview}
-                      </ThemedText>
-                      <ThemedText variant="caption" color={theme.textMuted}>待复习</ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.completionRateContainer}>
-                    <ThemedText variant="body" color={theme.textPrimary}>
-                      完成率：{calculateCompletionRate(selectedDateStats)}%
-                    </ThemedText>
-                    <View style={styles.progressBarContainer}>
-                      <View
-                        style={[
-                          styles.progressBarFill,
-                          { width: `${calculateCompletionRate(selectedDateStats)}%`, backgroundColor: theme.primary }
-                        ]}
-                      />
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <ThemedText variant="body" color={theme.textMuted}>暂无数据</ThemedText>
-              )}
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton, { backgroundColor: theme.primary }]}
-                onPress={() => setShowHistoryModal(false)}
-              >
-                <ThemedText variant="body" color={theme.buttonPrimaryText}>关闭</ThemedText>
               </TouchableOpacity>
             </View>
           </ThemedView>
