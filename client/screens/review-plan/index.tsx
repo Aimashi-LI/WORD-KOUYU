@@ -10,6 +10,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getAllWordbooks, getWordsInWordbook } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
+import { updateWord } from '@/database/wordDao';
 import { Word } from '@/database/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -81,6 +82,45 @@ export default function ReviewPlanScreen() {
 
       if (wordsWithoutNextReview.length > 0) {
         console.log('[ReviewPlan] 没有 next_review 的单词:', wordsWithoutNextReview.map(w => `${w.word} (ID: ${w.id})`).join(', '));
+
+        // 修复没有 next_review 的单词
+        const now = new Date();
+
+        for (const word of wordsWithoutNextReview) {
+          // 为新单词设置初始的 next_review（10分钟后）
+          const nextReviewDate = new Date(now);
+          nextReviewDate.setMinutes(nextReviewDate.getMinutes() + 10);
+          const nextReview = nextReviewDate.toISOString();
+
+          // 如果单词没有 last_review，设置为创建时间
+          const lastReview = word.last_review || word.created_at || now.toISOString();
+
+          await updateWord(word.id, {
+            last_review: lastReview,
+            next_review: nextReview,
+          });
+
+          console.log(`[ReviewPlan] 修复单词: ${word.word} (ID: ${word.id}), next_review: ${nextReview}`);
+        }
+
+        console.log(`[ReviewPlan] 修复完成，共修复 ${wordsWithoutNextReview.length} 个单词`);
+
+        // 重新加载单词列表
+        const updatedWords: Word[] = [];
+        for (const wb of wordbooks) {
+          const words = await getWordsInWordbook(wb.id);
+          updatedWords.push(...words);
+        }
+
+        // 去重
+        const updatedUniqueWordsMap = new Map<number, Word>();
+        updatedWords.forEach((word) => {
+          updatedUniqueWordsMap.set(word.id, word);
+        });
+        uniqueWords.length = 0;
+        uniqueWords.push(...Array.from(updatedUniqueWordsMap.values()));
+
+        console.log('[ReviewPlan] 重新加载后，所有单词都有 next_review');
       }
 
       // 计算未来60天的统计数据

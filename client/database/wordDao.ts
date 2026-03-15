@@ -103,11 +103,17 @@ export async function getWordByText(word: string): Promise<Word | null> {
 export async function createWord(word: NewWord): Promise<number> {
   const db = getDatabase();
   const now = new Date().toISOString();
-  
+
+  // 为新单词设置初始的 next_review（10分钟后）
+  const nextReviewDate = new Date(now);
+  nextReviewDate.setMinutes(nextReviewDate.getMinutes() + 10);
+  const nextReview = nextReviewDate.toISOString();
+
   console.log('[createWord] 准备插入单词:', word.word);
   console.log('[createWord] partOfSpeech 参数值:', word.partOfSpeech);
   console.log('[createWord] partOfSpeech 参数类型:', typeof word.partOfSpeech);
-  
+  console.log('[createWord] next_review 设置为:', nextReview);
+
   const params = [
     word.word,
     word.phonetic || null,
@@ -118,21 +124,23 @@ export async function createWord(word: NewWord): Promise<number> {
     word.sentence || null,
     word.difficulty || 0,
     word.stability || 0,
+    now, // last_review 设置为创建时间
+    nextReview, // next_review 设置为10分钟后
     word.avg_response_time || 0,
     word.is_mastered || 0,
     now
   ];
-  
+
   console.log('[createWord] SQL 参数数组:', params.map((p, i) => `参数${i}: ${p}`));
-  
+
   const result = await db.runAsync(
-    `INSERT INTO words (word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, difficulty, stability, avg_response_time, is_mastered, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO words (word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, difficulty, stability, last_review, next_review, avg_response_time, is_mastered, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     params
   );
-  
+
   console.log('[createWord] 插入成功，lastInsertRowId:', result.lastInsertRowId);
-  
+
   return result.lastInsertRowId;
 }
 
@@ -141,12 +149,17 @@ export async function createWords(words: NewWord[]): Promise<number[]> {
   const db = getDatabase();
   const now = new Date().toISOString();
   const ids: number[] = [];
-  
+
   await db.withTransactionAsync(async () => {
     for (const word of words) {
+      // 为新单词设置初始的 next_review（10分钟后）
+      const nextReviewDate = new Date(now);
+      nextReviewDate.setMinutes(nextReviewDate.getMinutes() + 10);
+      const nextReview = nextReviewDate.toISOString();
+
       const result = await db.runAsync(
-        `INSERT INTO words (word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, difficulty, stability, avg_response_time, is_mastered, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO words (word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, difficulty, stability, last_review, next_review, avg_response_time, is_mastered, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           word.word,
           word.phonetic || null,
@@ -157,6 +170,8 @@ export async function createWords(words: NewWord[]): Promise<number[]> {
           word.sentence || null,
           word.difficulty || 0,
           word.stability || 0,
+          now, // last_review 设置为创建时间
+          nextReview, // next_review 设置为10分钟后
           word.avg_response_time || 0,
           word.is_mastered || 0,
           now
@@ -165,7 +180,7 @@ export async function createWords(words: NewWord[]): Promise<number[]> {
       ids.push(result.lastInsertRowId);
     }
   });
-  
+
   return ids;
 }
 
