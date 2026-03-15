@@ -317,7 +317,7 @@ export const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   confirmButton: {
-    flex: 2,
+    flex: 1,
   },
   // 开关
   switchContainer: {
