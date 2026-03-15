@@ -36,6 +36,9 @@ export default function WordbookScreen() {
   const [newWordbookName, setNewWordbookName] = useState('');
   const [newWordbookDesc, setNewWordbookDesc] = useState('');
   
+  // 记录创建词库后要跳转的页面
+  const [pendingNavigateTo, setPendingNavigateTo] = useState<string | null>(null);
+  
   // 编辑词库相关状态
   const [showEditWordbookModal, setShowEditWordbookModal] = useState(false);
   const [editingWordbook, setEditingWordbook] = useState<Wordbook | null>(null);
@@ -154,7 +157,18 @@ export default function WordbookScreen() {
       setNewWordbookDesc('');
       setShowWordbookModal(false);
       await loadData();
-      Alert.alert('成功', '词库创建成功');
+      
+      // 如果有待跳转的页面，跳转过去
+      if (pendingNavigateTo) {
+        const newWordbooks = await getAllWordbooks();
+        if (newWordbooks.length > 0) {
+          const targetWordbookId = newWordbooks[0].id;
+          router.push(`${pendingNavigateTo}?wordbookId=${targetWordbookId}`);
+          setPendingNavigateTo(null);
+        }
+      } else {
+        Alert.alert('成功', '词库创建成功');
+      }
     } catch (error) {
       console.error('创建词库失败:', error);
       Alert.alert('错误', '创建词库失败');
@@ -563,7 +577,9 @@ export default function WordbookScreen() {
         <View style={styles.wordbookBar}>
           {/* 第一行：标题和添加按钮 */}
           <View style={styles.wordbookBarHeader}>
-            <ThemedText variant="body" color={theme.textMuted}>当前词库：</ThemedText>
+            <ThemedText variant="body" color={theme.textMuted}>
+              {wordbooks.length === 0 ? '当前没有词库，请先创建词库' : '当前词库：'}
+            </ThemedText>
             <TouchableOpacity 
               style={styles.addWordbookButton}
               onPress={() => setShowWordbookModal(true)}
@@ -600,7 +616,15 @@ export default function WordbookScreen() {
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push(currentWordbookId ? `/add-word?wordbookId=${currentWordbookId}` : '/add-word')}
+            onPress={() => {
+              if (wordbooks.length === 0) {
+                // 没有词库，先创建词库
+                setPendingNavigateTo('/add-word');
+                setShowWordbookModal(true);
+              } else {
+                router.push(currentWordbookId ? `/add-word?wordbookId=${currentWordbookId}` : '/add-word');
+              }
+            }}
           >
             <FontAwesome6 name="plus" size={24} color={theme.buttonPrimaryText} />
             <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>手动添加</ThemedText>
@@ -608,7 +632,15 @@ export default function WordbookScreen() {
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push(currentWordbookId ? `/paste-import?wordbookId=${currentWordbookId}` : '/paste-import')}
+            onPress={() => {
+              if (wordbooks.length === 0) {
+                // 没有词库，先创建词库
+                setPendingNavigateTo('/paste-import');
+                setShowWordbookModal(true);
+              } else {
+                router.push(currentWordbookId ? `/paste-import?wordbookId=${currentWordbookId}` : '/paste-import');
+              }
+            }}
           >
             <FontAwesome6 name="clipboard" size={24} color={theme.buttonPrimaryText} />
             <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>文本粘贴</ThemedText>
@@ -616,7 +648,15 @@ export default function WordbookScreen() {
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push(currentWordbookId ? `/import-words?wordbookId=${currentWordbookId}` : '/import-words')}
+            onPress={() => {
+              if (wordbooks.length === 0) {
+                // 没有词库，先创建词库
+                setPendingNavigateTo('/import-words');
+                setShowWordbookModal(true);
+              } else {
+                router.push(currentWordbookId ? `/import-words?wordbookId=${currentWordbookId}` : '/import-words');
+              }
+            }}
           >
             <FontAwesome6 name="file-import" size={24} color={theme.buttonPrimaryText} />
             <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>批量导入</ThemedText>
@@ -881,7 +921,10 @@ export default function WordbookScreen() {
         visible={showWordbookModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowWordbookModal(false)}
+        onRequestClose={() => {
+          setShowWordbookModal(false);
+          setPendingNavigateTo(null);
+        }}
       >
         <KeyboardAvoidingView 
           style={{ flex: 1 }} 
@@ -890,7 +933,10 @@ export default function WordbookScreen() {
           <TouchableOpacity 
             style={styles.modalOverlay}
             activeOpacity={1}
-            onPress={() => setShowWordbookModal(false)}
+            onPress={() => {
+              setShowWordbookModal(false);
+              setPendingNavigateTo(null);
+            }}
           >
             <TouchableOpacity 
               activeOpacity={1}
@@ -899,7 +945,10 @@ export default function WordbookScreen() {
             >
               <View style={styles.modalHeader}>
                 <ThemedText variant="h3" color={theme.textPrimary}>创建词库</ThemedText>
-                <TouchableOpacity onPress={() => setShowWordbookModal(false)}>
+                <TouchableOpacity onPress={() => {
+                  setShowWordbookModal(false);
+                  setPendingNavigateTo(null);
+                }}>
                   <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
                 </TouchableOpacity>
               </View>
@@ -938,7 +987,10 @@ export default function WordbookScreen() {
               <View style={styles.modalFooter}>
                 <TouchableOpacity 
                   style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.backgroundTertiary }]}
-                  onPress={() => setShowWordbookModal(false)}
+                  onPress={() => {
+                    setShowWordbookModal(false);
+                    setPendingNavigateTo(null);
+                  }}
                 >
                   <ThemedText variant="body" color={theme.textPrimary}>取消</ThemedText>
                 </TouchableOpacity>
