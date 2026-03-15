@@ -45,10 +45,6 @@ export default function ReviewPlanScreen() {
   
   // 新增：控制单词详情展开的状态
   const [expandedWordId, setExpandedWordId] = useState<number | null>(null);
-  
-  // 新增：控制提前复习弹窗
-  const [showEarlyReviewModal, setShowEarlyReviewModal] = useState(false);
-  const [earlyReviewDate, setEarlyReviewDate] = useState<Date | null>(null);
 
   // 加载复习数据
   const loadData = useCallback(async () => {
@@ -92,21 +88,11 @@ export default function ReviewPlanScreen() {
       }
 
       // 统计每个单词的复习情况
-      const processedDates = new Map<number, string>(); // 追踪每个单词已经添加到哪个日期
       uniqueWords.forEach((word) => {
         if (word.next_review) {
           const reviewDate = new Date(word.next_review);
           reviewDate.setHours(0, 0, 0, 0);
           const dateStr = reviewDate.toISOString().split('T')[0];
-
-          // 检查这个单词是否已经被添加到其他日期
-          if (processedDates.has(word.id)) {
-            const existingDateStr = processedDates.get(word.id)!;
-            console.warn(`[ReviewPlan] 单词 ${word.word} (ID: ${word.id}) 已被添加到日期 ${existingDateStr}，现在又想添加到日期 ${dateStr}`);
-            console.warn('[ReviewPlan] 这可能导致同一个单词出现在多个日期的待复习列表中');
-            // 跳过这个重复的单词
-            return;
-          }
 
           if (statsMap.has(dateStr)) {
             const stats = statsMap.get(dateStr)!;
@@ -117,9 +103,6 @@ export default function ReviewPlanScreen() {
             } else {
               stats.pendingReview++;
               
-              // 记录这个单词已经被添加到这个日期
-              processedDates.set(word.id, dateStr);
-              
               // 添加到待复习单词列表
               if (!dailyPendingWords.has(dateStr)) {
                 dailyPendingWords.set(dateStr, []);
@@ -127,20 +110,6 @@ export default function ReviewPlanScreen() {
               dailyPendingWords.get(dateStr)!.push(word);
             }
           }
-        }
-      });
-
-      // 检查每个日期的待复习列表是否有重复
-      dailyPendingWords.forEach((words, dateStr) => {
-        const wordIds = words.map(w => w.id);
-        const uniqueWordIds = new Set(wordIds);
-        if (wordIds.length !== uniqueWordIds.size) {
-          console.warn(`[ReviewPlan] 日期 ${dateStr} 的待复习列表中有重复单词！总数：${wordIds.length}，去重后：${uniqueWordIds.size}`);
-          console.warn('[ReviewPlan] 重复的单词ID：', wordIds.filter((id, index) => wordIds.indexOf(id) !== index));
-          
-          // 自动去重
-          const uniqueWordsForDate = Array.from(new Map(words.map(w => [w.id, w])).values());
-          dailyPendingWords.set(dateStr, uniqueWordsForDate);
         }
       });
 
@@ -234,21 +203,7 @@ export default function ReviewPlanScreen() {
   // 获取指定日期的待复习单词列表
   const getPendingWordsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    const words = dailyPendingWords.get(dateStr) || [];
-    
-    // 检查是否有重复
-    const wordIds = words.map(w => w.id);
-    const uniqueWordIds = new Set(wordIds);
-    if (wordIds.length !== uniqueWordIds.size) {
-      console.warn(`[ReviewPlan] getPendingWordsForDate(${dateStr}): 发现重复单词！`);
-      console.warn('[ReviewPlan] 总数：', wordIds.length, '去重后：', uniqueWordIds.size);
-      console.warn('[ReviewPlan] 单词ID列表：', wordIds);
-      
-      // 自动去重返回
-      return Array.from(new Map(words.map(w => [w.id, w])).values());
-    }
-    
-    return words;
+    return dailyPendingWords.get(dateStr) || [];
   };
 
   // 提前复习
@@ -259,35 +214,9 @@ export default function ReviewPlanScreen() {
       return;
     }
     
-    // 保存要复习的日期
-    setEarlyReviewDate(selectedDate);
-    
-    // 显示提前复习弹窗
-    setShowEarlyReviewModal(true);
-  };
-  
-  // 确认提前复习
-  const confirmEarlyReview = () => {
-    const pendingWords = getPendingWordsForDate(earlyReviewDate!);
-    if (pendingWords.length === 0) {
-      Alert.alert('提示', '当前没有待复习的单词');
-      setShowEarlyReviewModal(false);
-      return;
-    }
-    
-    // 计算提前的天数
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const reviewDate = new Date(earlyReviewDate!);
-    reviewDate.setHours(0, 0, 0, 0);
-    const diffDays = Math.ceil((reviewDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
     // 将单词ID列表转换为JSON字符串传递
     const wordIds = pendingWords.map(w => w.id).join(',');
-    router.push('/review-detail', { earlyReviewWords: wordIds, isEarlyReview: 'true', earlyDays: String(diffDays) });
-    
-    // 关闭弹窗
-    setShowEarlyReviewModal(false);
+    router.push('/review-detail', { earlyReviewWords: wordIds });
   };
 
   // 获取列表视图的数据
@@ -931,60 +860,6 @@ export default function ReviewPlanScreen() {
                 onPress={() => setShowHistoryModal(false)}
               >
                 <ThemedText variant="body" color={theme.buttonPrimaryText}>关闭</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-        </View>
-      </Modal>
-
-      {/* 提前复习确认弹窗 */}
-      <Modal
-        visible={showEarlyReviewModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowEarlyReviewModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <ThemedView level="default" style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <ThemedText variant="h3" color={theme.textPrimary}>
-                提前复习提醒
-              </ThemedText>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              <View style={styles.warningContainer}>
-                <FontAwesome6 name="triangle-exclamation" size={48} color="#F59E0B" />
-                <ThemedText variant="body" color={theme.textPrimary} style={styles.warningTitle}>
-                  提前复习会影响记忆效果
-                </ThemedText>
-              </View>
-              
-              <ThemedText variant="body" color={theme.textSecondary} style={styles.warningText}>
-                根据认知心理学研究，过早复习会导致过度学习，形成记忆假象，长期记忆效果会降低15%-30%。
-              </ThemedText>
-              
-              <ThemedText variant="body" color={theme.textSecondary} style={styles.warningText}>
-                建议按系统推算的时间进行复习，以获得最佳的记忆效果。
-              </ThemedText>
-              
-              <ThemedText variant="body" color={theme.warning} style={styles.adjustmentText}>
-                系统将调整单词掌握率计算因子
-              </ThemedText>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.backgroundTertiary }]}
-                onPress={() => setShowEarlyReviewModal(false)}
-              >
-                <ThemedText variant="body" color={theme.textPrimary}>取消</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton, { backgroundColor: theme.primary }]}
-                onPress={confirmEarlyReview}
-              >
-                <ThemedText variant="body" color={theme.buttonPrimaryText}>确认</ThemedText>
               </TouchableOpacity>
             </View>
           </ThemedView>

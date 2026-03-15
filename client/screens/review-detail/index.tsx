@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, TouchableOpacity, Alert, ActivityIndicator, ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal } from 'react-native';
+import { View, TouchableOpacity, Alert, ActivityIndicator, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -88,10 +88,6 @@ export default function ReviewScreen() {
   // 新增：未来的单词队列（提前复习）
   const [futureWords, setFutureWords] = useState<Word[]>([]);
   const [showFutureOption, setShowFutureOption] = useState(false);
-
-  // 新增：延后复习弹窗状态
-  const [showLateReviewModal, setShowLateReviewModal] = useState(false);
-  const [lateReviewHours, setLateReviewHours] = useState(0);
 
   // 新增：记录开始时间
   const startTimeRef = useRef<number>(0);
@@ -378,36 +374,32 @@ export default function ReviewScreen() {
     }
   };
 
-  // 确认延后复习
-  const confirmLateReview = () => {
-    setShowLateReviewModal(false);
-    startReview(reviewQueue[0]);
-  };
-
   const handleStartReview = () => {
     if (reviewQueue.length > 0) {
       // 检查所有单词的复习时机
       checkAllWordsTiming();
 
-      // 如果有延后复习，先弹窗提醒
-      if (timingWarning && timingWarning.late > 0) {
-        // 计算最大延后小时数
-        let maxLateHours = 0;
-        queue.forEach(word => {
-          if (word.next_review && word.last_review) {
-            const scheduledTime = new Date(word.next_review).getTime();
-            const currentTime = Date.now();
-            const lateHours = Math.max(0, (currentTime - scheduledTime) / (1000 * 60 * 60));
-            if (lateHours > maxLateHours) {
-              maxLateHours = lateHours;
-            }
-          }
-        });
-        
-        setLateReviewHours(Math.round(maxLateHours));
-        setShowLateReviewModal(true);
+      // 如果有复习时机警告，先弹窗提醒
+      if (timingWarning && (timingWarning.early > 0 || timingWarning.late > 0)) {
+        let message = '';
+        if (timingWarning.early > 0 && timingWarning.late > 0) {
+          message = `本次复习队列中有 ${timingWarning.early} 个单词提前复习，${timingWarning.late} 个单词延后复习。\n\n根据认知心理学研究，过早或过晚复习都会影响记忆效果。如果继续复习，掌握率的计算将适当调低。`;
+        } else if (timingWarning.early > 0) {
+          message = `本次复习队列中有 ${timingWarning.early} 个单词提前复习。\n\n根据认知心理学研究，过早复习会影响记忆效果，建议按推算时间进行复习。如果继续复习，掌握率的计算将适当调低。`;
+        } else {
+          message = `本次复习队列中有 ${timingWarning.late} 个单词延后复习。\n\n由于已超过推算的复习时间，单词的遗忘程度可能很大。根据遗忘曲线，掌握率的计算将适当调低。`;
+        }
+
+        Alert.alert(
+          '复习时机提醒',
+          message,
+          [
+            { text: '返回', onPress: () => router.back(), style: 'cancel' },
+            { text: '继续复习', onPress: () => startReview(reviewQueue[0]), style: 'default' }
+          ]
+        );
       } else {
-        // 没有延后复习，直接开始复习
+        // 没有警告，直接开始复习
         startReview(reviewQueue[0]);
       }
     }
@@ -1488,14 +1480,39 @@ export default function ReviewScreen() {
 
           {/* 按钮组 */}
           <View style={styles.buttonGroup}>
-            {/* 继续复习和再来一轮按钮已移除，以避免影响真实有效的掌握率计算 */}
+            {/* ✅ 继续复习按钮（如果有剩余单词） */}
+            {remainingWordsCount > 0 && (
+              <TouchableOpacity
+                style={[styles.completeButton, { backgroundColor: theme.accent }]}
+                onPress={loadReviewQueue}
+              >
+                <FontAwesome6 name="play" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
+                <ThemedText variant="h3" color={theme.buttonPrimaryText}>继续复习</ThemedText>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[styles.completeButton, { backgroundColor: theme.primary }]}
+              onPress={() => {
+                setCurrentStepIndex(0);
+                setTotalScore(0);
+                setMasteredWords([]);
+                setWordScores([]);
+                setWordCompletionStatus(new Map());
+                reviewStartTimeRef.current = 0;
+                loadReviewQueue();
+              }}
+            >
+              <FontAwesome6 name="rotate-right" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
+              <ThemedText variant="h3" color={theme.buttonPrimaryText}>再来一轮</ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.secondaryButton, { backgroundColor: theme.backgroundTertiary, borderColor: theme.border }]}
               onPress={() => router.back()}
             >
-              <FontAwesome6 name="house" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
-              <ThemedText variant="h3" color={theme.buttonPrimaryText}>返回首页</ThemedText>
+              <FontAwesome6 name="house" size={20} color={theme.textPrimary} style={styles.buttonIcon} />
+              <ThemedText variant="h3" color={theme.textPrimary}>返回首页</ThemedText>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -1519,54 +1536,6 @@ export default function ReviewScreen() {
       ) : (
         renderReviewContent()
       )}
-      
-      {/* 延后复习弹窗 */}
-      <Modal
-        visible={showLateReviewModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowLateReviewModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <ThemedView level="default" style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <ThemedText variant="h3" color={theme.textPrimary}>
-                延后复习提醒
-              </ThemedText>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              <View style={styles.warningContainer}>
-                <FontAwesome6 name="triangle-exclamation" size={48} color="#EF4444" />
-                <ThemedText variant="body" color={theme.textPrimary} style={styles.warningTitle}>
-                  本次复习已经延后
-                </ThemedText>
-              </View>
-              
-              <ThemedText variant="body" color={theme.textSecondary} style={styles.warningText}>
-                根据遗忘曲线，由于已超过推算的复习时间{lateReviewHours}小时，单词的遗忘程度可能很大。
-              </ThemedText>
-              
-              <ThemedText variant="body" color={theme.textSecondary} style={styles.warningText}>
-                建议尽快复习以保持记忆效果。根据遗忘曲线，掌握率的计算将适当调低。
-              </ThemedText>
-              
-              <ThemedText variant="body" color={theme.error} style={styles.adjustmentText}>
-                系统将调整单词掌握率计算因子
-              </ThemedText>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton, { backgroundColor: theme.primary }]}
-                onPress={confirmLateReview}
-              >
-                <ThemedText variant="body" color={theme.buttonPrimaryText}>确认</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-        </View>
-      </Modal>
     </Screen>
   );
 }
