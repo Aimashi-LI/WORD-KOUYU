@@ -117,13 +117,11 @@ export default function WordbookScreen() {
   const loadWordbookData = async (wordbookId: number) => {
     console.log('[loadWordbookData] 开始加载词库数据，词库ID:', wordbookId);
     try {
-      // 并行加载所有数据，提高性能
-      const [wordbook, updatedBooks, wordStats, wordList] = await Promise.all([
-        getWordbookWithCount(wordbookId),
-        getAllWordbooks(),
-        getWordbookStats(wordbookId),
-        getWordsInWordbook(wordbookId)
-      ]);
+      // 顺序加载所有数据（避免 Web Worker 环境下的并发问题）
+      const wordbook = await getWordbookWithCount(wordbookId);
+      const updatedBooks = await getAllWordbooks();
+      const wordStats = await getWordbookStats(wordbookId);
+      const wordList = await getWordsInWordbook(wordbookId);
       
       if (!wordbook) {
         console.log('[loadWordbookData] 词库不存在');
