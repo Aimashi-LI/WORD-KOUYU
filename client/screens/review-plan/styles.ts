@@ -36,6 +36,15 @@ export const createStyles = (theme: any) => StyleSheet.create({
   recommendationTextContainer: {
     flex: 1,
   },
+  predictionNoticeContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  predictionNoticeText: {
+    lineHeight: 20,
+  },
   // 视图切换
   viewToggleContainer: {
     flexDirection: 'row',

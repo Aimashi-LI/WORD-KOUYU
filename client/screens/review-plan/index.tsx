@@ -558,6 +558,11 @@ export default function ReviewPlanScreen() {
               </ThemedText>
             </View>
           </View>
+          <View style={styles.predictionNoticeContainer}>
+            <ThemedText variant="caption" color={theme.textMuted} style={styles.predictionNoticeText}>
+              除当天复习时间节点外其余时间节点均为预测节点，实际复习节点根据上一次复习结果实时调整
+            </ThemedText>
+          </View>
         </ThemedView>
 
         {/* 视图切换 */}
