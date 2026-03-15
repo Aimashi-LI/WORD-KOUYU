@@ -460,11 +460,19 @@ export const createStyles = (theme: Theme) => {
     shareSplitTextContainer: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      gap: 10,
     },
     shareSplitColumn: {
       flexDirection: 'column',
       gap: 4,
+    },
+    shareSplitColumnWithSpacing: {
+      paddingRight: 20,
+    },
+    shareSplitDivider: {
+      width: 1,
+      backgroundColor: 'rgba(59, 130, 246, 0.3)',
+      marginHorizontal: 10,
+      flexShrink: 0,
     },
     shareSplitItem: {
       fontSize: 14,

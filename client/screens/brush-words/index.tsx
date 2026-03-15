@@ -871,16 +871,25 @@ export default function BrushWordsScreen() {
                     return (
                       <View style={styles.shareSplitTextContainer}>
                         {columns.map((columnItems, colIndex) => (
-                          <View key={colIndex} style={styles.shareSplitColumn}>
-                            {columnItems.map((item, rowIndex) => (
-                              <Text key={rowIndex} style={[
-                                styles.shareSplitItem,
-                                numColumns >= 3 && styles.shareSplitItemSmall
-                              ]}>
-                                {item}
-                              </Text>
-                            ))}
-                          </View>
+                          <React.Fragment key={colIndex}>
+                            <View style={[
+                              styles.shareSplitColumn,
+                              colIndex < numColumns - 1 && styles.shareSplitColumnWithSpacing
+                            ]}>
+                              {columnItems.map((item, rowIndex) => (
+                                <Text key={rowIndex} style={[
+                                  styles.shareSplitItem,
+                                  numColumns >= 3 && styles.shareSplitItemSmall
+                                ]}>
+                                  {item}
+                                </Text>
+                              ))}
+                            </View>
+                            {/* 列与列之间添加分隔线（除了最后一列） */}
+                            {colIndex < numColumns - 1 && (
+                              <View style={styles.shareSplitDivider} />
+                            )}
+                          </React.Fragment>
                         ))}
                       </View>
                     );
