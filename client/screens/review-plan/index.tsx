@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Dimensions } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Dimensions, TouchableWithoutFeedback, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -50,6 +50,21 @@ export default function ReviewPlanScreen() {
   const [showEarlyReviewModal, setShowEarlyReviewModal] = useState(false);
   const [earlyReviewDate, setEarlyReviewDate] = useState<Date | null>(null);
 
+  // 新增：存储词库列表
+  const [wordbooks, setWordbooks] = useState<any[]>([]);
+
+  // 新增：存储每个日期的词库待复习单词统计
+  // key: dateStr, value: Map<wordbookId, Word[]>
+  const [dailyPendingWordsByWordbook, setDailyPendingWordsByWordbook] = useState<Map<string, Map<number, Word[]>>>(new Map());
+
+  // 新增：控制词库详情弹窗
+  const [showWordbookModal, setShowWordbookModal] = useState(false);
+  const [selectedWordbook, setSelectedWordbook] = useState<any>(null);
+
+  // 新增：控制单词详情弹窗
+  const [showWordModal, setShowWordModal] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<Word | null>(null);
+
   // 加载复习数据
   const loadData = useCallback(async () => {
     try {
@@ -57,21 +72,21 @@ export default function ReviewPlanScreen() {
       await initDatabase();
       const wordbooks = await getAllWordbooks();
 
-      // 获取所有单词的复习信息
+      // 存储词库列表
+      setWordbooks(wordbooks);
+
+      // 获取所有单词的复习信息（保留词库关系，不进行去重）
       const allWords: Word[] = [];
+      const wordbookWordsMap = new Map<number, Word[]>(); // wordbookId -> words
+
       for (const wb of wordbooks) {
         const words = await getWordsInWordbook(wb.id);
         allWords.push(...words);
+        wordbookWordsMap.set(wb.id, words);
       }
 
-      // 去重：避免同一个单词在多个词库中重复出现
-      const uniqueWordsMap = new Map<number, Word>();
-      allWords.forEach((word) => {
-        uniqueWordsMap.set(word.id, word);
-      });
-      const uniqueWords = Array.from(uniqueWordsMap.values());
-
-      console.log('[ReviewPlan] 去重前单词数:', allWords.length, '去重后单词数:', uniqueWords.length);
+      console.log('[ReviewPlan] 总单词数（含重复）:', allWords.length);
+      console.log('[ReviewPlan] 词库数量:', wordbooks.length);
 
       // 计算未来60天的统计数据
       const statsMap = new Map<string, DailyStats>();
@@ -91,61 +106,58 @@ export default function ReviewPlanScreen() {
         });
       }
 
-      // 统计每个单词的复习情况
-      const processedDates = new Map<number, string>(); // 追踪每个单词已经添加到哪个日期
-      uniqueWords.forEach((word) => {
-        if (word.next_review) {
-          const reviewDate = new Date(word.next_review);
-          reviewDate.setHours(0, 0, 0, 0);
-          const dateStr = reviewDate.toISOString().split('T')[0];
+      // 初始化按词库分组的待复习单词统计
+      const dailyPendingWordsByWordbookMap = new Map<string, Map<number, Word[]>>();
 
-          // 检查这个单词是否已经被添加到其他日期
-          if (processedDates.has(word.id)) {
-            const existingDateStr = processedDates.get(word.id)!;
-            console.warn(`[ReviewPlan] 单词 ${word.word} (ID: ${word.id}) 已被添加到日期 ${existingDateStr}，现在又想添加到日期 ${dateStr}`);
-            console.warn('[ReviewPlan] 这可能导致同一个单词出现在多个日期的待复习列表中');
-            // 跳过这个重复的单词
-            return;
-          }
+      // 统计每个词库在每个日期的复习情况
+      wordbooks.forEach((wb) => {
+        const words = wordbookWordsMap.get(wb.id) || [];
 
-          if (statsMap.has(dateStr)) {
-            const stats = statsMap.get(dateStr)!;
-            stats.totalReview++;
+        words.forEach((word) => {
+          if (word.next_review) {
+            const reviewDate = new Date(word.next_review);
+            reviewDate.setHours(0, 0, 0, 0);
+            const dateStr = reviewDate.toISOString().split('T')[0];
 
-            if (word.is_mastered === 1) {
-              stats.completedReview++;
-            } else {
-              stats.pendingReview++;
-              
-              // 记录这个单词已经被添加到这个日期
-              processedDates.set(word.id, dateStr);
-              
-              // 添加到待复习单词列表
-              if (!dailyPendingWords.has(dateStr)) {
-                dailyPendingWords.set(dateStr, []);
+            if (statsMap.has(dateStr)) {
+              const stats = statsMap.get(dateStr)!;
+              stats.totalReview++;
+
+              if (word.is_mastered === 1) {
+                stats.completedReview++;
+              } else {
+                stats.pendingReview++;
+
+                // 按词库分组存储待复习单词
+                if (!dailyPendingWordsByWordbookMap.has(dateStr)) {
+                  dailyPendingWordsByWordbookMap.set(dateStr, new Map());
+                }
+                const wordbookMap = dailyPendingWordsByWordbookMap.get(dateStr)!;
+                if (!wordbookMap.has(wb.id)) {
+                  wordbookMap.set(wb.id, []);
+                }
+                wordbookMap.get(wb.id)!.push(word);
               }
-              dailyPendingWords.get(dateStr)!.push(word);
             }
           }
-        }
+        });
       });
 
-      // 检查每个日期的待复习列表是否有重复
-      dailyPendingWords.forEach((words, dateStr) => {
-        const wordIds = words.map(w => w.id);
-        const uniqueWordIds = new Set(wordIds);
-        if (wordIds.length !== uniqueWordIds.size) {
-          console.warn(`[ReviewPlan] 日期 ${dateStr} 的待复习列表中有重复单词！总数：${wordIds.length}，去重后：${uniqueWordIds.size}`);
-          console.warn('[ReviewPlan] 重复的单词ID：', wordIds.filter((id, index) => wordIds.indexOf(id) !== index));
-          
-          // 自动去重
-          const uniqueWordsForDate = Array.from(new Map(words.map(w => [w.id, w])).values());
-          dailyPendingWords.set(dateStr, uniqueWordsForDate);
-        }
+      // 保留原有的去重待复习单词列表（用于其他用途）
+      const dailyPendingWordsMap = new Map<string, Word[]>();
+      dailyPendingWordsByWordbookMap.forEach((wordbookMap, dateStr) => {
+        const allWordsForDate: Word[] = [];
+        wordbookMap.forEach((words) => {
+          allWordsForDate.push(...words);
+        });
+        // 去重
+        const uniqueWordsForDate = Array.from(new Map(allWordsForDate.map(w => [w.id, w])).values());
+        dailyPendingWordsMap.set(dateStr, uniqueWordsForDate);
       });
 
       setDailyStats(statsMap);
-      setDailyPendingWords(dailyPendingWords);
+      setDailyPendingWords(dailyPendingWordsMap);
+      setDailyPendingWordsByWordbook(dailyPendingWordsByWordbookMap);
 
       // 计算最佳复习时间（基于历史复习时间）
       await calculateBestReviewTime(allWords);
@@ -251,6 +263,12 @@ export default function ReviewPlanScreen() {
     return words;
   };
 
+  // 获取指定日期的词库待复习单词统计
+  const getPendingWordsByWordbookForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return dailyPendingWordsByWordbook.get(dateStr) || new Map();
+  };
+
   // 提前复习
   const startEarlyReview = () => {
     const pendingWords = getPendingWordsForDate(selectedDate);
@@ -337,6 +355,34 @@ export default function ReviewPlanScreen() {
   const calculateCompletionRate = (stats: DailyStats) => {
     if (stats.totalReview === 0) return 0;
     return Math.round((stats.completedReview / stats.totalReview) * 100);
+  };
+
+  // 点击词库卡片，显示该词库的待复习单词列表
+  const handleWordbookPress = (wordbookId: number, wordbookName: string) => {
+    const wordbook = wordbooks.find(wb => wb.id === wordbookId);
+    if (wordbook) {
+      setSelectedWordbook(wordbook);
+      setShowWordbookModal(true);
+    }
+  };
+
+  // 点击单词，查看详情或开始复习
+  const handleWordPress = (word: Word) => {
+    setSelectedWord(word);
+    setShowWordModal(true);
+  };
+
+  // 开始复习某个单词
+  const startReview = (word: Word) => {
+    setShowWordModal(false);
+    try {
+      router.push('/review-detail', {
+        wordId: word.id.toString(),
+      });
+    } catch (error) {
+      console.error('[ReviewPlan] 跳转失败:', error);
+      Alert.alert('错误', '跳转失败，请重试');
+    }
   };
 
   // 生成日历数据
@@ -864,7 +910,7 @@ export default function ReviewPlanScreen() {
         </View>
       </Modal>
 
-      {/* 复习历史弹窗 */}
+      {/* 复习历史弹窗 - 显示词库卡片列表 */}
       <Modal
         visible={showHistoryModal}
         transparent
@@ -875,7 +921,7 @@ export default function ReviewPlanScreen() {
           <ThemedView level="default" style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <ThemedText variant="h3" color={theme.textPrimary}>
-                {selectedDateStats ? formatDateDisplay(selectedDate) : ''} 复习详情
+                {selectedDate ? formatDateDisplay(selectedDate) : ''} 待复习词库
               </ThemedText>
               <TouchableOpacity onPress={() => setShowHistoryModal(false)}>
                 <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
@@ -883,42 +929,57 @@ export default function ReviewPlanScreen() {
             </View>
 
             <ScrollView style={styles.modalBody}>
-              {selectedDateStats ? (
-                <View>
-                  <View style={styles.historyStatsContainer}>
-                    <View style={styles.historyStatItem}>
-                      <ThemedText variant="h2" color={theme.textPrimary}>
-                        {selectedDateStats.totalReview}
-                      </ThemedText>
-                      <ThemedText variant="caption" color={theme.textMuted}>总单词</ThemedText>
-                    </View>
-                    <View style={styles.historyStatItem}>
-                      <ThemedText variant="h2" color={theme.success}>
-                        {selectedDateStats.completedReview}
-                      </ThemedText>
-                      <ThemedText variant="caption" color={theme.textMuted}>已完成</ThemedText>
-                    </View>
-                    <View style={styles.historyStatItem}>
-                      <ThemedText variant="h2" color={theme.warning}>
-                        {selectedDateStats.pendingReview}
-                      </ThemedText>
-                      <ThemedText variant="caption" color={theme.textMuted}>待复习</ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.completionRateContainer}>
-                    <ThemedText variant="body" color={theme.textPrimary}>
-                      完成率：{calculateCompletionRate(selectedDateStats)}%
-                    </ThemedText>
-                    <View style={styles.progressBarContainer}>
-                      <View
-                        style={[
-                          styles.progressBarFill,
-                          { width: `${calculateCompletionRate(selectedDateStats)}%`, backgroundColor: theme.primary }
-                        ]}
-                      />
-                    </View>
-                  </View>
+              {selectedDate ? (
+                <View style={styles.wordbookListContainer}>
+                  {Array.from(dailyPendingWordsByWordbook.keys()).map((dateStr) => {
+                    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+                    if (dateStr !== selectedDateStr) return null;
+                    
+                    const wordbookMap = dailyPendingWordsByWordbook.get(dateStr);
+                    if (!wordbookMap) return null;
+                    
+                    return Array.from(wordbookMap.entries()).map(([wordbookId, words]) => {
+                      const wordbook = wordbooks.find(wb => wb.id === wordbookId);
+                      if (!wordbook) return null;
+                      
+                      return (
+                        <TouchableOpacity
+                          key={wordbookId}
+                          style={styles.wordbookCard}
+                          onPress={() => handleWordbookPress(wordbookId, wordbook.name)}
+                        >
+                          <View style={styles.wordbookCardHeader}>
+                            <ThemedText variant="h4" color={theme.textPrimary}>
+                              {wordbook.name}
+                            </ThemedText>
+                            <View style={styles.wordbookCardBadge}>
+                              <ThemedText variant="caption" color={theme.buttonPrimaryText}>
+                                {words.length}
+                              </ThemedText>
+                            </View>
+                          </View>
+                          <ThemedText variant="caption" color={theme.textMuted}>
+                            点击查看待复习单词列表
+                          </ThemedText>
+                        </TouchableOpacity>
+                      );
+                    });
+                  })}
+                  
+                  {(() => {
+                    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+                    const hasNoData = !dailyPendingWordsByWordbook.has(selectedDateStr) || 
+                      Array.from(dailyPendingWordsByWordbook.get(selectedDateStr)?.keys() || []).length === 0;
+                    
+                    return hasNoData && (
+                      <View style={styles.emptyContainer}>
+                        <FontAwesome6 name="circle-check" size={48} color={theme.success} />
+                        <ThemedText variant="body" color={theme.textSecondary} style={styles.emptyText}>
+                          该日无需复习单词
+                        </ThemedText>
+                      </View>
+                    );
+                  })()}
                 </View>
               ) : (
                 <ThemedText variant="body" color={theme.textMuted}>暂无数据</ThemedText>
@@ -935,6 +996,203 @@ export default function ReviewPlanScreen() {
             </View>
           </ThemedView>
         </View>
+      </Modal>
+
+      {/* 词库详情弹窗 */}
+      <Modal
+        visible={showWordbookModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowWordbookModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} disabled={Platform.OS === 'web'}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={styles.modalOverlay}>
+              <ThemedView level="default" style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <ThemedText variant="h3" color={theme.textPrimary}>
+                    {selectedWordbook?.name} - 待复习单词
+                  </ThemedText>
+                  <TouchableOpacity onPress={() => setShowWordbookModal(false)}>
+                    <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.modalBody}>
+                  {selectedWordbook && selectedDate && (
+                    <View style={styles.wordListContainer}>
+                      {(() => {
+                        const dateStr = selectedDate.toISOString().split('T')[0];
+                        const wordbookMap = dailyPendingWordsByWordbook.get(dateStr);
+                        const words = wordbookMap?.get(selectedWordbook.id) || [];
+                        
+                        if (words.length === 0) {
+                          return (
+                            <View style={styles.emptyContainer}>
+                              <FontAwesome6 name="circle-check" size={48} color={theme.success} />
+                              <ThemedText variant="body" color={theme.textSecondary} style={styles.emptyText}>
+                                全部完成！
+                              </ThemedText>
+                            </View>
+                          );
+                        }
+
+                        return words.map((word) => (
+                          <TouchableOpacity
+                            key={word.id}
+                            style={styles.wordItem}
+                            onPress={() => handleWordPress(word)}
+                          >
+                            <View style={styles.wordInfo}>
+                              <ThemedText variant="body" color={theme.textPrimary} style={styles.wordText}>
+                                {word.word}
+                              </ThemedText>
+                              <ThemedText variant="caption" color={theme.textMuted} style={styles.phonetic}>
+                                {word.phonetic ? word.phonetic : ''}
+                              </ThemedText>
+                              <ThemedText variant="caption" color={theme.textSecondary} style={styles.definition}>
+                                {word.definition}
+                              </ThemedText>
+                            </View>
+                            <View style={styles.wordActions}>
+                              <TouchableOpacity
+                                style={styles.wordActionButton}
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  startReview(word);
+                                }}
+                              >
+                                <ThemedText variant="caption" color={theme.primary}>
+                                  开始复习
+                                </ThemedText>
+                              </TouchableOpacity>
+                            </View>
+                          </TouchableOpacity>
+                        ));
+                      })()}
+                    </View>
+                  )}
+                </ScrollView>
+
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.confirmButton, { backgroundColor: theme.primary }]}
+                    onPress={() => setShowWordbookModal(false)}
+                  >
+                    <ThemedText variant="body" color={theme.buttonPrimaryText}>关闭</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </ThemedView>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* 单词详情弹窗 */}
+      <Modal
+        visible={showWordModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowWordModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} disabled={Platform.OS === 'web'}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={styles.modalOverlay}>
+              <ThemedView level="default" style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <ThemedText variant="h3" color={theme.textPrimary}>
+                    单词详情
+                  </ThemedText>
+                  <TouchableOpacity onPress={() => setShowWordModal(false)}>
+                    <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.modalBody}>
+                  {selectedWord && (
+                    <View style={styles.wordDetailContent}>
+                      <View style={styles.wordDetailRow}>
+                        <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                          单词
+                        </ThemedText>
+                        <ThemedText variant="body" color={theme.textPrimary} style={styles.wordDetailValue}>
+                          {selectedWord.word}
+                        </ThemedText>
+                      </View>
+                      
+                      {selectedWord.phonetic && (
+                        <View style={styles.wordDetailRow}>
+                          <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                            音标
+                          </ThemedText>
+                          <ThemedText variant="body" color={theme.textPrimary} style={styles.wordDetailPhonetic}>
+                            {selectedWord.phonetic}
+                          </ThemedText>
+                        </View>
+                      )}
+                      
+                      <View style={styles.wordDetailRow}>
+                        <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                          释义
+                        </ThemedText>
+                        <ThemedText variant="body" color={theme.textPrimary} style={styles.wordDetailDefinition}>
+                          {selectedWord.definition}
+                        </ThemedText>
+                      </View>
+
+                      {selectedWord.split && (
+                        <View style={styles.wordDetailRow}>
+                          <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                            拆分
+                          </ThemedText>
+                          <ThemedText variant="body" color={theme.textPrimary} style={styles.wordDetailValue}>
+                            {selectedWord.split}
+                          </ThemedText>
+                        </View>
+                      )}
+
+                      {selectedWord.mnemonic && (
+                        <View style={styles.wordDetailRow}>
+                          <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                            助记句
+                          </ThemedText>
+                          <ThemedText variant="body" color={theme.textPrimary} style={styles.wordDetailValue}>
+                            {selectedWord.mnemonic}
+                          </ThemedText>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </ScrollView>
+
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.wordDetailButton, styles.wordDetailSecondaryButton, { backgroundColor: theme.backgroundTertiary }]}
+                    onPress={() => setShowWordModal(false)}
+                  >
+                    <ThemedText variant="body" color={theme.textPrimary} style={styles.wordDetailSecondaryButtonText}>
+                      关闭
+                    </ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.wordDetailButton, styles.wordDetailPrimaryButton, { backgroundColor: theme.primary }]}
+                    onPress={() => selectedWord && startReview(selectedWord)}
+                  >
+                    <ThemedText variant="body" color={theme.buttonPrimaryText} style={styles.wordDetailButtonText}>
+                      开始复习
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </ThemedView>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* 提前复习确认弹窗 */}
