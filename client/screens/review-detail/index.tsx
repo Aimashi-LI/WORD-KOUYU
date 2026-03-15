@@ -1480,33 +1480,6 @@ export default function ReviewScreen() {
 
           {/* 按钮组 */}
           <View style={styles.buttonGroup}>
-            {/* ✅ 继续复习按钮（如果有剩余单词） */}
-            {remainingWordsCount > 0 && (
-              <TouchableOpacity
-                style={[styles.completeButton, { backgroundColor: theme.accent }]}
-                onPress={loadReviewQueue}
-              >
-                <FontAwesome6 name="play" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
-                <ThemedText variant="h3" color={theme.buttonPrimaryText}>继续复习</ThemedText>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={[styles.completeButton, { backgroundColor: theme.primary }]}
-              onPress={() => {
-                setCurrentStepIndex(0);
-                setTotalScore(0);
-                setMasteredWords([]);
-                setWordScores([]);
-                setWordCompletionStatus(new Map());
-                reviewStartTimeRef.current = 0;
-                loadReviewQueue();
-              }}
-            >
-              <FontAwesome6 name="rotate-right" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
-              <ThemedText variant="h3" color={theme.buttonPrimaryText}>再来一轮</ThemedText>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.secondaryButton, { backgroundColor: theme.backgroundTertiary, borderColor: theme.border }]}
               onPress={() => router.back()}
