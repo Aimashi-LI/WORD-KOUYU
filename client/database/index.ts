@@ -1,8 +1,10 @@
 import * as SQLite from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DB_NAME = 'word_review.db';
 const DB_VERSION = 6; // 数据库版本号 - 升级到 6，添加 review_count 字段
+const DB_INITIALIZED_KEY = '@app:database_initialized'; // 用于记录数据库是否已经初始化过
 let db: SQLite.SQLiteDatabase | null = null;
 
 // 基础音标数据（常用词）
@@ -71,14 +73,20 @@ async function initDefaultWordbook(): Promise<void> {
   if (!db) return;
 
   try {
-    // 检查是否有任何词库存在（用于判断是否是全新初始化）
+    // 检查数据库是否已经初始化过（通过 AsyncStorage）
+    const hasInitialized = await AsyncStorage.getItem(DB_INITIALIZED_KEY);
+    const isFirstInit = hasInitialized === null; // null 表示从未初始化过
+    
+    console.log('[initDefaultWordbook] 数据库初始化状态:', isFirstInit ? '首次初始化' : '已初始化');
+
+    // 检查是否有任何词库存在
     const anyWordbook = await db.getFirstAsync<{ id: number }>(
       'SELECT id FROM wordbooks LIMIT 1'
     );
 
-    // 如果数据库中没有任何词库，说明是全新初始化，需要创建预设词库
-    if (!anyWordbook) {
-      console.log('Database is empty, creating preset wordbook...');
+    // 只有在首次初始化且数据库为空时，才创建预设词库
+    if (isFirstInit && !anyWordbook) {
+      console.log('[initDefaultWordbook] 首次初始化且数据库为空，创建预设词库...');
       
       // 创建预设词库
       const result = await db.runAsync(
@@ -86,7 +94,7 @@ async function initDefaultWordbook(): Promise<void> {
         ['预设词库', '系统预设的词库，用于存储所有未分类的单词']
       );
       const presetWordbookId = result.lastInsertRowId;
-      console.log('Created preset wordbook, ID:', presetWordbookId);
+      console.log('[initDefaultWordbook] 创建预设词库成功，ID:', presetWordbookId);
 
       // 将所有未分配到任何词库的单词添加到预设词库
       const orphanWords = await db.getAllAsync<{ id: number }>(
@@ -104,7 +112,7 @@ async function initDefaultWordbook(): Promise<void> {
             // 忽略重复插入
           }
         }
-        console.log(`Added ${orphanWords.length} orphan words to preset wordbook`);
+        console.log(`[initDefaultWordbook] 添加了 ${orphanWords.length} 个未分类单词到预设词库`);
       }
 
       // 更新预设词库的单词数
@@ -114,19 +122,19 @@ async function initDefaultWordbook(): Promise<void> {
          WHERE id = ?`,
         [presetWordbookId, presetWordbookId]
       );
-    } else {
-      // 数据库中已有词库，检查是否有预设词库
+      
+      // 标记数据库已初始化
+      await AsyncStorage.setItem(DB_INITIALIZED_KEY, 'true');
+      console.log('[initDefaultWordbook] 数据库初始化标记已设置');
+    } else if (!isFirstInit) {
+      // 数据库已经初始化过，不再创建预设词库
+      console.log('[initDefaultWordbook] 数据库已初始化，跳过创建预设词库');
+      
+      // 即使不创建预设词库，也要处理未分类的单词
       const existingPreset = await db.getFirstAsync<{ id: number }>(
         'SELECT id FROM wordbooks WHERE is_preset = 1'
       );
 
-      if (existingPreset) {
-        console.log('Preset wordbook already exists, ID:', existingPreset.id);
-      } else {
-        console.log('Database has wordbooks but no preset wordbook - user may have deleted it, skipping creation');
-      }
-
-      // 如果存在预设词库，将未分配的单词添加到预设词库
       if (existingPreset) {
         const orphanWords = await db.getAllAsync<{ id: number }>(
           'SELECT w.id FROM words w WHERE NOT EXISTS (SELECT 1 FROM wordbook_words ww WHERE ww.word_id = w.id)'
@@ -143,7 +151,7 @@ async function initDefaultWordbook(): Promise<void> {
               // 忽略重复插入
             }
           }
-          console.log(`Added ${orphanWords.length} orphan words to preset wordbook`);
+          console.log(`[initDefaultWordbook] 添加了 ${orphanWords.length} 个未分类单词到现有预设词库`);
         }
 
         // 更新预设词库的单词数
@@ -154,9 +162,12 @@ async function initDefaultWordbook(): Promise<void> {
           [existingPreset.id, existingPreset.id]
         );
       }
+    } else {
+      // 有词库但不是首次初始化，说明是用户删除后重新初始化的情况
+      console.log('[initDefaultWordbook] 不是首次初始化但数据库为空，跳过创建预设词库（用户可能删除了所有词库）');
     }
   } catch (error) {
-    console.error('Failed to initialize preset wordbook:', error);
+    console.error('[initDefaultWordbook] 初始化预设词库失败:', error);
   }
 }
 
@@ -488,13 +499,15 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
       CREATE INDEX IF NOT EXISTS idx_phonetics_word ON phonetics(word);
     `);
 
-    console.log('Database initialized successfully');
+    console.log('[initDatabase] Database initialized successfully');
     
     // 初始化基础音标数据
     await initDefaultPhonetics();
 
     // 初始化预设词库
     await initDefaultWordbook();
+  } else {
+    console.log('[initDatabase] Database already initialized');
   }
 
   // 每次调用都检查是否需要迁移
