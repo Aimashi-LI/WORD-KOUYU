@@ -91,14 +91,28 @@ export default function ReviewHomeScreen() {
     );
   };
 
-  const handleStartReview = (projectId: number) => {
+  const handleStartReview = (project: ReviewProject) => {
     console.log('[ReviewHome] ========== 点击开始复习 ==========');
-    console.log('[ReviewHome] projectId:', projectId);
-    console.log('[ReviewHome] 路由路径:', '/review-detail');
-    console.log('[ReviewHome] 路由参数:', { projectId: projectId.toString() });
+    console.log('[ReviewHome] project:', project.name, 'ID:', project.id);
+    console.log('[ReviewHome] pendingReview:', project.pendingReview);
+
+    // 检查待复习项目个数
+    if (project.pendingReview === 0) {
+      // 没有待复习项目，显示提示
+      Alert.alert(
+        '提示',
+        '该项目当前没有待复习项目',
+        [{ text: '确定' }]
+      );
+      return;
+    }
+
+    // 有待复习项目，跳转到待复习项目列表页面
+    console.log('[ReviewHome] 路由路径:', '/review-word-list');
+    console.log('[ReviewHome] 路由参数:', { projectId: project.id.toString() });
 
     try {
-      router.push('/review-detail', { projectId: projectId.toString() });
+      router.push('/review-word-list', { projectId: project.id.toString() });
       console.log('[ReviewHome] router.push 调用成功');
     } catch (error) {
       console.error('[ReviewHome] router.push 调用失败:', error);
@@ -112,7 +126,7 @@ export default function ReviewHomeScreen() {
       <ThemedView key={project.id} level="default" style={styles.projectCard}>
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => handleStartReview(project.id)}
+          onPress={() => handleStartReview(project)}
         >
           <View style={styles.projectContent}>
             <View style={styles.projectHeader}>

@@ -129,6 +129,13 @@ export default function RootLayout() {
                 presentation: 'card'
               }}
             />
+            <Stack.Screen
+              name="review-word-list"
+              options={{
+                title: "待复习单词",
+                presentation: 'card'
+              }}
+            />
             <Stack.Screen 
               name="brush-words" 
               options={{ 
