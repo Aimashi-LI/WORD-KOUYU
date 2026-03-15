@@ -137,6 +137,74 @@ export const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.border,
     height: 40,
   },
+  // 待复习单词列表
+  pendingWordsContainer: {
+    marginTop: 16,
+  },
+  pendingWordsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  pendingWordsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  earlyReviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 6,
+  },
+  earlyReviewButtonText: {
+    fontSize: 12,
+  },
+  pendingWordItem: {
+    padding: 12,
+    marginTop: 8,
+    borderRadius: 8,
+    backgroundColor: theme.backgroundTertiary,
+  },
+  pendingWordHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pendingWordLeft: {
+    flex: 1,
+  },
+  pendingWord: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  expandIcon: {
+    transitionDuration: '0.2s',
+  },
+  pendingWordDetails: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  wordDetailRow: {
+    marginBottom: 8,
+  },
+  wordDetailLabel: {
+    marginBottom: 2,
+  },
+  // 没有复习项目提示
+  noReviewItemsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 16,
+  },
+  noReviewItemsText: {
+    fontSize: 14,
+  },
   // 完成率
   completionRateContainer: {
     paddingHorizontal: 16,

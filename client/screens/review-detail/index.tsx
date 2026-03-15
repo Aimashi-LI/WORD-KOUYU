@@ -10,7 +10,7 @@ import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getReviewWords, addReviewLog, updateWord } from '@/database/wordDao';
 import { getRecentReviewLogs } from '@/database/wordDao';
-import { getWordsInWordbook } from '@/database/wordbookDao';
+import { getWordsInWordbook, getAllWordbooks } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
 import { Word } from '@/database/types';
 import {
@@ -51,7 +51,7 @@ export default function ReviewScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  const { projectId } = useSafeSearchParams<{ projectId?: string }>();
+  const { projectId, earlyReviewWords } = useSafeSearchParams<{ projectId?: string; earlyReviewWords?: string }>();
 
   // 添加调试日志
   console.log('[Review] 页面加载，projectId:', projectId);
@@ -133,11 +133,61 @@ export default function ReviewScreen() {
 
   const loadReviewQueue = async () => {
     console.log('[Review] ========== loadReviewQueue 开始 ==========');
-    console.log('[Review] 加载复习队列，projectId:', projectId);
+    console.log('[Review] 加载复习队列，projectId:', projectId, 'earlyReviewWords:', earlyReviewWords);
     setLoading(true);
     try {
       await initDatabase();
       console.log('[Review] 数据库初始化完成');
+
+      // 处理提前复习的单词
+      if (earlyReviewWords) {
+        console.log('[Review] 检测到提前复习单词，开始加载...');
+        
+        // 解析单词ID列表
+        const wordIds = earlyReviewWords.split(',').map((id: string) => parseInt(id.trim()));
+        console.log('[Review] 提前复习的单词ID列表:', wordIds);
+
+        // 获取所有词库的所有单词
+        const wordbooks = await getAllWordbooks();
+        const allWords: Word[] = [];
+        
+        for (const wb of wordbooks) {
+          const words = await getWordsInWordbook(wb.id);
+          allWords.push(...words);
+        }
+
+        // 筛选出指定的单词
+        const earlyReviewWordList = allWords.filter(w => wordIds.includes(w.id));
+        console.log('[Review] 找到', earlyReviewWordList.length, '个提前复习的单词');
+
+        // 设置为复习队列
+        setQueue(earlyReviewWordList);
+        setCurrentStepIndex(0);
+        setLoading(false);
+
+        // 创建复习步骤
+        const reviewSteps: ReviewStep[] = earlyReviewWordList.map(word => ({
+          word,
+          mode: 'type1', // 默认使用填空单词模式
+          wordId: word.id
+        }));
+        setReviewQueue(reviewSteps);
+
+        // 检查时机
+        setQueue(earlyReviewWordList);
+        checkAllWordsTiming();
+        
+        // 开始复习
+        if (earlyReviewWordList.length > 0 && reviewSteps.length > 0) {
+          startReview(reviewSteps[0]);
+        } else {
+          setState('completed');
+          Alert.alert('提示', '没有找到需要提前复习的单词');
+        }
+        
+        console.log('[Review] ========== loadReviewQueue 结束（提前复习） ==========');
+        return;
+      }
 
       let words: Word[];
       let futureWordsList: Word[] = [];

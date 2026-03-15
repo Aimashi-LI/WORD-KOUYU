@@ -39,6 +39,12 @@ export default function ReviewPlanScreen() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [bestReviewTime, setBestReviewTime] = useState('09:00');
   const [loading, setLoading] = useState(true);
+  
+  // 新增：存储每个日期的待复习单词列表
+  const [dailyPendingWords, setDailyPendingWords] = useState<Map<string, Word[]>>(new Map());
+  
+  // 新增：控制单词详情展开的状态
+  const [expandedWordId, setExpandedWordId] = useState<number | null>(null);
 
   // 加载复习数据
   const loadData = useCallback(async () => {
@@ -87,12 +93,19 @@ export default function ReviewPlanScreen() {
               stats.completedReview++;
             } else {
               stats.pendingReview++;
+              
+              // 添加到待复习单词列表
+              if (!dailyPendingWords.has(dateStr)) {
+                dailyPendingWords.set(dateStr, []);
+              }
+              dailyPendingWords.get(dateStr)!.push(word);
             }
           }
         }
       });
 
       setDailyStats(statsMap);
+      setDailyPendingWords(dailyPendingWords);
 
       // 计算最佳复习时间（基于历史复习时间）
       await calculateBestReviewTime(allWords);
@@ -176,6 +189,25 @@ export default function ReviewPlanScreen() {
   const getStatsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
     return dailyStats.get(dateStr);
+  };
+
+  // 获取指定日期的待复习单词列表
+  const getPendingWordsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return dailyPendingWords.get(dateStr) || [];
+  };
+
+  // 提前复习
+  const startEarlyReview = () => {
+    const pendingWords = getPendingWordsForDate(selectedDate);
+    if (pendingWords.length === 0) {
+      Alert.alert('提示', '当前没有待复习的单词');
+      return;
+    }
+    
+    // 将单词ID列表转换为JSON字符串传递
+    const wordIds = pendingWords.map(w => w.id).join(',');
+    router.push('/review-detail', { earlyReviewWords: wordIds });
   };
 
   // 获取列表视图的数据
@@ -287,6 +319,7 @@ export default function ReviewPlanScreen() {
   }
 
   const selectedDateStats = getStatsForDate(selectedDate);
+  const selectedDatePendingWords = getPendingWordsForDate(selectedDate);
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
@@ -470,6 +503,130 @@ export default function ReviewPlanScreen() {
                       />
                     </View>
                   </View>
+
+                  {/* 待复习项目列表 */}
+                  {selectedDatePendingWords.length > 0 && (
+                    <View style={styles.pendingWordsContainer}>
+                      <View style={styles.pendingWordsHeader}>
+                        <ThemedText variant="body" color={theme.textPrimary} style={styles.pendingWordsTitle}>
+                          待复习项目 ({selectedDatePendingWords.length})
+                        </ThemedText>
+                        {selectedDatePendingWords.length > 0 && (
+                          <TouchableOpacity
+                            style={[styles.earlyReviewButton, { backgroundColor: theme.primary }]}
+                            onPress={startEarlyReview}
+                          >
+                            <FontAwesome6 name="clock" size={16} color={theme.buttonPrimaryText} />
+                            <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.earlyReviewButtonText}>
+                              提前复习
+                            </ThemedText>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+
+                      {/* 待复习单词列表 */}
+                      {selectedDatePendingWords.map((word) => (
+                        <TouchableOpacity
+                          key={word.id}
+                          style={styles.pendingWordItem}
+                          onPress={() => setExpandedWordId(expandedWordId === word.id ? null : word.id)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.pendingWordHeader}>
+                            <View style={styles.pendingWordLeft}>
+                              <ThemedText variant="body" color={theme.textPrimary} style={styles.pendingWord}>
+                                {word.word}
+                              </ThemedText>
+                              {word.phonetic && (
+                                <ThemedText variant="caption" color={theme.textMuted}>
+                                  {word.phonetic}
+                                </ThemedText>
+                              )}
+                            </View>
+                            <FontAwesome6
+                              name="chevron-down"
+                              size={16}
+                              color={theme.textMuted}
+                              style={[
+                                styles.expandIcon,
+                                expandedWordId === word.id && { transform: [{ rotate: '180deg' }] }
+                              ]}
+                            />
+                          </View>
+
+                          {/* 单词详情（展开时显示） */}
+                          {expandedWordId === word.id && (
+                            <View style={styles.pendingWordDetails}>
+                              <View style={styles.wordDetailRow}>
+                                <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                                  释义：
+                                </ThemedText>
+                                <ThemedText variant="body" color={theme.textPrimary}>
+                                  {word.definition}
+                                </ThemedText>
+                              </View>
+                              {word.partOfSpeech && (
+                                <View style={styles.wordDetailRow}>
+                                  <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                                    词性：
+                                  </ThemedText>
+                                  <ThemedText variant="body" color={theme.textPrimary}>
+                                    {word.partOfSpeech}
+                                  </ThemedText>
+                                </View>
+                              )}
+                              {word.mnemonic && (
+                                <View style={styles.wordDetailRow}>
+                                  <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                                    助记句：
+                                  </ThemedText>
+                                  <ThemedText variant="body" color={theme.textPrimary}>
+                                    {word.mnemonic}
+                                  </ThemedText>
+                                </View>
+                              )}
+                              {word.sentence && (
+                                <View style={styles.wordDetailRow}>
+                                  <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                                    例句：
+                                  </ThemedText>
+                                  <ThemedText variant="body" color={theme.textPrimary}>
+                                    {word.sentence}
+                                  </ThemedText>
+                                </View>
+                              )}
+                              <View style={styles.wordDetailRow}>
+                                <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                                  稳定性：
+                                </ThemedText>
+                                <ThemedText variant="body" color={theme.textPrimary}>
+                                  {word.stability.toFixed(2)} 天
+                                </ThemedText>
+                              </View>
+                              <View style={styles.wordDetailRow}>
+                                <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                                  计划复习时间：
+                                </ThemedText>
+                                <ThemedText variant="body" color={theme.textPrimary}>
+                                  {word.next_review ? new Date(word.next_review).toLocaleString('zh-CN') : '未设置'}
+                                </ThemedText>
+                              </View>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* 当前日期没有复习项目时显示的提示 */}
+              {(!selectedDateStats || selectedDateStats.totalReview === 0) && (
+                <View style={styles.noReviewItemsContainer}>
+                  <FontAwesome6 name="calendar-xmark" size={48} color={theme.textMuted} />
+                  <ThemedText variant="body" color={theme.textMuted} style={styles.noReviewItemsText}>
+                    当前没有待复习项目
+                  </ThemedText>
                 </View>
               )}
             </ThemedView>
