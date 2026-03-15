@@ -501,10 +501,10 @@ export const createStyles = (theme: Theme) => {
     },
     // 底部信息
     shareCardFooter: {
-      backgroundColor: '#F97316',
       padding: 12,
       borderRadius: 8,
       alignItems: 'center',
+      marginTop: 16,
     },
     shareFooterUser: {
       fontSize: 10,

@@ -907,7 +907,7 @@ export default function BrushWordsScreen() {
 
               {/* 底部信息 */}
               <View style={styles.shareCardFooter}>
-                <Text style={styles.shareFooterUser}>来自编码记忆法的分享</Text>
+                <Text style={styles.shareFooterUser}>来自 编码记忆法 的分享</Text>
                 <Text style={styles.shareFooterDate}>{new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
               </View>
             </View>
