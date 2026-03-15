@@ -111,8 +111,9 @@ export default function ReviewPlanScreen() {
                 dailyPendingWords.set(dateStr, []);
                 dateProcessedWordIds.set(dateStr, new Set());
               }
-              
-              const processedIds = dateProcessedWordIds.get(dateStr)!;
+
+              // 使用空值合并运算符确保 processedIds 不会是 undefined
+              const processedIds = dateProcessedWordIds.get(dateStr) ?? new Set();
               if (!processedIds.has(word.id)) {
                 processedIds.add(word.id);
                 dailyPendingWords.get(dateStr)!.push(word);
