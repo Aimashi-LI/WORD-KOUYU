@@ -36,6 +36,9 @@ export default function ReviewPlanScreen() {
   const [markedDatesCount, setMarkedDatesCount] = useState<Record<string, number>>({});
   const [selectedDateWords, setSelectedDateWords] = useState<any[]>([]);
   
+  // 词库分组折叠状态管理
+  const [expandedWordbooks, setExpandedWordbooks] = useState<Record<string, boolean>>({});
+  
   // 判断今天是否有待复习的单词
   const hasTodayWords = useMemo(() => {
     if (reviewGroups.length === 0) return false;
@@ -150,6 +153,15 @@ export default function ReviewPlanScreen() {
     } else {
       return '很稳定';
     }
+  };
+  
+  // 切换词库分组的展开/收起状态
+  const toggleWordbookExpand = (groupIndex: number, wordbookId: number) => {
+    const key = `${groupIndex}-${wordbookId}`;
+    setExpandedWordbooks(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
   
   return (
@@ -343,48 +355,67 @@ export default function ReviewPlanScreen() {
                   {/* 按词库分组显示 */}
                   {item.wordbooks && item.wordbooks.length > 0 ? (
                     <View style={styles.wordbookGroups}>
-                      {item.wordbooks.map((wb) => (
-                        <View key={wb.wordbookId} style={styles.wordbookGroup}>
-                          <View style={styles.wordbookGroupHeader}>
-                            <ThemedText variant="smallMedium" color={theme.textSecondary}>
-                              {wb.wordbookName}
-                            </ThemedText>
-                            <ThemedText variant="caption" color={theme.primary}>
-                              {wb.count} 个单词
-                            </ThemedText>
-                          </View>
-                          {wb.words.map((word) => (
+                      {item.wordbooks.map((wb) => {
+                        const wordbookKey = `${groupIndex}-${wb.wordbookId}`;
+                        const isExpanded = expandedWordbooks[wordbookKey];
+                        
+                        return (
+                          <View key={wb.wordbookId} style={styles.wordbookGroup}>
                             <TouchableOpacity 
-                              key={word.id}
-                              style={styles.wordItem}
-                              onPress={() => router.push('/word-detail', { id: word.id.toString() })}
+                              style={styles.wordbookGroupHeader}
+                              onPress={() => toggleWordbookExpand(groupIndex, wb.wordbookId)}
+                              activeOpacity={0.7}
                             >
-                              <View style={styles.wordInfo}>
-                                <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                                  {word.word}
-                                </ThemedText>
-                                {word.partOfSpeech && (
-                                  <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
-                                    {word.partOfSpeech}
-                                  </ThemedText>
-                                )}
-                                <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
-                                  {word.definition}
+                              <View style={styles.wordbookGroupHeaderLeft}>
+                                <FontAwesome6 
+                                  name={isExpanded ? "chevron-down" : "chevron-right"} 
+                                  size={14} 
+                                  color={theme.primary} 
+                                  style={styles.wordbookExpandIcon}
+                                />
+                                <ThemedText variant="smallMedium" color={theme.textSecondary}>
+                                  {wb.wordbookName}
                                 </ThemedText>
                               </View>
-                              
-                              <View style={styles.wordStatus}>
-                                <ThemedText variant="caption" color={theme.textMuted}>
-                                  {formatStability(word.stability)}
+                              <View style={styles.wordbookGroupHeaderRight}>
+                                <ThemedText variant="caption" color={theme.primary}>
+                                  {wb.count} 个单词
                                 </ThemedText>
-                                {word.is_mastered && (
-                                  <FontAwesome6 name="circle-check" size={16} color={theme.success} />
-                                )}
                               </View>
                             </TouchableOpacity>
-                          ))}
-                        </View>
-                      ))}
+                            {isExpanded && wb.words.map((word) => (
+                              <TouchableOpacity 
+                                key={word.id}
+                                style={styles.wordItem}
+                                onPress={() => router.push('/word-detail', { id: word.id.toString() })}
+                              >
+                                <View style={styles.wordInfo}>
+                                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                                    {word.word}
+                                  </ThemedText>
+                                  {word.partOfSpeech && (
+                                    <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
+                                      {word.partOfSpeech}
+                                    </ThemedText>
+                                  )}
+                                  <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
+                                    {word.definition}
+                                  </ThemedText>
+                                </View>
+                                
+                                <View style={styles.wordStatus}>
+                                  <ThemedText variant="caption" color={theme.textMuted}>
+                                    {formatStability(word.stability)}
+                                  </ThemedText>
+                                  {word.is_mastered && (
+                                    <FontAwesome6 name="circle-check" size={16} color={theme.success} />
+                                  )}
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        );
+                      })}
                     </View>
                   ) : (
                     // 没有词库分组时显示原始单词列表

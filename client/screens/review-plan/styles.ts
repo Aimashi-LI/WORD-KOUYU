@@ -205,6 +205,19 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.md,
       marginBottom: Spacing.xs,
     },
+    wordbookGroupHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      gap: Spacing.xs,
+    },
+    wordbookGroupHeaderRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    wordbookExpandIcon: {
+      marginRight: Spacing.xs,
+    },
     // 加载和空状态
     loadingContainer: {
       paddingVertical: Spacing.xl,
