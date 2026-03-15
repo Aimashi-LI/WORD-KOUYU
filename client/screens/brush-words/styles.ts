@@ -507,13 +507,13 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
     },
     shareFooterUser: {
-      fontSize: 12,
-      color: '#1F2937',
+      fontSize: 10,
+      color: '#6B7280',
       marginBottom: 2,
     },
     shareFooterDate: {
       fontSize: 10,
-      color: '#1F2937',
+      color: '#6B7280',
     },
   });
 };
