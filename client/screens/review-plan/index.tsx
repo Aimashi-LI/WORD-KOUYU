@@ -12,6 +12,50 @@ import { getReviewStats, getReviewPlanGrouped, ReviewStats, ReviewGroup, getWord
 import { initDatabase } from '@/database';
 import { CalendarView } from '@/components/CalendarView';
 
+// 单词项组件（独立组件避免 map 渲染问题）
+/* eslint-disable react/prop-types */
+interface WordItemProps {
+  word: any;
+  theme: any;
+  styles: any;
+  router: any;
+  formatStability: (stability: number | undefined) => string;
+}
+
+const WordItem = React.memo<WordItemProps>(({ word, theme, styles, router, formatStability }) => {
+  return (
+    <TouchableOpacity 
+      style={styles.wordItem}
+      onPress={() => router.push('/word-detail', { id: word.id.toString() })}
+    >
+      <View style={styles.wordInfo}>
+        <ThemedText variant="smallMedium" color={theme.textPrimary}>
+          {word.word}
+        </ThemedText>
+        {word.partOfSpeech && (
+          <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
+            {word.partOfSpeech}
+          </ThemedText>
+        )}
+        <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
+          {word.definition}
+        </ThemedText>
+      </View>
+      
+      <View style={styles.wordStatus}>
+        <ThemedText variant="caption" color={theme.textMuted}>
+          {formatStability(word.stability)}
+        </ThemedText>
+        {word.is_mastered && (
+          <FontAwesome6 name="circle-check" size={16} color={theme.success} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+WordItem.displayName = 'WordItem';
+
 export default function ReviewPlanScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -386,34 +430,14 @@ export default function ReviewPlanScreen() {
                             {isExpanded ? (
                               wb.words && wb.words.length > 0 ? (
                                 wb.words.map((word) => (
-                                  <TouchableOpacity 
+                                  <WordItem
                                     key={word.id}
-                                    style={styles.wordItem}
-                                    onPress={() => router.push('/word-detail', { id: word.id.toString() })}
-                                  >
-                                    <View style={styles.wordInfo}>
-                                      <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                                        {word.word}
-                                      </ThemedText>
-                                      {word.partOfSpeech && (
-                                        <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
-                                          {word.partOfSpeech}
-                                        </ThemedText>
-                                      )}
-                                      <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
-                                        {word.definition}
-                                      </ThemedText>
-                                    </View>
-                                    
-                                    <View style={styles.wordStatus}>
-                                      <ThemedText variant="caption" color={theme.textMuted}>
-                                        {formatStability(word.stability)}
-                                      </ThemedText>
-                                      {word.is_mastered && (
-                                        <FontAwesome6 name="circle-check" size={16} color={theme.success} />
-                                      )}
-                                    </View>
-                                  </TouchableOpacity>
+                                    word={word}
+                                    theme={theme}
+                                    styles={styles}
+                                    router={router}
+                                    formatStability={formatStability}
+                                  />
                                 ))
                               ) : null
                             ) : null}
@@ -423,36 +447,18 @@ export default function ReviewPlanScreen() {
                     </View>
                   ) : (
                     // 没有词库分组时显示原始单词列表
-                    item.words.map((word) => (
-                      <TouchableOpacity 
-                        key={word.id}
-                        style={styles.wordItem}
-                        onPress={() => router.push('/word-detail', { id: word.id.toString() })}
-                      >
-                        <View style={styles.wordInfo}>
-                          <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                            {word.word}
-                          </ThemedText>
-                          {word.partOfSpeech && (
-                            <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
-                              {word.partOfSpeech}
-                            </ThemedText>
-                          )}
-                          <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
-                            {word.definition}
-                          </ThemedText>
-                        </View>
-                        
-                        <View style={styles.wordStatus}>
-                          <ThemedText variant="caption" color={theme.textMuted}>
-                            {formatStability(word.stability)}
-                          </ThemedText>
-                          {word.is_mastered && (
-                            <FontAwesome6 name="circle-check" size={16} color={theme.success} />
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    ))
+                    item.words && item.words.length > 0 ? (
+                      item.words.map((word) => (
+                        <WordItem
+                          key={word.id}
+                          word={word}
+                          theme={theme}
+                          styles={styles}
+                          router={router}
+                          formatStability={formatStability}
+                        />
+                      ))
+                    ) : null
                   )}
                 </View>
               ))}
