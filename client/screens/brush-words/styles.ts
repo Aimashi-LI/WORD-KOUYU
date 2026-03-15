@@ -435,15 +435,21 @@ export const createStyles = (theme: Theme) => {
       borderRadius: 12,
       marginBottom: 12,
     },
+    shareLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
     shareDefinitionLabel: {
       fontSize: 14,
       color: '#9CA3AF',
-      marginBottom: 4,
+      minWidth: 45,
+      flexShrink: 0,
     },
     shareDefinition: {
       fontSize: 16,
       color: '#1F2937',
       lineHeight: 22,
+      flex: 1,
     },
     // 拆分
     shareSplitSection: {
@@ -493,11 +499,14 @@ export const createStyles = (theme: Theme) => {
     shareMnemonicLabel: {
       fontSize: 14,
       color: '#9CA3AF',
+      minWidth: 45,
+      flexShrink: 0,
     },
     shareMnemonicText: {
       fontSize: 16,
       color: '#F97316',
       lineHeight: 22,
+      flex: 1,
     },
     // 例句
     shareSentenceSection: {
@@ -509,11 +518,14 @@ export const createStyles = (theme: Theme) => {
     shareSentenceLabel: {
       fontSize: 14,
       color: '#9CA3AF',
+      minWidth: 45,
+      flexShrink: 0,
     },
     shareSentenceText: {
       fontSize: 16,
       color: '#374151',
       lineHeight: 22,
+      flex: 1,
     },
     // 底部信息
     shareCardFooter: {

@@ -839,10 +839,12 @@ export default function BrushWordsScreen() {
 
               {/* 释义 */}
               <View style={styles.shareDefinitionSection}>
-                <Text style={styles.shareDefinitionLabel}>释义：</Text>
-                <Text style={styles.shareDefinition}>
-                  {currentWord.definition || '单词'}
-                </Text>
+                <View style={styles.shareLabelRow}>
+                  <Text style={styles.shareDefinitionLabel}>释义：</Text>
+                  <Text style={styles.shareDefinition} numberOfLines={undefined}>
+                    {currentWord.definition || '单词'}
+                  </Text>
+                </View>
               </View>
 
               {/* 拆分 */}
@@ -900,16 +902,20 @@ export default function BrushWordsScreen() {
               {/* 助记短句 */}
               {currentWord.mnemonic && (
                 <View style={styles.shareMnemonicSection}>
-                  <Text style={styles.shareMnemonicLabel}>短句：</Text>
-                  <Text style={styles.shareMnemonicText}>{currentWord.mnemonic}</Text>
+                  <View style={styles.shareLabelRow}>
+                    <Text style={styles.shareMnemonicLabel}>短句：</Text>
+                    <Text style={styles.shareMnemonicText} numberOfLines={undefined}>{currentWord.mnemonic}</Text>
+                  </View>
                 </View>
               )}
 
               {/* 例句 */}
               {currentWord.sentence && (
                 <View style={styles.shareSentenceSection}>
-                  <Text style={styles.shareSentenceLabel}>例句：</Text>
-                  <Text style={styles.shareSentenceText}>{currentWord.sentence}</Text>
+                  <View style={styles.shareLabelRow}>
+                    <Text style={styles.shareSentenceLabel}>例句：</Text>
+                    <Text style={styles.shareSentenceText} numberOfLines={undefined}>{currentWord.sentence}</Text>
+                  </View>
                 </View>
               )}
 
