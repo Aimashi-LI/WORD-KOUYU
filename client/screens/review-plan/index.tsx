@@ -88,11 +88,21 @@ export default function ReviewPlanScreen() {
       }
 
       // 统计每个单词的复习情况
+      const processedDates = new Map<number, string>(); // 追踪每个单词已经添加到哪个日期
       uniqueWords.forEach((word) => {
         if (word.next_review) {
           const reviewDate = new Date(word.next_review);
           reviewDate.setHours(0, 0, 0, 0);
           const dateStr = reviewDate.toISOString().split('T')[0];
+
+          // 检查这个单词是否已经被添加到其他日期
+          if (processedDates.has(word.id)) {
+            const existingDateStr = processedDates.get(word.id)!;
+            console.warn(`[ReviewPlan] 单词 ${word.word} (ID: ${word.id}) 已被添加到日期 ${existingDateStr}，现在又想添加到日期 ${dateStr}`);
+            console.warn('[ReviewPlan] 这可能导致同一个单词出现在多个日期的待复习列表中');
+            // 跳过这个重复的单词
+            return;
+          }
 
           if (statsMap.has(dateStr)) {
             const stats = statsMap.get(dateStr)!;
@@ -103,6 +113,9 @@ export default function ReviewPlanScreen() {
             } else {
               stats.pendingReview++;
               
+              // 记录这个单词已经被添加到这个日期
+              processedDates.set(word.id, dateStr);
+              
               // 添加到待复习单词列表
               if (!dailyPendingWords.has(dateStr)) {
                 dailyPendingWords.set(dateStr, []);
@@ -110,6 +123,20 @@ export default function ReviewPlanScreen() {
               dailyPendingWords.get(dateStr)!.push(word);
             }
           }
+        }
+      });
+
+      // 检查每个日期的待复习列表是否有重复
+      dailyPendingWords.forEach((words, dateStr) => {
+        const wordIds = words.map(w => w.id);
+        const uniqueWordIds = new Set(wordIds);
+        if (wordIds.length !== uniqueWordIds.size) {
+          console.warn(`[ReviewPlan] 日期 ${dateStr} 的待复习列表中有重复单词！总数：${wordIds.length}，去重后：${uniqueWordIds.size}`);
+          console.warn('[ReviewPlan] 重复的单词ID：', wordIds.filter((id, index) => wordIds.indexOf(id) !== index));
+          
+          // 自动去重
+          const uniqueWordsForDate = Array.from(new Map(words.map(w => [w.id, w])).values());
+          dailyPendingWords.set(dateStr, uniqueWordsForDate);
         }
       });
 
@@ -203,7 +230,21 @@ export default function ReviewPlanScreen() {
   // 获取指定日期的待复习单词列表
   const getPendingWordsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return dailyPendingWords.get(dateStr) || [];
+    const words = dailyPendingWords.get(dateStr) || [];
+    
+    // 检查是否有重复
+    const wordIds = words.map(w => w.id);
+    const uniqueWordIds = new Set(wordIds);
+    if (wordIds.length !== uniqueWordIds.size) {
+      console.warn(`[ReviewPlan] getPendingWordsForDate(${dateStr}): 发现重复单词！`);
+      console.warn('[ReviewPlan] 总数：', wordIds.length, '去重后：', uniqueWordIds.size);
+      console.warn('[ReviewPlan] 单词ID列表：', wordIds);
+      
+      // 自动去重返回
+      return Array.from(new Map(words.map(w => [w.id, w])).values());
+    }
+    
+    return words;
   };
 
   // 提前复习
