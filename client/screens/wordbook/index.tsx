@@ -38,6 +38,9 @@ export default function WordbookScreen() {
   
   // 记录创建词库后要跳转的页面
   const [pendingNavigateTo, setPendingNavigateTo] = useState<string | null>(null);
+
+  // 判断是否是为了添加单词而创建词库
+  const isCreatingForAddingWord = pendingNavigateTo !== null;
   
   // 编辑词库相关状态
   const [showEditWordbookModal, setShowEditWordbookModal] = useState(false);
@@ -943,7 +946,9 @@ export default function WordbookScreen() {
               onPress={(e) => e.stopPropagation()}
             >
               <View style={styles.modalHeader}>
-                <ThemedText variant="h3" color={theme.textPrimary}>创建词库</ThemedText>
+                <ThemedText variant="h3" color={theme.textPrimary}>
+                  {isCreatingForAddingWord ? '请先创建词库' : '创建词库'}
+                </ThemedText>
                 <TouchableOpacity onPress={() => {
                   setShowWordbookModal(false);
                   setPendingNavigateTo(null);
@@ -953,6 +958,15 @@ export default function WordbookScreen() {
               </View>
 
               <ScrollView style={styles.modalBody}>
+                {isCreatingForAddingWord && (
+                  <View style={styles.hintText}>
+                    <FontAwesome6 name="circle-info" size={16} color={theme.primary} />
+                    <ThemedText variant="caption" color={theme.textSecondary} style={styles.hintTextContent}>
+                      添加单词需要先创建词库
+                    </ThemedText>
+                  </View>
+                )}
+
                 <View style={styles.inputGroup}>
                   <ThemedText variant="body" color={theme.textSecondary} style={styles.inputLabel}>
                     词库名称 <ThemedText color={theme.error}>*</ThemedText>
@@ -1034,6 +1048,15 @@ export default function WordbookScreen() {
               </View>
 
               <ScrollView style={styles.modalBody}>
+                {isCreatingForAddingWord && (
+                  <View style={styles.hintText}>
+                    <FontAwesome6 name="circle-info" size={16} color={theme.primary} />
+                    <ThemedText variant="caption" color={theme.textSecondary} style={styles.hintTextContent}>
+                      添加单词需要先创建词库
+                    </ThemedText>
+                  </View>
+                )}
+
                 <View style={styles.inputGroup}>
                   <ThemedText variant="body" color={theme.textSecondary} style={styles.inputLabel}>
                     词库名称 <ThemedText color={theme.error}>*</ThemedText>

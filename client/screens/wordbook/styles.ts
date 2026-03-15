@@ -455,6 +455,18 @@ export const createStyles = (theme: Theme) => {
       padding: Spacing.lg,
       maxHeight: 300,
     },
+    hintText: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: `${theme.primary}15`,
+      borderRadius: BorderRadius.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      marginBottom: Spacing.lg,
+    },
+    hintTextContent: {
+      marginLeft: Spacing.sm,
+    },
     modalFooter: {
       flexDirection: 'row',
       gap: Spacing.md,
