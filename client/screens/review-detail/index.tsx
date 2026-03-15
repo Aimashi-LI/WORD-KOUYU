@@ -1480,39 +1480,14 @@ export default function ReviewScreen() {
 
           {/* 按钮组 */}
           <View style={styles.buttonGroup}>
-            {/* ✅ 继续复习按钮（如果有剩余单词） */}
-            {remainingWordsCount > 0 && (
-              <TouchableOpacity
-                style={[styles.completeButton, { backgroundColor: theme.accent }]}
-                onPress={loadReviewQueue}
-              >
-                <FontAwesome6 name="play" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
-                <ThemedText variant="h3" color={theme.buttonPrimaryText}>继续复习</ThemedText>
-              </TouchableOpacity>
-            )}
+            {/* 继续复习和再来一轮按钮已移除，以避免影响真实有效的掌握率计算 */}
 
             <TouchableOpacity
               style={[styles.completeButton, { backgroundColor: theme.primary }]}
-              onPress={() => {
-                setCurrentStepIndex(0);
-                setTotalScore(0);
-                setMasteredWords([]);
-                setWordScores([]);
-                setWordCompletionStatus(new Map());
-                reviewStartTimeRef.current = 0;
-                loadReviewQueue();
-              }}
-            >
-              <FontAwesome6 name="rotate-right" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
-              <ThemedText variant="h3" color={theme.buttonPrimaryText}>再来一轮</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.secondaryButton, { backgroundColor: theme.backgroundTertiary, borderColor: theme.border }]}
               onPress={() => router.back()}
             >
-              <FontAwesome6 name="house" size={20} color={theme.textPrimary} style={styles.buttonIcon} />
-              <ThemedText variant="h3" color={theme.textPrimary}>返回首页</ThemedText>
+              <FontAwesome6 name="house" size={20} color={theme.buttonPrimaryText} style={styles.buttonIcon} />
+              <ThemedText variant="h3" color={theme.buttonPrimaryText}>返回首页</ThemedText>
             </TouchableOpacity>
           </View>
         </ScrollView>
