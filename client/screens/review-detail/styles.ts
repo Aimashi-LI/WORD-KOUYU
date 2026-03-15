@@ -198,6 +198,33 @@ export const createStyles = (theme: Theme) => {
       shadowRadius: 8,
       elevation: 4,
     },
+    futureReviewSection: {
+      marginTop: Spacing.xl,
+      alignItems: 'center',
+      gap: Spacing.md,
+      width: '100%',
+    },
+    futureReviewTitle: {
+      fontSize: 14,
+    },
+    futureReviewButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.xl,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+    },
+    futureReviewButtonText: {
+      fontSize: 16,
+    },
+    futureWordItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
     completedContainer: {
       flex: 1,
     },

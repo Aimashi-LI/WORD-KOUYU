@@ -85,6 +85,10 @@ export default function ReviewScreen() {
   // 新增：记录复习时机提醒信息
   const [timingWarning, setTimingWarning] = useState<{ early: number; late: number } | null>(null);
 
+  // 新增：未来的单词队列（提前复习）
+  const [futureWords, setFutureWords] = useState<Word[]>([]);
+  const [showFutureOption, setShowFutureOption] = useState(false);
+
   // 新增：记录开始时间
   const startTimeRef = useRef<number>(0);
   const reviewStartTimeRef = useRef<number>(0);
@@ -136,6 +140,7 @@ export default function ReviewScreen() {
       console.log('[Review] 数据库初始化完成');
 
       let words: Word[];
+      let futureWordsList: Word[] = [];
 
       if (projectId) {
         console.log('[Review] 从指定词库加载单词，projectId:', projectId);
@@ -143,47 +148,72 @@ export default function ReviewScreen() {
         const allWords = await getWordsInWordbook(parseInt(projectId));
         console.log('[Review] 词库中的单词总数:', allWords.length);
 
-        // 只加载需要复习且未掌握的单词
-        const filteredWords = allWords.filter(w => {
+        // 分离到期的单词和未来的单词
+        const overdueWords: Word[] = [];
+        const upcomingWords: Word[] = [];
+        const now = new Date();
+
+        allWords.forEach(w => {
           // 已掌握的单词不加载
-          if (w.is_mastered === 1) return false;
+          if (w.is_mastered === 1) return;
 
           // 检查是否需要复习
-          const now = new Date();
-          if (!w.next_review) return true;
-          return new Date(w.next_review) <= now;
+          if (!w.next_review) {
+            overdueWords.push(w); // 没有复习时间的单词视为需要复习
+          } else {
+            const nextReview = new Date(w.next_review);
+            if (nextReview <= now) {
+              overdueWords.push(w); // 到期的单词
+            } else {
+              upcomingWords.push(w); // 未来的单词
+            }
+          }
         });
-        console.log('[Review] 过滤后的待复习单词数:', filteredWords.length);
 
-        // ✅ 智能优先级排序：按逾期时间排序（逾期越久越紧急）
-        const sortedWords = [...filteredWords].sort((a, b) => {
+        console.log('[Review] 到期的单词数:', overdueWords.length);
+        console.log('[Review] 未来的单词数:', upcomingWords.length);
+
+        // 智能优先级排序：按逾期时间排序（逾期越久越紧急）
+        const sortedOverdueWords = [...overdueWords].sort((a, b) => {
           const overdueA = getOverdueHours(a);
           const overdueB = getOverdueHours(b);
           return overdueB - overdueA; // 降序
         });
 
-        // 取前20个
-        words = sortedWords.slice(0, 20);
-
-        // 打印排序结果（前5个）
-        console.log('[Review] 排序后的前5个单词逾期时间:');
-        sortedWords.slice(0, 5).forEach((w, i) => {
-          console.log(`  ${i + 1}. ${w.word}: 逾期 ${getOverdueHours(w).toFixed(1)} 小时`);
+        // 按复习时间排序未来的单词（越早复习的越优先）
+        const sortedFutureWords = [...upcomingWords].sort((a, b) => {
+          if (!a.next_review || !b.next_review) return 0;
+          return new Date(a.next_review).getTime() - new Date(b.next_review).getTime();
         });
 
-        // 取前20个
-        words = filteredWords.slice(0, 20);
+        // 取前20个到期的单词
+        words = sortedOverdueWords.slice(0, 20);
+
+        // 存储未来的单词（最多10个）
+        futureWordsList = sortedFutureWords.slice(0, 10);
+
+        // 如果有未来的单词，显示提前复习选项
+        if (futureWordsList.length > 0) {
+          setShowFutureOption(true);
+          console.log('[Review] 检测到', futureWordsList.length, '个未来的单词，显示提前复习选项');
+        } else {
+          setShowFutureOption(false);
+        }
 
         // 打印排序结果（前5个）
-        console.log('[Review] 排序后的前5个单词逾期时间:');
-        words.slice(0, 5).forEach((w, i) => {
+        console.log('[Review] 排序后的前5个到期的单词逾期时间:');
+        sortedOverdueWords.slice(0, 5).forEach((w, i) => {
           console.log(`  ${i + 1}. ${w.word}: 逾期 ${getOverdueHours(w).toFixed(1)} 小时`);
         });
       } else {
         console.log('[Review] 从所有单词加载需要复习的单词');
         // 从所有单词加载需要复习的单词
         words = await getReviewWords(20);
+        setShowFutureOption(false);
       }
+
+      // 存储未来的单词
+      setFutureWords(futureWordsList);
 
       console.log('[Review] 最终加载了', words.length, '个单词');
       setQueue(words);
@@ -890,6 +920,83 @@ export default function ReviewScreen() {
         >
           <ThemedText variant="h3" color={theme.buttonPrimaryText}>点击开始</ThemedText>
         </TouchableOpacity>
+
+        {/* 提前复习按钮 */}
+        {showFutureOption && futureWords.length > 0 && (
+          <View style={styles.futureReviewSection}>
+            <ThemedText variant="body" color={theme.textMuted} style={styles.futureReviewTitle}>
+              还有 {futureWords.length} 个未来的单词
+            </ThemedText>
+            <TouchableOpacity
+              style={[styles.futureReviewButton, { borderColor: theme.primary }]}
+              onPress={() => {
+                // 将未来的单词添加到队列中
+                setQueue(prev => [...prev, ...futureWords]);
+                
+                // 为未来的单词创建复习步骤
+                const futureSteps: ReviewStep[] = [];
+                futureWords.forEach(word => {
+                  futureSteps.push(
+                    { word, mode: 'type1', wordId: word.id },
+                    { word, mode: 'type2', wordId: word.id }
+                  );
+                });
+
+                // 打乱并确保同一单词的两种方式不连续出现
+                const shuffledFutureSteps = shuffleArray([...futureSteps]);
+                const finalFutureSteps = ensureNonConsecutiveSameWord(shuffledFutureSteps);
+
+                // 添加到复习队列
+                setReviewQueue(prev => [...prev, ...finalFutureSteps]);
+
+                // 初始化未来单词的完成状态
+                setWordCompletionStatus(prev => {
+                  const newStatus = new Map(prev);
+                  futureWords.forEach(word => {
+                    newStatus.set(word.id, {
+                      wordId: word.id,
+                      completedModes: new Set(),
+                      type1Score: 0,
+                      type2Score: 0,
+                      isQuickCompleted: false,
+                      quickScore: null
+                    });
+                  });
+                  return newStatus;
+                });
+
+                // 隐藏提前复习按钮
+                setShowFutureOption(false);
+
+                console.log('[Review] 已添加', futureWords.length, '个未来的单词到复习队列');
+              }}
+            >
+              <FontAwesome6 name="clock" size={16} color={theme.primary} />
+              <ThemedText variant="body" color={theme.primary} style={styles.futureReviewButtonText}>
+                提前复习
+              </ThemedText>
+            </TouchableOpacity>
+
+            {/* 显示未来单词的列表 */}
+            {futureWords.slice(0, 5).map((word, index) => (
+              <View key={word.id} style={styles.futureWordItem}>
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  {index + 1}. {word.word}
+                </ThemedText>
+                {word.next_review && (
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    ({new Date(word.next_review).toLocaleDateString()})
+                  </ThemedText>
+                )}
+              </View>
+            ))}
+            {futureWords.length > 5 && (
+              <ThemedText variant="caption" color={theme.textMuted}>
+                还有 {futureWords.length - 5} 个...
+              </ThemedText>
+            )}
+          </View>
+        )}
       </View>
     );
   };
