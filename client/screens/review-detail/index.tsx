@@ -752,11 +752,15 @@ export default function ReviewScreen() {
       // 记录复习时机信息到日志
       console.log(`[Review] 单词 ${word.word} 复习时机: ${reviewStatus}, 掌握率调整因子: ${masteryAdjustmentFactor.toFixed(2)}`);
 
-      // 先添加复习日志（确保日志包含当前分数）
+      // 先添加复习日志（包含完整数据）
       await addReviewLog({
         word_id: word.id,
         score: finalScore,
         response_time: responseTime,
+        stability_before: word.stability,
+        stability_after: newStability,
+        difficulty_before: word.difficulty,
+        difficulty_after: newDifficulty,
         reviewed_at: new Date().toISOString()
       });
 
