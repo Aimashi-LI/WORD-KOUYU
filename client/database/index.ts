@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DB_NAME = 'word_review.db';
-const DB_VERSION = 6; // 数据库版本号 - 升级到 6，添加 review_count 字段
+const DB_VERSION = 7; // 数据库版本号 - 升级到 7，添加复习日志表
 const DB_INITIALIZED_KEY = '@app:database_initialized'; // 用于记录数据库是否已经初始化过
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -266,6 +266,23 @@ async function migrateDatabase(): Promise<void> {
 
         CREATE INDEX IF NOT EXISTS idx_words_next_review ON words(next_review);
         CREATE INDEX IF NOT EXISTS idx_words_is_mastered ON words(is_mastered);
+
+        -- 复习日志表
+        CREATE TABLE IF NOT EXISTS review_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          word_id INTEGER NOT NULL,
+          score INTEGER NOT NULL,
+          response_time REAL NOT NULL,
+          stability_before REAL,
+          stability_after REAL,
+          difficulty_before REAL,
+          difficulty_after REAL,
+          reviewed_at TEXT NOT NULL,
+          FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_review_logs_word_id ON review_logs(word_id);
+        CREATE INDEX IF NOT EXISTS idx_review_logs_reviewed_at ON review_logs(reviewed_at);
       `);
 
       // 恢复数据
@@ -396,6 +413,32 @@ async function migrateDatabase(): Promise<void> {
         }
 
         console.log('Migration to version 6 completed');
+      }
+
+      // 升级到版本 7：添加复习日志表
+      if (currentVersion < 7) {
+        console.log('Migrating database to version 7: adding review_logs table...');
+
+        // 创建复习日志表
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS review_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word_id INTEGER NOT NULL,
+            score INTEGER NOT NULL,
+            response_time REAL NOT NULL,
+            stability_before REAL,
+            stability_after REAL,
+            difficulty_before REAL,
+            difficulty_after REAL,
+            reviewed_at TEXT NOT NULL,
+            FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE
+          );
+
+          CREATE INDEX IF NOT EXISTS idx_review_logs_word_id ON review_logs(word_id);
+          CREATE INDEX IF NOT EXISTS idx_review_logs_reviewed_at ON review_logs(reviewed_at);
+        `);
+
+        console.log('Migration to version 7 completed');
       }
     }
 

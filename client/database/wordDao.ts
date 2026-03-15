@@ -299,9 +299,18 @@ export async function getMasteredWords(): Promise<Word[]> {
 export async function addReviewLog(reviewLog: Omit<ReviewLog, 'id'>): Promise<number> {
   const db = getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO review_logs (word_id, score, response_time, reviewed_at)
-     VALUES (?, ?, ?, ?)`,
-    [reviewLog.word_id, reviewLog.score, reviewLog.response_time, reviewLog.reviewed_at]
+    `INSERT INTO review_logs (word_id, score, response_time, stability_before, stability_after, difficulty_before, difficulty_after, reviewed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      reviewLog.word_id,
+      reviewLog.score,
+      reviewLog.response_time,
+      reviewLog.stability_before || null,
+      reviewLog.stability_after || null,
+      reviewLog.difficulty_before || null,
+      reviewLog.difficulty_after || null,
+      reviewLog.reviewed_at
+    ]
   );
   return result.lastInsertRowId;
 }
@@ -383,6 +392,10 @@ function mapToReviewLog(row: any): ReviewLog {
     word_id: row.word_id,
     score: row.score,
     response_time: row.response_time,
+    stability_before: row.stability_before,
+    stability_after: row.stability_after,
+    difficulty_before: row.difficulty_before,
+    difficulty_after: row.difficulty_after,
     reviewed_at: row.reviewed_at
   };
 }

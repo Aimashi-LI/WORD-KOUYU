@@ -66,6 +66,10 @@ export interface ReviewLog {
   word_id: number;
   score: number;
   response_time: number;
+  stability_before?: number;
+  stability_after?: number;
+  difficulty_before?: number;
+  difficulty_after?: number;
   reviewed_at: string;
 }
 
