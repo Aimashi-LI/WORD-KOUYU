@@ -135,6 +135,23 @@ export default function ReviewPlanScreen() {
       });
 
       setDailyStats(statsMap);
+
+      // 检查 dailyPendingWords 中是否有重复
+      dailyPendingWords.forEach((words, dateStr) => {
+        const wordIdSet = new Set<number>();
+        const duplicateIds: number[] = [];
+        words.forEach((word) => {
+          if (wordIdSet.has(word.id)) {
+            duplicateIds.push(word.id);
+          } else {
+            wordIdSet.add(word.id);
+          }
+        });
+        if (duplicateIds.length > 0) {
+          console.log(`[ReviewPlan] 日期 ${dateStr} 发现重复单词ID:`, duplicateIds);
+        }
+      });
+
       setDailyPendingWords(dailyPendingWords);
 
       // 计算最佳复习时间（基于历史复习时间）
@@ -224,7 +241,14 @@ export default function ReviewPlanScreen() {
   // 获取指定日期的待复习单词列表
   const getPendingWordsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return dailyPendingWords.get(dateStr) || [];
+    const words = dailyPendingWords.get(dateStr) || [];
+
+    // 防御性去重：确保返回的列表中没有重复的单词ID
+    const uniqueWordsMap = new Map<number, Word>();
+    words.forEach((word) => {
+      uniqueWordsMap.set(word.id, word);
+    });
+    return Array.from(uniqueWordsMap.values());
   };
 
   // 提前复习
