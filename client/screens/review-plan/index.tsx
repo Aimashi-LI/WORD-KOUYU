@@ -105,6 +105,9 @@ export default function ReviewPlanScreen() {
       // 为每个日期维护一个已添加单词ID的Set，确保每个单词在每个日期只出现一次
       const dateProcessedWordIds = new Map<string, Set<number>>();
 
+      // 创建新的 Map 来存储待复习单词（避免累积）
+      const pendingWordsMap = new Map<string, Word[]>();
+
       uniqueWords.forEach((word) => {
         if (word.next_review) {
           const reviewDate = new Date(word.next_review);
@@ -121,9 +124,9 @@ export default function ReviewPlanScreen() {
               stats.pendingReview++;
 
               // 添加到待复习单词列表（确保唯一性）
-              // 确保 dailyPendingWords 和 dateProcessedWordIds 都已初始化
-              if (!dailyPendingWords.has(dateStr)) {
-                dailyPendingWords.set(dateStr, []);
+              // 确保 pendingWordsMap 和 dateProcessedWordIds 都已初始化
+              if (!pendingWordsMap.has(dateStr)) {
+                pendingWordsMap.set(dateStr, []);
               }
               if (!dateProcessedWordIds.has(dateStr)) {
                 dateProcessedWordIds.set(dateStr, new Set());
@@ -138,7 +141,7 @@ export default function ReviewPlanScreen() {
 
               if (!processedIds.has(word.id)) {
                 processedIds.add(word.id);
-                dailyPendingWords.get(dateStr)!.push(word);
+                pendingWordsMap.get(dateStr)!.push(word);
                 console.log(`[ReviewPlan] 添加单词到 ${dateStr}: ${word.word} (ID: ${word.id})`);
               } else {
                 console.log(`[ReviewPlan] 跳过重复单词 ${dateStr}: ${word.word} (ID: ${word.id})`);
@@ -153,7 +156,7 @@ export default function ReviewPlanScreen() {
       // 统计有多少日期有待复习单词
       let datesWithPendingWords = 0;
       let totalPendingWords = 0;
-      dailyPendingWords.forEach((words, dateStr) => {
+      pendingWordsMap.forEach((words, dateStr) => {
         if (words.length > 0) {
           datesWithPendingWords++;
           totalPendingWords += words.length;
@@ -163,8 +166,8 @@ export default function ReviewPlanScreen() {
 
       console.log(`[ReviewPlan] 共有 ${datesWithPendingWords} 个日期有待复习单词，总计 ${totalPendingWords} 个单词`);
 
-      // 检查 dailyPendingWords 中是否有重复
-      dailyPendingWords.forEach((words, dateStr) => {
+      // 检查 pendingWordsMap 中是否有重复
+      pendingWordsMap.forEach((words, dateStr) => {
         const wordIdSet = new Set<number>();
         const duplicateIds: number[] = [];
         words.forEach((word) => {
@@ -179,7 +182,7 @@ export default function ReviewPlanScreen() {
         }
       });
 
-      setDailyPendingWords(dailyPendingWords);
+      setDailyPendingWords(pendingWordsMap);
 
       // 计算最佳复习时间（基于历史复习时间）
       await calculateBestReviewTime(allWords);
