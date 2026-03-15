@@ -191,19 +191,14 @@ export default function WordbookScreen() {
   const handleDeleteWordbook = async () => {
     if (!editingWordbook) return;
 
-    // 检查是否为预设词库
-    if (editingWordbook.is_preset === 1) {
-      Alert.alert(
-        '无法删除',
-        '预设词库是系统自带的，不能删除。',
-        [{ text: '知道了', style: 'default' }]
-      );
-      return;
-    }
-
+    // 根据是否为预设词库显示不同的提示
+    const isPreset = editingWordbook.is_preset === 1;
+    
     Alert.alert(
       '确认删除',
-      `确定要删除词库「${editingWordbook.name}」吗？此操作不可撤销。`,
+      isPreset 
+        ? `「${editingWordbook.name}」是系统预设词库，删除后将无法恢复。确定要删除吗？`
+        : `确定要删除词库「${editingWordbook.name}」吗？此操作不可撤销。`,
       [
         { text: '取消', style: 'cancel' },
         {
@@ -1009,18 +1004,19 @@ export default function WordbookScreen() {
                   />
                 </View>
 
-                {/* 删除词库按钮 - 仅显示非预设词库 */}
-                {editingWordbook && !editingWordbook.is_preset && (
-                  <View style={styles.deleteButtonContainer}>
-                    <TouchableOpacity 
-                      style={[styles.deleteButton, { backgroundColor: theme.error }]}
-                      onPress={handleDeleteWordbook}
-                    >
-                      <FontAwesome6 name="trash" size={18} color="#FFFFFF" />
-                      <ThemedText variant="body" color="#FFFFFF">删除词库</ThemedText>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                {/* 删除词库按钮 */}
+                <View style={styles.deleteButtonContainer}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.deleteButton, 
+                      { backgroundColor: editingWordbook?.is_preset === 1 ? theme.error : theme.error }
+                    ]}
+                    onPress={handleDeleteWordbook}
+                  >
+                    <FontAwesome6 name="trash" size={18} color="#FFFFFF" />
+                    <ThemedText variant="body" color="#FFFFFF">删除词库</ThemedText>
+                  </TouchableOpacity>
+                </View>
               </ScrollView>
 
               <View style={styles.modalFooter}>

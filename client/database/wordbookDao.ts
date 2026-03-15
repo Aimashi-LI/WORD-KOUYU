@@ -58,7 +58,7 @@ export async function createWordbook(name: string, description?: string): Promis
 // 删除词库
 export async function deleteWordbook(id: number): Promise<void> {
   const db = getDatabase();
-  await db.runAsync('DELETE FROM wordbooks WHERE id = ? AND is_preset = 0', [id]);
+  await db.runAsync('DELETE FROM wordbooks WHERE id = ?', [id]);
 }
 
 // 更新词库
