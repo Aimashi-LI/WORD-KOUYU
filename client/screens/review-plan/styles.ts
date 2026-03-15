@@ -190,6 +190,12 @@ export const createStyles = (theme: any) => StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.border,
   },
+  wordDetailRow: {
+    marginBottom: 8,
+  },
+  wordDetailLabel: {
+    marginBottom: 2,
+  },
   // 没有复习项目提示
   noReviewItemsContainer: {
     alignItems: 'center',
@@ -258,9 +264,6 @@ export const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 40,
     gap: 16,
-  },
-  emptyText: {
-    marginTop: 12,
   },
   // 弹窗
   modalOverlay: {
@@ -374,153 +377,5 @@ export const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginTop: 8,
-  },
-  // 词库列表容器
-  wordbookListContainer: {
-    paddingTop: 16,
-  },
-  // 词库卡片
-  wordbookCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-  },
-  // 词库卡片头部
-  wordbookCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  // 词库卡片徽章
-  wordbookCardBadge: {
-    backgroundColor: '#8B5CF6',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    minWidth: 40,
-    alignItems: 'center',
-  },
-  // 词库详情弹窗
-  wordbookModalTitle: {
-    marginBottom: 16,
-  },
-  // 单词列表容器
-  wordListContainer: {
-    paddingTop: 8,
-  },
-  // 单词项
-  wordItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  // 单词信息
-  wordInfo: {
-    flex: 1,
-  },
-  // 单词文本
-  wordText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  // 音标
-  phonetic: {
-    fontSize: 14,
-    marginRight: 12,
-  },
-  // 释义
-  definition: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  // 单词操作按钮容器
-  wordActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  // 单词操作按钮
-  wordActionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  // 单词详情弹窗
-  wordModalTitle: {
-    marginBottom: 16,
-  },
-  // 单词详情内容
-  wordDetailContent: {
-    paddingBottom: 16,
-  },
-  // 单词详情行
-  wordDetailRow: {
-    marginBottom: 12,
-  },
-  // 单词详情标签
-  wordDetailLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  // 单词详情值
-  wordDetailValue: {
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  // 单词详情音标
-  wordDetailPhonetic: {
-    fontSize: 14,
-    color: '#666',
-  },
-  // 单词详情释义
-  wordDetailDefinition: {
-    fontSize: 16,
-  },
-  // 单词详情操作按钮
-  wordDetailActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
-  // 单词详情按钮
-  wordDetailButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  // 单词详情主按钮
-  wordDetailPrimaryButton: {
-    backgroundColor: '#8B5CF6',
-  },
-  // 单词详情次按钮
-  wordDetailSecondaryButton: {
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-  },
-  // 单词详情按钮文本
-  wordDetailButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  // 单词详情次按钮文本
-  wordDetailSecondaryButtonText: {
-    color: '#666',
-    fontWeight: '600',
-  },
-  // 隐藏
-  hidden: {
-    display: 'none',
   },
 });
