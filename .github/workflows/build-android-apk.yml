@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK (Local Build)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest  # 使用 macOS，支持更好的 Android 构建
 
     steps:
       - name: 📥 Checkout repository
@@ -22,32 +22,89 @@ jobs:
           cache: 'npm'
           cache-dependency-path: client/package-lock.json
 
-      - name: 📥 Setup EAS
-        uses: expo/expo-github-action@v8
+      - name: 🔧 Setup Java
+        uses: actions/setup-java@v4
         with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          distribution: 'zulu'
+          java-version: '17'
 
       - name: 🔧 Install dependencies
         working-directory: ./client
         run: npm ci
 
-      - name: 🏗️ Build Android APK
+      - name: 📦 Install EAS CLI
         working-directory: ./client
-        run: eas build --platform android --profile preview --non-interactive
+        run: npm install -g eas-cli
+
+      - name: 🔧 Setup EAS configuration
+        working-directory: ./client
+        run: |
+          # 确保 eas.json 存在
+          cat eas.json || cat > eas.json << 'EOF'
+          {
+            "cli": {
+              "version": ">= 7.0.0"
+            },
+            "build": {
+              "development": {
+                "developmentClient": true,
+                "distribution": "internal"
+              },
+              "preview": {
+                "distribution": "internal",
+                "android": {
+                  "buildType": "apk"
+                }
+              },
+              "production": {
+                "android": {
+                  "buildType": "apk"
+                }
+              }
+            },
+            "submit": {
+              "production": {}
+            }
+          }
+          EOF
+
+      - name: 🏗️ Build Android APK (Local)
+        working-directory: ./client
+        timeout-minutes: 60
+        run: |
+          # 初始化 EAS 项目
+          eas build:configure || true
+          
+          # 本地构建 APK
+          eas build --platform android --profile preview --non-interactive --local --output ./app-release.apk
+
+      - name: 📤 Find and Upload APK
+        run: |
+          find . -name "*.apk" -type f
+          APK_FILE=$(find . -name "*.apk" -type f | head -n 1)
+          if [ -n "$APK_FILE" ]; then
+            echo "Found APK: $APK_FILE"
+            cp "$APK_FILE" ./app-release.apk
+            echo "APK file copied successfully"
+          else
+            echo "No APK file found"
+            find . -type f -name "*.apk" 2>/dev/null || true
+            ls -la ./client/ 2>/dev/null || true
+          fi
 
       - name: 📤 Upload APK artifact
+        if: hashFiles('app-release.apk') != ''
         uses: actions/upload-artifact@v4
         with:
           name: app-apk
-          path: client/*.apk
+          path: ./app-release.apk
           retention-days: 30
 
-      - name: 📝 Create Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: 📝 Create Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/') && hashFiles('app-release.apk') != ''
         uses: softprops/action-gh-release@v2
         with:
-          files: client/*.apk
+          files: ./app-release.apk
           draft: false
           prerelease: false
         env:
