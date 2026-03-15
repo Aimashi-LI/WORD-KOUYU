@@ -105,15 +105,23 @@ export default function ReviewPlanScreen() {
               stats.completedReview++;
             } else {
               stats.pendingReview++;
-              
+
               // 添加到待复习单词列表（确保唯一性）
+              // 确保 dailyPendingWords 和 dateProcessedWordIds 都已初始化
               if (!dailyPendingWords.has(dateStr)) {
                 dailyPendingWords.set(dateStr, []);
+              }
+              if (!dateProcessedWordIds.has(dateStr)) {
                 dateProcessedWordIds.set(dateStr, new Set());
               }
 
-              // 确保 processedIds 存在
-              const processedIds = dateProcessedWordIds.get(dateStr)!;
+              // 获取或创建 processedIds
+              let processedIds = dateProcessedWordIds.get(dateStr);
+              if (!processedIds) {
+                processedIds = new Set<number>();
+                dateProcessedWordIds.set(dateStr, processedIds);
+              }
+
               if (!processedIds.has(word.id)) {
                 processedIds.add(word.id);
                 dailyPendingWords.get(dateStr)!.push(word);
