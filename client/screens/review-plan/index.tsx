@@ -45,6 +45,10 @@ export default function ReviewPlanScreen() {
   
   // 新增：控制单词详情展开的状态
   const [expandedWordId, setExpandedWordId] = useState<number | null>(null);
+  
+  // 新增：控制提前复习弹窗
+  const [showEarlyReviewModal, setShowEarlyReviewModal] = useState(false);
+  const [earlyReviewDate, setEarlyReviewDate] = useState<Date | null>(null);
 
   // 加载复习数据
   const loadData = useCallback(async () => {
@@ -255,9 +259,35 @@ export default function ReviewPlanScreen() {
       return;
     }
     
+    // 保存要复习的日期
+    setEarlyReviewDate(selectedDate);
+    
+    // 显示提前复习弹窗
+    setShowEarlyReviewModal(true);
+  };
+  
+  // 确认提前复习
+  const confirmEarlyReview = () => {
+    const pendingWords = getPendingWordsForDate(earlyReviewDate!);
+    if (pendingWords.length === 0) {
+      Alert.alert('提示', '当前没有待复习的单词');
+      setShowEarlyReviewModal(false);
+      return;
+    }
+    
+    // 计算提前的天数
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const reviewDate = new Date(earlyReviewDate!);
+    reviewDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((reviewDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
     // 将单词ID列表转换为JSON字符串传递
     const wordIds = pendingWords.map(w => w.id).join(',');
-    router.push('/review-detail', { earlyReviewWords: wordIds });
+    router.push('/review-detail', { earlyReviewWords: wordIds, isEarlyReview: 'true', earlyDays: String(diffDays) });
+    
+    // 关闭弹窗
+    setShowEarlyReviewModal(false);
   };
 
   // 获取列表视图的数据
@@ -901,6 +931,54 @@ export default function ReviewPlanScreen() {
                 onPress={() => setShowHistoryModal(false)}
               >
                 <ThemedText variant="body" color={theme.buttonPrimaryText}>关闭</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
+        </View>
+      </Modal>
+
+      {/* 提前复习确认弹窗 */}
+      <Modal
+        visible={showEarlyReviewModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEarlyReviewModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <ThemedView level="default" style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText variant="h3" color={theme.textPrimary}>
+                提前复习提醒
+              </ThemedText>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.warningContainer}>
+                <FontAwesome6 name="triangle-exclamation" size={48} color="#F59E0B" />
+                <ThemedText variant="body" color={theme.textPrimary} style={styles.warningTitle}>
+                  提前复习会影响记忆效果
+                </ThemedText>
+              </View>
+              
+              <ThemedText variant="body" color={theme.textSecondary} style={styles.warningText}>
+                根据认知心理学研究，过早复习会导致过度学习，形成记忆假象，长期记忆效果会降低15%-30%。
+              </ThemedText>
+              
+              <ThemedText variant="body" color={theme.textSecondary} style={styles.warningText}>
+                建议按系统推算的时间进行复习，以获得最佳的记忆效果。
+              </ThemedText>
+              
+              <ThemedText variant="body" color={theme.warning} style={styles.adjustmentText}>
+                系统将调整单词掌握率计算因子
+              </ThemedText>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton, { backgroundColor: theme.primary }]}
+                onPress={confirmEarlyReview}
+              >
+                <ThemedText variant="body" color={theme.buttonPrimaryText}>确认</ThemedText>
               </TouchableOpacity>
             </View>
           </ThemedView>

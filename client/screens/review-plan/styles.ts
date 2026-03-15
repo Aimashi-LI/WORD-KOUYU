@@ -356,4 +356,26 @@ export const createStyles = (theme: any) => StyleSheet.create({
   historyStatItem: {
     alignItems: 'center',
   },
+  // 提前复习弹窗样式
+  warningContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  warningTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  warningText: {
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  adjustmentText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 8,
+  },
 });

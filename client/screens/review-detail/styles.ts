@@ -390,5 +390,59 @@ export const createStyles = (theme: Theme) => {
       elevation: 2,
     },
     buttonIcon: {},
+    // 延后复习弹窗样式
+    warningContainer: {
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    warningTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      marginBottom: Spacing.sm,
+    },
+    warningText: {
+      fontSize: 14,
+      textAlign: 'center',
+      marginBottom: Spacing.sm,
+    },
+    adjustmentText: {
+      fontSize: 13,
+      color: theme.textMuted,
+      marginTop: Spacing.md,
+    },
+    // 通用Modal样式
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: theme.backgroundDefault,
+      width: '85%',
+      maxWidth: 400,
+      borderRadius: BorderRadius.xl,
+      padding: Spacing.xl,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.lg,
+    },
+    modalBody: {
+      marginBottom: Spacing.xl,
+    },
+    modalFooter: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+    },
   });
 };
