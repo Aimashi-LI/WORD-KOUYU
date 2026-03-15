@@ -112,11 +112,14 @@ export default function ReviewPlanScreen() {
                 dateProcessedWordIds.set(dateStr, new Set());
               }
 
-              // 使用空值合并运算符确保 processedIds 不会是 undefined
-              const processedIds = dateProcessedWordIds.get(dateStr) ?? new Set();
+              // 确保 processedIds 存在
+              const processedIds = dateProcessedWordIds.get(dateStr)!;
               if (!processedIds.has(word.id)) {
                 processedIds.add(word.id);
                 dailyPendingWords.get(dateStr)!.push(word);
+                console.log(`[ReviewPlan] 添加单词到 ${dateStr}: ${word.word} (ID: ${word.id})`);
+              } else {
+                console.log(`[ReviewPlan] 跳过重复单词 ${dateStr}: ${word.word} (ID: ${word.id})`);
               }
             }
           }
@@ -223,9 +226,20 @@ export default function ReviewPlanScreen() {
       Alert.alert('提示', '当前没有待复习的单词');
       return;
     }
-    
+
+    console.log('[ReviewPlan] 待复习单词列表（去重前）:', pendingWords.map(w => `${w.word}(${w.id})`).join(', '));
+
+    // 确保单词不重复（防御性编程）
+    const uniqueWordsMap = new Map<number, Word>();
+    pendingWords.forEach((word) => {
+      uniqueWordsMap.set(word.id, word);
+    });
+    const uniqueWords = Array.from(uniqueWordsMap.values());
+
+    console.log('[ReviewPlan] 待复习单词列表（去重后）:', uniqueWords.map(w => `${w.word}(${w.id})`).join(', '));
+
     // 将单词ID列表转换为JSON字符串传递
-    const wordIds = pendingWords.map(w => w.id).join(',');
+    const wordIds = uniqueWords.map(w => w.id).join(',');
     router.push('/review-detail', { earlyReviewWords: wordIds });
   };
 
