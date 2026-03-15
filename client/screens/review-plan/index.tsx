@@ -1095,7 +1095,8 @@ export default function ReviewPlanScreen() {
                   >
                     <ThemedText variant="body" color={theme.primary}>
                       {(() => {
-                        const dateStr = earlyReviewDate!.toISOString().split('T')[0];
+                        if (!earlyReviewDate) return '';
+                        const dateStr = earlyReviewDate.toISOString().split('T')[0];
                         const wordbookWordsMap = dailyWordbookPendingWords.get(dateStr) || new Map();
                         const allWordbookIds = Array.from(wordbookWordsMap.keys());
                         return selectedWordbookIds.size === allWordbookIds.length ? '取消全选' : '全选';
@@ -1105,7 +1106,8 @@ export default function ReviewPlanScreen() {
                 </View>
                 
                 {(() => {
-                  const dateStr = earlyReviewDate!.toISOString().split('T')[0];
+                  if (!earlyReviewDate) return null;
+                  const dateStr = earlyReviewDate.toISOString().split('T')[0];
                   const wordbookWordsMap = dailyWordbookPendingWords.get(dateStr) || new Map();
                   
                   return Array.from(wordbookWordsMap.entries()).map(([wordbookId, words]) => (
