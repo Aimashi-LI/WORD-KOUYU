@@ -905,6 +905,14 @@ export default function BrushWordsScreen() {
                 </View>
               )}
 
+              {/* 例句 */}
+              {currentWord.sentence && (
+                <View style={styles.shareSentenceSection}>
+                  <Text style={styles.shareSentenceLabel}>例句：</Text>
+                  <Text style={styles.shareSentenceText}>{currentWord.sentence}</Text>
+                </View>
+              )}
+
               {/* 底部信息 */}
               <View style={styles.shareCardFooter}>
                 <Text style={styles.shareFooterUser}>来自 编码记忆法 的分享</Text>

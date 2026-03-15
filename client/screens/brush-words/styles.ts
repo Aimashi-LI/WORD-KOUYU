@@ -499,6 +499,22 @@ export const createStyles = (theme: Theme) => {
       color: '#F97316',
       lineHeight: 22,
     },
+    // 例句
+    shareSentenceSection: {
+      backgroundColor: '#F3F4F6',
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    shareSentenceLabel: {
+      fontSize: 14,
+      color: '#9CA3AF',
+    },
+    shareSentenceText: {
+      fontSize: 16,
+      color: '#374151',
+      lineHeight: 22,
+    },
     // 底部信息
     shareCardFooter: {
       padding: 12,
