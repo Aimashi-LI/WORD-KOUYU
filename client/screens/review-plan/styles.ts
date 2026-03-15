@@ -378,46 +378,4 @@ export const createStyles = (theme: any) => StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-  wordbookSelectContainer: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  wordbookSelectHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  wordbookSelectTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  selectAllButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  wordbookSelectItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  wordbookSelectLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  wordbookSelectName: {
-    fontSize: 15,
-  },
-  wordbookSelectCount: {
-    fontSize: 13,
-  },
 });

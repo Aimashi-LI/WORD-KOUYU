@@ -10,7 +10,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getAllWordbooks, getWordsInWordbook } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
-import { Word, Wordbook } from '@/database/types';
+import { Word } from '@/database/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -43,25 +43,12 @@ export default function ReviewPlanScreen() {
   // 新增：存储每个日期的待复习单词列表
   const [dailyPendingWords, setDailyPendingWords] = useState<Map<string, Word[]>>(new Map());
   
-  // 新增：存储每个日期的按词库分组的待复习单词
-  const [dailyWordbookPendingWords, setDailyWordbookPendingWords] = useState<Map<string, Map<number, Word[]>>>(new Map());
-  
   // 新增：控制单词详情展开的状态
   const [expandedWordId, setExpandedWordId] = useState<number | null>(null);
   
   // 新增：控制提前复习弹窗
   const [showEarlyReviewModal, setShowEarlyReviewModal] = useState(false);
   const [earlyReviewDate, setEarlyReviewDate] = useState<Date | null>(null);
-
-  // 新增：提前复习模式相关状态
-  const [isEarlyReviewMode, setIsEarlyReviewMode] = useState(false);
-  const [selectedWordbookIds, setSelectedWordbookIds] = useState<Set<number>>(new Set());
-  const [dailyWordbookList, setDailyWordbookList] = useState<Map<number, Wordbook>>(new Map());
-  
-  // 新增：词库详情相关状态
-  const [showWordbookDetail, setShowWordbookDetail] = useState(false);
-  const [currentWordbookId, setCurrentWordbookId] = useState<number | null>(null);
-  const [currentWordbookWords, setCurrentWordbookWords] = useState<Word[]>([]);
 
   // 加载复习数据
   const loadData = useCallback(async () => {
@@ -70,20 +57,11 @@ export default function ReviewPlanScreen() {
       await initDatabase();
       const wordbooks = await getAllWordbooks();
 
-      // 获取所有单词的复习信息，并记录所属词库
+      // 获取所有单词的复习信息
       const allWords: Word[] = [];
-      const wordWordbookMap = new Map<number, Set<number>>(); // 单词ID -> 词库ID集合
-      
       for (const wb of wordbooks) {
         const words = await getWordsInWordbook(wb.id);
-        words.forEach(word => {
-          allWords.push(word);
-          // 记录单词所属的词库
-          if (!wordWordbookMap.has(word.id)) {
-            wordWordbookMap.set(word.id, new Set());
-          }
-          wordWordbookMap.get(word.id)!.add(wb.id);
-        });
+        allWords.push(...words);
       }
 
       // 去重：避免同一个单词在多个词库中重复出现
@@ -147,18 +125,6 @@ export default function ReviewPlanScreen() {
                 dailyPendingWords.set(dateStr, []);
               }
               dailyPendingWords.get(dateStr)!.push(word);
-              
-              // 添加到按词库分组的待复习单词列表
-              if (!dailyWordbookPendingWords.has(dateStr)) {
-                dailyWordbookPendingWords.set(dateStr, new Map());
-              }
-              const wordbookIds = wordWordbookMap.get(word.id) || new Set();
-              wordbookIds.forEach(wordbookId => {
-                if (!dailyWordbookPendingWords.get(dateStr)!.has(wordbookId)) {
-                  dailyWordbookPendingWords.get(dateStr)!.set(wordbookId, []);
-                }
-                dailyWordbookPendingWords.get(dateStr)!.get(wordbookId)!.push(word);
-              });
             }
           }
         }
@@ -180,14 +146,6 @@ export default function ReviewPlanScreen() {
 
       setDailyStats(statsMap);
       setDailyPendingWords(dailyPendingWords);
-      setDailyWordbookPendingWords(dailyWordbookPendingWords);
-      
-      // 保存词库列表映射
-      const wordbookMap = new Map<number, Wordbook>();
-      wordbooks.forEach(wb => {
-        wordbookMap.set(wb.id, wb);
-      });
-      setDailyWordbookList(wordbookMap);
 
       // 计算最佳复习时间（基于历史复习时间）
       await calculateBestReviewTime(allWords);
@@ -304,41 +262,14 @@ export default function ReviewPlanScreen() {
     // 保存要复习的日期
     setEarlyReviewDate(selectedDate);
     
-    // 默认选中所有词库
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const wordbookWordsMap = dailyWordbookPendingWords.get(dateStr) || new Map();
-    setSelectedWordbookIds(new Set(Array.from(wordbookWordsMap.keys())));
-    
     // 显示提前复习弹窗
     setShowEarlyReviewModal(true);
   };
   
   // 确认提前复习
   const confirmEarlyReview = () => {
-    // 检查是否选择了词库
-    if (selectedWordbookIds.size === 0) {
-      Alert.alert('提示', '请至少选择一个词库');
-      return;
-    }
-    
-    // 获取选中词库的待复习单词
-    const dateStr = earlyReviewDate!.toISOString().split('T')[0];
-    const wordbookWordsMap = dailyWordbookPendingWords.get(dateStr) || new Map();
-    
-    let pendingWords: Word[] = [];
-    selectedWordbookIds.forEach(wordbookId => {
-      const words = wordbookWordsMap.get(wordbookId) || [];
-      pendingWords = pendingWords.concat(words);
-    });
-    
-    // 去重
-    const uniqueWordsMap = new Map<number, Word>();
-    pendingWords.forEach((word) => {
-      uniqueWordsMap.set(word.id, word);
-    });
-    const uniquePendingWords = Array.from(uniqueWordsMap.values());
-    
-    if (uniquePendingWords.length === 0) {
+    const pendingWords = getPendingWordsForDate(earlyReviewDate!);
+    if (pendingWords.length === 0) {
       Alert.alert('提示', '当前没有待复习的单词');
       setShowEarlyReviewModal(false);
       return;
@@ -352,12 +283,11 @@ export default function ReviewPlanScreen() {
     const diffDays = Math.ceil((reviewDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
     // 将单词ID列表转换为JSON字符串传递
-    const wordIds = uniquePendingWords.map(w => w.id).join(',');
-    router.push('/review-word-list', { earlyReviewWords: wordIds, isEarlyReview: 'true', earlyDays: String(diffDays) });
+    const wordIds = pendingWords.map(w => w.id).join(',');
+    router.push('/review-detail', { earlyReviewWords: wordIds, isEarlyReview: 'true', earlyDays: String(diffDays) });
     
     // 关闭弹窗
     setShowEarlyReviewModal(false);
-    setSelectedWordbookIds(new Set());
   };
 
   // 获取列表视图的数据
@@ -435,37 +365,6 @@ export default function ReviewPlanScreen() {
 
     return days;
   }, [currentDate]);
-
-  // 计算按词库分组的待复习单词
-  const wordbookPendingWords = useMemo(() => {
-    const selectedDatePendingWords = getPendingWordsForDate(selectedDate);
-    
-    if (!selectedDatePendingWords || selectedDatePendingWords.length === 0) {
-      return [];
-    }
-
-    // 按词库ID分组
-    const grouped = new Map<number, Word[]>();
-    selectedDatePendingWords.forEach((word) => {
-      // 这里需要知道单词属于哪个词库，但由于数据结构中没有直接关联，
-      // 我们暂时只显示单词列表，后续可以优化为词库级别
-      // 为了简化实现，我们将所有单词作为一个"虚拟词库"
-      if (!grouped.has(0)) {
-        grouped.set(0, []);
-      }
-      grouped.get(0)!.push(word);
-    });
-
-    // 转换为数组格式
-    const result = Array.from(grouped.entries()).map(([wordbookId, words]) => ({
-      wordbookId,
-      wordbookName: wordbookId === 0 ? '全部待复习单词' : `词库 ${wordbookId}`,
-      words,
-      count: words.length,
-    }));
-
-    return result;
-  }, [selectedDate, dailyPendingWords]);
 
   // 切换月份
   const changeMonth = (delta: number) => {
@@ -1072,78 +971,6 @@ export default function ReviewPlanScreen() {
               <ThemedText variant="body" color={theme.warning} style={styles.adjustmentText}>
                 系统将调整单词掌握率计算因子
               </ThemedText>
-              
-              {/* 词库选择列表 */}
-              <View style={styles.wordbookSelectContainer}>
-                <View style={styles.wordbookSelectHeader}>
-                  <ThemedText variant="body" color={theme.textPrimary} style={styles.wordbookSelectTitle}>
-                    选择词库
-                  </ThemedText>
-                  <TouchableOpacity
-                    style={styles.selectAllButton}
-                    onPress={() => {
-                      const dateStr = earlyReviewDate!.toISOString().split('T')[0];
-                      const wordbookWordsMap = dailyWordbookPendingWords.get(dateStr) || new Map();
-                      const allWordbookIds = Array.from(wordbookWordsMap.keys());
-                      
-                      if (selectedWordbookIds.size === allWordbookIds.length) {
-                        setSelectedWordbookIds(new Set());
-                      } else {
-                        setSelectedWordbookIds(new Set(allWordbookIds));
-                      }
-                    }}
-                  >
-                    <ThemedText variant="body" color={theme.primary}>
-                      {(() => {
-                        if (!earlyReviewDate) return '';
-                        const dateStr = earlyReviewDate.toISOString().split('T')[0];
-                        const wordbookWordsMap = dailyWordbookPendingWords.get(dateStr) || new Map();
-                        const allWordbookIds = Array.from(wordbookWordsMap.keys());
-                        return selectedWordbookIds.size === allWordbookIds.length ? '取消全选' : '全选';
-                      })()}
-                    </ThemedText>
-                  </TouchableOpacity>
-                </View>
-                
-                {(() => {
-                  if (!earlyReviewDate) return null;
-                  const dateStr = earlyReviewDate.toISOString().split('T')[0];
-                  const wordbookWordsMap = dailyWordbookPendingWords.get(dateStr) || new Map();
-                  
-                  return Array.from(wordbookWordsMap.entries()).map(([wordbookId, words]) => (
-                    <TouchableOpacity
-                      key={wordbookId}
-                      style={styles.wordbookSelectItem}
-                      onPress={() => {
-                        const newSelected = new Set(selectedWordbookIds);
-                        if (newSelected.has(wordbookId)) {
-                          newSelected.delete(wordbookId);
-                        } else {
-                          newSelected.add(wordbookId);
-                        }
-                        setSelectedWordbookIds(newSelected);
-                      }}
-                    >
-                      <View style={styles.wordbookSelectLeft}>
-                        <FontAwesome6
-                          name={selectedWordbookIds.has(wordbookId) ? 'square-check' : 'square'}
-                          size={20}
-                          color={selectedWordbookIds.has(wordbookId) ? theme.primary : theme.textMuted}
-                        />
-                        <ThemedText variant="body" color={theme.textPrimary} style={styles.wordbookSelectName}>
-                          {(() => {
-                            const wordbook = dailyWordbookList.get(wordbookId);
-                            return wordbook ? wordbook.name : `词库 ${wordbookId}`;
-                          })()}
-                        </ThemedText>
-                      </View>
-                      <ThemedText variant="caption" color={theme.textMuted} style={styles.wordbookSelectCount}>
-                        {words.length} 个单词
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ));
-                })()}
-              </View>
             </ScrollView>
 
             <View style={styles.modalFooter}>

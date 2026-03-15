@@ -9,7 +9,6 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
 import { getWordsInWordbook } from '@/database/wordbookDao';
-import { getWordById } from '@/database/wordDao';
 import { initDatabase } from '@/database';
 import { Word } from '@/database/types';
 import { Spacing, BorderRadius } from '@/constants/theme';
@@ -20,17 +19,11 @@ export default function ReviewWordListScreen() {
   const { theme, isDark } = useTheme();
   const styles = createStyles(theme);
   const router = useSafeRouter();
-  const { projectId, earlyReviewWords, isEarlyReview, earlyDays } = useSafeSearchParams<{ 
-    projectId?: string;
-    earlyReviewWords?: string;
-    isEarlyReview?: string;
-    earlyDays?: string;
-  }>();
+  const { projectId } = useSafeSearchParams<{ projectId: string }>();
 
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
   const [wordbookName, setWordbookName] = useState('');
-  const [reviewMode, setReviewMode] = useState<ReviewMode>('normal');
 
   // 提前复习弹窗相关状态
   const [showEarlyReviewModal, setShowEarlyReviewModal] = useState(false);
@@ -40,50 +33,32 @@ export default function ReviewWordListScreen() {
   useFocusEffect(
     useCallback(() => {
       loadWords();
-    }, [projectId, earlyReviewWords, isEarlyReview])
+    }, [projectId])
   );
 
   const loadWords = async () => {
+    if (!projectId) {
+      console.error('[ReviewWordList] projectId is missing');
+      return;
+    }
+
     try {
       setLoading(true);
       await initDatabase();
+      const allWords = await getWordsInWordbook(parseInt(projectId));
+      const now = new Date();
 
-      // 判断是提前复习模式还是正常模式
-      if (isEarlyReview === 'true' && earlyReviewWords) {
-        // 提前复习模式：根据单词ID列表加载单词
-        setReviewMode('early');
-        
-        const wordIds = earlyReviewWords.split(',').map(id => parseInt(id, 10));
-        const loadedWords: Word[] = [];
-        
-        for (const wordId of wordIds) {
-          const word = await getWordById(wordId);
-          if (word) {
-            loadedWords.push(word);
-          }
-        }
-        
-        setWords(loadedWords);
-        setWordbookName('提前复习');
-      } else if (projectId) {
-        // 正常模式：根据词库ID加载单词
-        setReviewMode('normal');
-        
-        const allWords = await getWordsInWordbook(parseInt(projectId));
-        const now = new Date();
+      // 筛选出待复习的单词
+      const pendingWords = allWords.filter(w => {
+        if (!w.next_review) return true;
+        return new Date(w.next_review) <= now;
+      });
 
-        // 筛选出待复习的单词
-        const pendingWords = allWords.filter(w => {
-          if (!w.next_review) return true;
-          return new Date(w.next_review) <= now;
-        });
+      setWords(pendingWords);
 
-        setWords(pendingWords);
+      // 获取词库名称（从第一个单词的wordbook字段中获取，如果没有则显示ID）
+      if (pendingWords.length > 0) {
         setWordbookName(`词库 ${projectId}`);
-      } else {
-        console.error('[ReviewWordList] projectId and earlyReviewWords are both missing');
-        Alert.alert('错误', '缺少必要的参数');
-        router.back();
       }
     } catch (error) {
       console.error('加载待复习单词失败:', error);
@@ -131,21 +106,11 @@ export default function ReviewWordListScreen() {
     console.log('[ReviewWordList] 开始复习单词:', word.word, 'mode:', mode);
 
     try {
-      // 在提前复习模式下，将所有单词ID列表传递给复习详情页面
-      if (reviewMode === 'early' && earlyReviewWords) {
-        router.push('/review-detail', {
-          wordId: word.id.toString(),
-          earlyReviewWords,
-          isEarlyReview: 'true',
-          earlyDays: earlyDays || '0',
-        });
-      } else {
-        // 正常复习模式，只传入单词ID
-        router.push('/review-detail', {
-          wordId: word.id.toString(),
-          reviewMode: mode,
-        });
-      }
+      // 跳转到复习详情页面，只传入单词ID
+      router.push('/review-detail', {
+        wordId: word.id.toString(),
+        reviewMode: mode,
+      });
     } catch (error) {
       console.error('[ReviewWordList] 跳转失败:', error);
       Alert.alert('错误', '跳转失败，请重试');
@@ -209,13 +174,8 @@ export default function ReviewWordListScreen() {
           </TouchableOpacity>
           <View style={styles.headerTitle}>
             <ThemedText variant="h2" color={theme.textPrimary}>
-              {reviewMode === 'early' ? '提前复习' : '待复习单词'} ({words.length})
+              待复习单词 ({words.length})
             </ThemedText>
-            {reviewMode === 'early' && earlyDays && (
-              <ThemedText variant="caption" color={theme.textSecondary} style={styles.headerSubtitle}>
-                提前 {earlyDays} 天
-              </ThemedText>
-            )}
           </View>
           <View style={styles.backButton} />
         </View>

@@ -17,9 +17,6 @@ export const createStyles = (theme: Theme) => {
     headerTitle: {
       flex: 1,
     },
-    headerSubtitle: {
-      marginTop: 2,
-    },
     backButton: {
       padding: Spacing.sm,
       marginRight: Spacing.sm,
