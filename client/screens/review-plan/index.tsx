@@ -79,8 +79,15 @@ export default function ReviewPlanScreen() {
       }
 
       // 统计每个单词的复习情况
+      const processedWordIds = new Set<number>(); // 追踪已处理的单词ID，避免重复
       allWords.forEach((word) => {
         if (word.next_review) {
+          // 检查是否已经处理过这个单词（避免因单词属于多个词库而重复）
+          if (processedWordIds.has(word.id)) {
+            return;
+          }
+          processedWordIds.add(word.id);
+
           const reviewDate = new Date(word.next_review);
           reviewDate.setHours(0, 0, 0, 0);
           const dateStr = reviewDate.toISOString().split('T')[0];
