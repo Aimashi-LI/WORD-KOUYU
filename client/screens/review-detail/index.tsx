@@ -156,8 +156,15 @@ export default function ReviewScreen() {
           allWords.push(...words);
         }
 
+        // 去重：避免同一个单词在多个词库中重复出现
+        const uniqueWordsMap = new Map<number, Word>();
+        allWords.forEach(word => {
+          uniqueWordsMap.set(word.id, word);
+        });
+        const uniqueWords = Array.from(uniqueWordsMap.values());
+
         // 筛选出指定的单词
-        const earlyReviewWordList = allWords.filter(w => wordIds.includes(w.id));
+        const earlyReviewWordList = uniqueWords.filter(w => wordIds.includes(w.id));
         console.log('[Review] 找到', earlyReviewWordList.length, '个提前复习的单词');
 
         // 设置为复习队列
@@ -203,7 +210,15 @@ export default function ReviewScreen() {
         const upcomingWords: Word[] = [];
         const now = new Date();
 
-        allWords.forEach(w => {
+        // 去重：避免同一个单词在多个词库中重复出现
+        const uniqueWordsMap = new Map<number, Word>();
+        allWords.forEach(word => {
+          uniqueWordsMap.set(word.id, word);
+        });
+        const uniqueWords = Array.from(uniqueWordsMap.values());
+        console.log('[Review] 去重前单词数:', allWords.length, '去重后单词数:', uniqueWords.length);
+
+        uniqueWords.forEach(w => {
           // 已掌握的单词不加载
           if (w.is_mastered === 1) return;
 
