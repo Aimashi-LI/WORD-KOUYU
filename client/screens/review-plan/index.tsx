@@ -88,6 +88,9 @@ export default function ReviewPlanScreen() {
       }
 
       // 统计每个单词的复习情况
+      // 为每个日期维护一个已添加单词ID的Set，确保每个单词在每个日期只出现一次
+      const dateProcessedWordIds = new Map<string, Set<number>>();
+      
       uniqueWords.forEach((word) => {
         if (word.next_review) {
           const reviewDate = new Date(word.next_review);
@@ -103,11 +106,17 @@ export default function ReviewPlanScreen() {
             } else {
               stats.pendingReview++;
               
-              // 添加到待复习单词列表
+              // 添加到待复习单词列表（确保唯一性）
               if (!dailyPendingWords.has(dateStr)) {
                 dailyPendingWords.set(dateStr, []);
+                dateProcessedWordIds.set(dateStr, new Set());
               }
-              dailyPendingWords.get(dateStr)!.push(word);
+              
+              const processedIds = dateProcessedWordIds.get(dateStr)!;
+              if (!processedIds.has(word.id)) {
+                processedIds.add(word.id);
+                dailyPendingWords.get(dateStr)!.push(word);
+              }
             }
           }
         }
