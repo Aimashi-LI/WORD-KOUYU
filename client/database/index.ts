@@ -71,52 +71,90 @@ async function initDefaultWordbook(): Promise<void> {
   if (!db) return;
 
   try {
-    // 检查是否已存在预设词库
-    const existingPreset = await db.getFirstAsync<{ id: number }>(
-      'SELECT id FROM wordbooks WHERE is_preset = 1'
+    // 检查是否有任何词库存在（用于判断是否是全新初始化）
+    const anyWordbook = await db.getFirstAsync<{ id: number }>(
+      'SELECT id FROM wordbooks LIMIT 1'
     );
 
-    let presetWordbookId: number;
-
-    if (existingPreset) {
-      presetWordbookId = existingPreset.id;
-      console.log('Preset wordbook already exists, ID:', presetWordbookId);
-    } else {
+    // 如果数据库中没有任何词库，说明是全新初始化，需要创建预设词库
+    if (!anyWordbook) {
+      console.log('Database is empty, creating preset wordbook...');
+      
       // 创建预设词库
       const result = await db.runAsync(
         'INSERT INTO wordbooks (name, description, word_count, is_preset) VALUES (?, ?, 0, 1)',
         ['预设词库', '系统预设的词库，用于存储所有未分类的单词']
       );
-      presetWordbookId = result.lastInsertRowId;
+      const presetWordbookId = result.lastInsertRowId;
       console.log('Created preset wordbook, ID:', presetWordbookId);
-    }
 
-    // 将所有未分配到任何词库的单词添加到预设词库
-    const orphanWords = await db.getAllAsync<{ id: number }>(
-      'SELECT w.id FROM words w WHERE NOT EXISTS (SELECT 1 FROM wordbook_words ww WHERE ww.word_id = w.id)'
-    );
+      // 将所有未分配到任何词库的单词添加到预设词库
+      const orphanWords = await db.getAllAsync<{ id: number }>(
+        'SELECT w.id FROM words w WHERE NOT EXISTS (SELECT 1 FROM wordbook_words ww WHERE ww.word_id = w.id)'
+      );
 
-    if (orphanWords.length > 0) {
-      for (const word of orphanWords) {
-        try {
-          await db.runAsync(
-            'INSERT OR IGNORE INTO wordbook_words (wordbook_id, word_id) VALUES (?, ?)',
-            [presetWordbookId, word.id]
-          );
-        } catch (error) {
-          // 忽略重复插入
+      if (orphanWords.length > 0) {
+        for (const word of orphanWords) {
+          try {
+            await db.runAsync(
+              'INSERT OR IGNORE INTO wordbook_words (wordbook_id, word_id) VALUES (?, ?)',
+              [presetWordbookId, word.id]
+            );
+          } catch (error) {
+            // 忽略重复插入
+          }
         }
+        console.log(`Added ${orphanWords.length} orphan words to preset wordbook`);
       }
-      console.log(`Added ${orphanWords.length} orphan words to preset wordbook`);
-    }
 
-    // 更新预设词库的单词数
-    await db.runAsync(
-      `UPDATE wordbooks 
-       SET word_count = (SELECT COUNT(*) FROM wordbook_words WHERE wordbook_id = ?)
-       WHERE id = ?`,
-      [presetWordbookId, presetWordbookId]
-    );
+      // 更新预设词库的单词数
+      await db.runAsync(
+        `UPDATE wordbooks 
+         SET word_count = (SELECT COUNT(*) FROM wordbook_words WHERE wordbook_id = ?)
+         WHERE id = ?`,
+        [presetWordbookId, presetWordbookId]
+      );
+    } else {
+      // 数据库中已有词库，检查是否有预设词库
+      const existingPreset = await db.getFirstAsync<{ id: number }>(
+        'SELECT id FROM wordbooks WHERE is_preset = 1'
+      );
+
+      if (existingPreset) {
+        console.log('Preset wordbook already exists, ID:', existingPreset.id);
+      } else {
+        console.log('Database has wordbooks but no preset wordbook - user may have deleted it, skipping creation');
+      }
+
+      // 如果存在预设词库，将未分配的单词添加到预设词库
+      if (existingPreset) {
+        const orphanWords = await db.getAllAsync<{ id: number }>(
+          'SELECT w.id FROM words w WHERE NOT EXISTS (SELECT 1 FROM wordbook_words ww WHERE ww.word_id = w.id)'
+        );
+
+        if (orphanWords.length > 0) {
+          for (const word of orphanWords) {
+            try {
+              await db.runAsync(
+                'INSERT OR IGNORE INTO wordbook_words (wordbook_id, word_id) VALUES (?, ?)',
+                [existingPreset.id, word.id]
+              );
+            } catch (error) {
+              // 忽略重复插入
+            }
+          }
+          console.log(`Added ${orphanWords.length} orphan words to preset wordbook`);
+        }
+
+        // 更新预设词库的单词数
+        await db.runAsync(
+          `UPDATE wordbooks 
+           SET word_count = (SELECT COUNT(*) FROM wordbook_words WHERE wordbook_id = ?)
+           WHERE id = ?`,
+          [existingPreset.id, existingPreset.id]
+        );
+      }
+    }
   } catch (error) {
     console.error('Failed to initialize preset wordbook:', error);
   }

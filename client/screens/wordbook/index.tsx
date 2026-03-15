@@ -88,6 +88,7 @@ export default function WordbookScreen() {
       
       // 加载词库列表
       const bookList = await getAllWordbooks();
+      console.log('[loadData] 加载到的词库列表:', bookList.map(w => ({ id: w.id, name: w.name, isPreset: w.is_preset })));
       setWordbooks(bookList);
       
       // 确定要加载的词库ID
@@ -206,22 +207,29 @@ export default function WordbookScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('[handleDeleteWordbook] 准备删除词库:', editingWordbook);
               await deleteWordbook(editingWordbook.id);
+              console.log('[handleDeleteWordbook] 删除成功，关闭Modal');
               setShowEditWordbookModal(false);
               setEditingWordbook(null);
               
               // 如果删除的是当前选中的词库，切换到第一个词库
               if (currentWordbookId === editingWordbook.id) {
+                console.log('[handleDeleteWordbook] 删除的是当前词库，准备切换');
                 const remainingWordbooks = wordbooks.filter(w => w.id !== editingWordbook.id);
+                console.log('[handleDeleteWordbook] 剩余词库:', remainingWordbooks.map(w => ({ id: w.id, name: w.name })));
                 if (remainingWordbooks.length > 0) {
                   setCurrentWordbookId(remainingWordbooks[0].id);
                   await loadWordbookData(remainingWordbooks[0].id);
                 } else {
+                  console.log('[handleDeleteWordbook] 没有剩余词库，清空数据');
                   setCurrentWordbookId(null);
                   setWords([]);
                   setStats({ total: 0, mastered: 0, pending: 0 });
                 }
               } else {
+                console.log('[handleDeleteWordbook] 删除的不是当前词库，重新加载词库列表');
+                console.log('[handleDeleteWordbook] 当前词库ID:', currentWordbookId, '删除的词库ID:', editingWordbook.id);
                 await loadData();
               }
               
