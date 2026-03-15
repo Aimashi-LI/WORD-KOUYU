@@ -177,6 +177,7 @@ export default function WordbookScreen() {
 
   // 编辑词库
   const handleEditWordbook = (wordbook: Wordbook) => {
+    console.log('[handleEditWordbook] 编辑词库:', { id: wordbook.id, name: wordbook.name, is_preset: wordbook.is_preset });
     setEditingWordbook(wordbook);
     setEditWordbookName(wordbook.name);
     setEditWordbookDesc(wordbook.description || '');

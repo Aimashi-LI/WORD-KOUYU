@@ -5,6 +5,7 @@ import { Wordbook, Word } from './types';
 export async function getAllWordbooks(): Promise<Wordbook[]> {
   const db = getDatabase();
   const rows = await db.getAllAsync<any>('SELECT * FROM wordbooks ORDER BY is_preset DESC, name ASC');
+  console.log('[getAllWordbooks] 获取到词库列表:', rows.map((w: any) => ({ id: w.id, name: w.name, is_preset: w.is_preset, word_count: w.word_count })));
   return rows.map(mapToWordbook);
 }
 
@@ -58,13 +59,32 @@ export async function createWordbook(name: string, description?: string): Promis
 // 删除词库
 export async function deleteWordbook(id: number): Promise<void> {
   const db = getDatabase();
-  console.log('[deleteWordbook] 删除词库，ID:', id);
-  await db.runAsync('DELETE FROM wordbooks WHERE id = ?', [id]);
-  console.log('[deleteWordbook] 删除完成');
+  console.log('[deleteWordbook] 开始删除词库，ID:', id);
+  
+  // 先检查词库是否存在
+  const wordbook = await db.getFirstAsync<any>('SELECT * FROM wordbooks WHERE id = ?', [id]);
+  if (!wordbook) {
+    console.error('[deleteWordbook] 词库不存在，ID:', id);
+    throw new Error('词库不存在');
+  }
+  console.log('[deleteWordbook] 找到词库:', { id: wordbook.id, name: wordbook.name, is_preset: wordbook.is_preset });
+  
+  // 执行删除
+  const result = await db.runAsync('DELETE FROM wordbooks WHERE id = ?', [id]);
+  console.log('[deleteWordbook] 删除完成，影响行数:', result.changes);
   
   // 验证删除结果
   const remaining = await db.getAllAsync<any>('SELECT * FROM wordbooks ORDER BY is_preset DESC, name ASC');
   console.log('[deleteWordbook] 删除后剩余词库:', remaining.map((w: any) => ({ id: w.id, name: w.name, is_preset: w.is_preset })));
+  
+  // 检查是否真的删除了
+  const stillExists = await db.getFirstAsync<any>('SELECT id FROM wordbooks WHERE id = ?', [id]);
+  if (stillExists) {
+    console.error('[deleteWordbook] 删除失败，词库仍然存在，ID:', id);
+    throw new Error('删除失败');
+  }
+  
+  console.log('[deleteWordbook] 验证通过，词库已成功删除');
 }
 
 // 更新词库
