@@ -324,6 +324,16 @@ function scoreToQuality(score: number): number {
  * 使用动态掌握标准（基于稳定性分段）
  */
 export function checkMastery(word: Word, recentScores: number[]): boolean {
+  return checkMasteryWithConfig(word, recentScores, false);
+}
+
+/**
+ * 检查单词是否已掌握（支持提前复习配置）
+ * @param word 单词对象
+ * @param recentScores 最近得分列表
+ * @param isEarlyReview 是否为提前复习
+ */
+export function checkMasteryWithConfig(word: Word, recentScores: number[], isEarlyReview: boolean): boolean {
   const stability = word.stability;
 
   // 1. 根据稳定性确定连续高分要求
@@ -353,8 +363,13 @@ export function checkMastery(word: Word, recentScores: number[]): boolean {
   const maxPossibleScore = windowSize * 6;
   const overallMasteryRate = (totalScore / maxPossibleScore) * 100;
 
-  // 4. 综合判断
-  return consecutiveHighScores && overallMasteryRate >= MASTERY_CONFIG.overallMasteryThreshold;
+  // 4. 根据是否为提前复习调整掌握率要求
+  // 使用局部变量，避免修改只读的配置对象
+  const baseThreshold = MASTERY_CONFIG.overallMasteryThreshold;
+  const masteryThreshold = isEarlyReview ? 70 : baseThreshold;
+
+  // 5. 综合判断
+  return consecutiveHighScores && overallMasteryRate >= masteryThreshold;
 }
 
 /**

@@ -17,7 +17,8 @@ import {
   updateWithTimeWeight,
   calculateMasteryRate,
   getRating,
-  checkMastery
+  checkMastery,
+  checkMasteryWithConfig
 } from '@/algorithm/fsrs';
 import { useCallback } from 'react';
 import { formatSplitStringForDisplay } from '@/utils/splitHelper';
@@ -89,6 +90,9 @@ export default function ReviewScreen() {
   const [futureWords, setFutureWords] = useState<Word[]>([]);
   const [showFutureOption, setShowFutureOption] = useState(false);
 
+  // 新增：记录是否是提前复习
+  const [isEarlyReview, setIsEarlyReview] = useState(false);
+
   // 新增：记录开始时间
   const startTimeRef = useRef<number>(0);
   const reviewStartTimeRef = useRef<number>(0);
@@ -142,7 +146,11 @@ export default function ReviewScreen() {
       // 处理提前复习的单词
       if (earlyReviewWords) {
         console.log('[Review] 检测到提前复习单词，开始加载...');
-        
+
+        // 设置为提前复习模式
+        setIsEarlyReview(true);
+        console.log('[Review] 提前复习模式已启用，掌握率计算因子将调整为更高要求');
+
         // 解析单词ID列表
         const wordIds = earlyReviewWords.split(',').map((id: string) => parseInt(id.trim()));
         console.log('[Review] 提前复习的单词ID列表:', wordIds);
@@ -150,7 +158,7 @@ export default function ReviewScreen() {
         // 获取所有词库的所有单词
         const wordbooks = await getAllWordbooks();
         const allWords: Word[] = [];
-        
+
         for (const wb of wordbooks) {
           const words = await getWordsInWordbook(wb.id);
           allWords.push(...words);
@@ -183,7 +191,7 @@ export default function ReviewScreen() {
         // 检查时机
         setQueue(earlyReviewWordList);
         checkAllWordsTiming();
-        
+
         // 开始复习
         if (earlyReviewWordList.length > 0 && reviewSteps.length > 0) {
           startReview(reviewSteps[0]);
@@ -191,10 +199,13 @@ export default function ReviewScreen() {
           setState('completed');
           Alert.alert('提示', '没有找到需要提前复习的单词');
         }
-        
+
         console.log('[Review] ========== loadReviewQueue 结束（提前复习） ==========');
         return;
       }
+
+      // 正常复习模式：设置为 false
+      setIsEarlyReview(false);
 
       let words: Word[];
       let futureWordsList: Word[] = [];
@@ -843,7 +854,7 @@ export default function ReviewScreen() {
         next_review: nextReviewDate.toISOString(),
       };
 
-      const isMastered = checkMasteryWithConfig(updatedWord, recentScores);
+      const isMastered = checkMasteryWithTiming(updatedWord, recentScores);
 
       console.log(`[Review] 提交单词 ${word.word} 的快速评分分数: ${finalScore}`);
       console.log(`[Review]   新稳定性: ${newStability.toFixed(2)} 天`);
@@ -966,14 +977,18 @@ export default function ReviewScreen() {
   };
 
   // 使用配置的掌握标准判断
-  const checkMasteryWithConfig = (word: Word, recentScores: number[]): boolean => {
+  const checkMasteryWithTiming = (word: Word, recentScores: number[]): boolean => {
     // 调试日志
-    console.log(`[checkMasteryWithConfig] 单词: ${word.word}`);
-    console.log(`[checkMasteryWithConfig]   稳定性: ${word.stability.toFixed(2)} 天`);
-    console.log(`[checkMasteryWithConfig]   最近得分: [${recentScores.join(', ')}]`);
-    console.log(`[checkMasteryWithConfig]   是否已掌握: ${checkMastery(word, recentScores)}`);
+    console.log(`[checkMasteryWithTiming] 单词: ${word.word}`);
+    console.log(`[checkMasteryWithTiming]   稳定性: ${word.stability.toFixed(2)} 天`);
+    console.log(`[checkMasteryWithTiming]   最近得分: [${recentScores.join(', ')}]`);
+    console.log(`[checkMasteryWithTiming]   是否为提前复习: ${isEarlyReview}`);
 
-    return checkMastery(word, recentScores);
+    // 调用从 fsrs.ts 导入的 checkMasteryWithConfig 函数
+    const isMastered = checkMasteryWithConfig(word, recentScores, isEarlyReview);
+    console.log(`[checkMasteryWithTiming]   是否已掌握: ${isMastered}`);
+
+    return isMastered;
   };
 
   const renderStartScreen = () => {
