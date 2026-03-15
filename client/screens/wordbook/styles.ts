@@ -492,5 +492,18 @@ export const createStyles = (theme: Theme) => {
       borderWidth: 1,
       borderColor: theme.primary,
     },
+    deleteButtonContainer: {
+      marginTop: Spacing.xl,
+      marginBottom: Spacing.xl,
+    },
+    deleteButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      borderRadius: BorderRadius.md,
+    },
   });
 };
