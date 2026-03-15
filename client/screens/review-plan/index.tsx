@@ -975,6 +975,12 @@ export default function ReviewPlanScreen() {
 
             <View style={styles.modalFooter}>
               <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.backgroundTertiary }]}
+                onPress={() => setShowEarlyReviewModal(false)}
+              >
+                <ThemedText variant="body" color={theme.textPrimary}>取消</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton, { backgroundColor: theme.primary }]}
                 onPress={confirmEarlyReview}
               >
