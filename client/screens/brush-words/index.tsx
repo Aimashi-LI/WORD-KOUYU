@@ -851,22 +851,11 @@ export default function BrushWordsScreen() {
                   <Text style={styles.shareSectionTitle}>拆分</Text>
                   {(() => {
                     const splitText = formatSplitStringForDisplay(currentWord.split!);
-                    const items = splitText.split('。').filter(item => item.trim());
+                    const items = splitText.split('\n').filter(item => item.trim());
                     const itemsPerColumn = 4;
                     const numColumns = Math.ceil(items.length / itemsPerColumn);
 
-                    // 列优先排序：重新排列数组
-                    const sortedItems: string[] = [];
-                    for (let row = 0; row < itemsPerColumn; row++) {
-                      for (let col = 0; col < numColumns; col++) {
-                        const index = row + col * itemsPerColumn;
-                        if (index < items.length) {
-                          sortedItems.push(items[index]);
-                        }
-                      }
-                    }
-
-                    // 将重新排列的项分组到列中
+                    // 将拆分项分组到列中
                     const columns: string[][] = [];
                     for (let col = 0; col < numColumns; col++) {
                       const columnItems: string[] = [];
