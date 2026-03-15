@@ -1,244 +1,291 @@
-import { StyleSheet } from 'react-native';
-import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+import { StyleSheet, Dimensions } from 'react-native';
 
-export const createStyles = (theme: Theme) => {
-  return StyleSheet.create({
-    scrollContent: {
-      flexGrow: 1,
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.xl,
-      paddingBottom: Spacing['5xl'],
-    },
-    // 统计卡片
-    statsCard: {
-      padding: Spacing.lg,
-      borderRadius: BorderRadius.lg,
-      marginBottom: Spacing.md,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-      elevation: 4,
-    },
-    statsTitle: {
-      marginBottom: Spacing.md,
-    },
-    statsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      alignItems: 'center',
-      marginBottom: Spacing.md,
-    },
-    statItem: {
-      alignItems: 'center',
-      flex: 1,
-    },
-    statDivider: {
-      width: 1,
-      height: 40,
-      backgroundColor: theme.border,
-    },
-    progressRow: {
-      marginBottom: Spacing.md,
-    },
-    progressBar: {
-      height: 6,
-      backgroundColor: theme.backgroundTertiary,
-      borderRadius: 3,
-      overflow: 'hidden',
-    },
-    progressFill: {
-      height: '100%',
-      backgroundColor: theme.success,
-      borderRadius: 3,
-    },
-    extraStats: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      paddingTop: Spacing.sm,
-      borderTopWidth: 1,
-      borderTopColor: theme.borderLight,
-    },
-    extraStatItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.xs,
-    },
-    // 快捷操作
-    quickReviewButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: Spacing.xs,
-      paddingVertical: Spacing.lg,
-      paddingHorizontal: Spacing.xl,
-      borderRadius: BorderRadius.lg,
-      backgroundColor: theme.primary,
-      marginBottom: Spacing.xl,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
-    },
-    quickReviewButtonDisabled: {
-      backgroundColor: theme.backgroundTertiary,
-      shadowOpacity: 0,
-      elevation: 0,
-    },
-    // 选中日期卡片
-    selectedDateCard: {
-      padding: Spacing.md,
-      borderRadius: BorderRadius.lg,
-      marginBottom: Spacing.lg,
-      borderWidth: 1,
-      borderColor: `${theme.primary}30`,
-      backgroundColor: `${theme.primary}05`,
-    },
-    selectedDateHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: Spacing.md,
-      paddingBottom: Spacing.sm,
-      borderBottomWidth: 1,
-      borderBottomColor: `${theme.primary}20`,
-    },
-    selectedDateWordItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: Spacing.sm,
-      paddingHorizontal: Spacing.sm,
-      backgroundColor: theme.backgroundDefault,
-      borderRadius: BorderRadius.md,
-      marginBottom: Spacing.xs,
-    },
-    startReviewButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: Spacing.xs,
-      paddingVertical: Spacing.sm,
-      paddingHorizontal: Spacing.md,
-      borderRadius: BorderRadius.md,
-      backgroundColor: theme.primary,
-      marginTop: Spacing.md,
-    },
-    // 分组容器
-    sectionTitle: {
-      marginBottom: Spacing.md,
-    },
-    groupContainer: {
-      marginBottom: Spacing.lg,
-    },
-    groupHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: Spacing.sm,
-      paddingBottom: Spacing.sm,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.borderLight,
-    },
-    dateItem: {
-      marginBottom: Spacing.sm,
-    },
-    dateHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: Spacing.sm,
-      paddingHorizontal: Spacing.xs,
-      paddingVertical: Spacing.xs,
-      backgroundColor: theme.backgroundTertiary,
-      borderRadius: BorderRadius.sm,
-    },
-    dateLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-    },
-    timeLabel: {
-      fontSize: 12,
-      fontWeight: '500',
-    },
-    wordItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: Spacing.sm,
-      paddingHorizontal: Spacing.md,
-      backgroundColor: theme.backgroundDefault,
-      borderRadius: BorderRadius.md,
-      marginBottom: Spacing.xs,
-    },
-    wordInfo: {
-      flex: 1,
-    },
-    partOfSpeech: {
-      fontSize: 12,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
-      backgroundColor: `${theme.primary}15`,
-      borderRadius: 4,
-      alignSelf: 'flex-start',
-      marginTop: 2,
-    },
-    wordStatus: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.xs,
-    },
-    wordbookGroups: {
-      marginTop: Spacing.md,
-    },
-    wordbookGroup: {
-      marginBottom: Spacing.md,
-    },
-    wordbookGroupHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: Spacing.sm,
-      paddingHorizontal: Spacing.md,
-      backgroundColor: `${theme.primary}10`,
-      borderRadius: BorderRadius.md,
-      marginBottom: Spacing.xs,
-    },
-    wordbookGroupHeaderLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-      gap: Spacing.xs,
-    },
-    wordbookGroupHeaderRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    wordbookExpandIcon: {
-      marginRight: Spacing.xs,
-    },
-    // 加载和空状态
-    loadingContainer: {
-      paddingVertical: Spacing.xl,
-      alignItems: 'center',
-      gap: Spacing.md,
-    },
-    loadingText: {
-      marginTop: Spacing.sm,
-    },
-    emptyContainer: {
-      paddingVertical: Spacing['3xl'],
-      alignItems: 'center',
-    },
-    emptyText: {
-      marginTop: Spacing.md,
-      textAlign: 'center',
-    },
-    emptySubtext: {
-      marginTop: Spacing.xs,
-      textAlign: 'center',
-      fontSize: 12,
-    },
-  });
-};
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+export const createStyles = (theme: any) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.backgroundRoot,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  // 智能推荐卡片
+  recommendationCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  recommendationContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  recommendationTextContainer: {
+    flex: 1,
+  },
+  // 视图切换
+  viewToggleContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: theme.backgroundTertiary,
+    borderRadius: 8,
+    padding: 4,
+  },
+  viewToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 6,
+    gap: 8,
+  },
+  // 滚动内容
+  scrollContent: {
+    flex: 1,
+    marginTop: 16,
+  },
+  // 日历容器
+  calendarContainer: {
+    marginHorizontal: 16,
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: theme.backgroundDefault,
+  },
+  // 月份导航
+  monthNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  // 星期标题
+  weekHeader: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  weekDayItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  // 日期网格
+  daysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dayCell: {
+    width: `${100 / 7}%`,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  dayCellSelected: {
+    backgroundColor: theme.primary,
+  },
+  dayCellEmpty: {
+    backgroundColor: 'transparent',
+  },
+  dayNumber: {
+    fontSize: 16,
+  },
+  dayNumberToday: {
+    fontWeight: 'bold',
+  },
+  dayDot: {
+    marginTop: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  // 选中日期的统计
+  selectedDayStats: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  selectedDayTitle: {
+    marginBottom: 12,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: theme.border,
+    height: 40,
+  },
+  // 完成率
+  completionRateContainer: {
+    paddingHorizontal: 16,
+  },
+  progressBarContainer: {
+    marginTop: 8,
+    height: 6,
+    backgroundColor: theme.backgroundTertiary,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  // 列表容器
+  listContainer: {
+    paddingHorizontal: 16,
+  },
+  // 天数切换
+  daysToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: theme.backgroundTertiary,
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 16,
+  },
+  daysToggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  // 日期卡片
+  dayCard: {
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+  },
+  dayCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  // 空状态
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 16,
+  },
+  // 弹窗
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 12,
+    maxHeight: SCREEN_HEIGHT * 0.7,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    flex: 1,
+  },
+  confirmButton: {
+    flex: 2,
+  },
+  // 开关
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  switch: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.backgroundTertiary,
+    padding: 2,
+  },
+  switchThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: theme.backgroundDefault,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  // 时间输入
+  timeInputContainer: {
+    marginBottom: 16,
+  },
+  timeInput: {
+    marginTop: 8,
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+  },
+  // 历史统计
+  historyStatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  historyStatItem: {
+    alignItems: 'center',
+  },
+});

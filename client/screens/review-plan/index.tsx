@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Dimensions } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -8,464 +8,697 @@ import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
-import { getReviewStats, getReviewPlanGrouped, ReviewStats, ReviewGroup, getWordsByDateRange, getReviewPlan } from '@/database/reviewPlanDao';
+import { getAllWordbooks, getWordsInWordbook } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
-import { CalendarView } from '@/components/CalendarView';
+import { Word } from '@/database/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 单词项组件（独立组件避免 map 渲染问题）
-/* eslint-disable react/prop-types */
-interface WordItemProps {
-  word: any;
-  theme: any;
-  styles: any;
-  router: any;
-  formatStability: (stability: number | undefined) => string;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// 统计数据类型
+interface DailyStats {
+  date: string;
+  totalReview: number;
+  completedReview: number;
+  pendingReview: number;
 }
-
-const WordItem = React.memo<WordItemProps>(({ word, theme, styles, router, formatStability }) => {
-  return (
-    <TouchableOpacity 
-      style={styles.wordItem}
-      onPress={() => router.push('/word-detail', { id: word.id.toString() })}
-    >
-      <View style={styles.wordInfo}>
-        <ThemedText variant="smallMedium" color={theme.textPrimary}>
-          {word.word}
-        </ThemedText>
-        {word.partOfSpeech && (
-          <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
-            {word.partOfSpeech}
-          </ThemedText>
-        )}
-        <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
-          {word.definition}
-        </ThemedText>
-      </View>
-      
-      <View style={styles.wordStatus}>
-        <ThemedText variant="caption" color={theme.textMuted}>
-          {formatStability(word.stability)}
-        </ThemedText>
-        {word.is_mastered && (
-          <FontAwesome6 name="circle-check" size={16} color={theme.success} />
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-});
-
-WordItem.displayName = 'WordItem';
 
 export default function ReviewPlanScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  
-  const [stats, setStats] = useState<ReviewStats>({
-    totalWords: 0,
-    masteredWords: 0,
-    pendingWords: 0,
-    masteryRate: 0,
-    averageStability: 0,
-    totalReviewCount: 0
-  });
-  
-  const [reviewGroups, setReviewGroups] = useState<ReviewGroup[]>([]);
+
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [dailyStats, setDailyStats] = useState<Map<string, DailyStats>>(new Map());
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [listDays, setListDays] = useState<'7' | '30'>('7');
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderTime, setReminderTime] = useState('09:00');
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [bestReviewTime, setBestReviewTime] = useState('09:00');
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  
-  // 日历相关状态
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [markedDates, setMarkedDates] = useState<string[]>([]);
-  const [markedDatesCount, setMarkedDatesCount] = useState<Record<string, number>>({});
-  const [selectedDateWords, setSelectedDateWords] = useState<any[]>([]);
-  
-  // 词库分组折叠状态管理
-  const [expandedWordbooks, setExpandedWordbooks] = useState<Record<string, boolean>>({});
-  
-  // 判断今天是否有待复习的单词
-  const hasTodayWords = useMemo(() => {
-    if (reviewGroups.length === 0) return false;
-    const todayGroup = reviewGroups.find(g => g.label === '今天待复习');
-    return todayGroup ? todayGroup.totalWords > 0 : false;
-  }, [reviewGroups]);
-  
+
+  // 加载复习数据
   const loadData = useCallback(async () => {
     try {
+      setLoading(true);
       await initDatabase();
-      
-      const [reviewStats, groups, plan] = await Promise.all([
-        getReviewStats(),
-        getReviewPlanGrouped(),
-        getReviewPlan(60)  // 获取 60 天的复习计划用于日历标记
-      ]);
-      
-      setStats(reviewStats);
-      setReviewGroups(groups);
-      
-      // 提取有复习计划的日期
-      const dates = plan.map(item => item.date);
-      setMarkedDates(dates);
-      
-      // 提取每个日期的复习计划数量
-      const countMap: Record<string, number> = {};
-      plan.forEach(item => {
-        countMap[item.date] = item.count;
+      const wordbooks = await getAllWordbooks();
+
+      // 获取所有单词的复习信息
+      const allWords: Word[] = [];
+      for (const wb of wordbooks) {
+        const words = await getWordsInWordbook(wb.id);
+        allWords.push(...words);
+      }
+
+      // 计算未来60天的统计数据
+      const statsMap = new Map<string, DailyStats>();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      for (let i = 0; i < 60; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+
+        statsMap.set(dateStr, {
+          date: dateStr,
+          totalReview: 0,
+          completedReview: 0,
+          pendingReview: 0,
+        });
+      }
+
+      // 统计每个单词的复习情况
+      allWords.forEach((word) => {
+        if (word.next_review) {
+          const reviewDate = new Date(word.next_review);
+          reviewDate.setHours(0, 0, 0, 0);
+          const dateStr = reviewDate.toISOString().split('T')[0];
+
+          if (statsMap.has(dateStr)) {
+            const stats = statsMap.get(dateStr)!;
+            stats.totalReview++;
+
+            if (word.is_mastered === 1) {
+              stats.completedReview++;
+            } else {
+              stats.pendingReview++;
+            }
+          }
+        }
       });
-      setMarkedDatesCount(countMap);
+
+      setDailyStats(statsMap);
+
+      // 计算最佳复习时间（基于历史复习时间）
+      await calculateBestReviewTime(allWords);
+
+      // 加载提醒设置
+      await loadReminderSettings();
     } catch (error) {
-      console.error('加载复习计划失败:', error);
+      console.error('加载复习数据失败:', error);
+      Alert.alert('错误', '加载复习数据失败');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
-  
+
+  // 计算最佳复习时间
+  const calculateBestReviewTime = async (words: Word[]) => {
+    try {
+      // 分析复习时间分布
+      const hourCounts = new Map<number, number>();
+
+      words.forEach((word) => {
+        if (word.last_review) {
+          const reviewDate = new Date(word.last_review);
+          const hour = reviewDate.getHours();
+          hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
+        }
+      });
+
+      // 找出复习次数最多的时间段
+      let maxCount = 0;
+      let bestHour = 9; // 默认上午9点
+
+      hourCounts.forEach((count, hour) => {
+        if (count > maxCount) {
+          maxCount = count;
+          bestHour = hour;
+        }
+      });
+
+      // 转换为 HH:mm 格式
+      const timeString = `${bestHour.toString().padStart(2, '0')}:00`;
+      setBestReviewTime(timeString);
+    } catch (error) {
+      console.error('计算最佳复习时间失败:', error);
+    }
+  };
+
+  // 加载提醒设置
+  const loadReminderSettings = async () => {
+    try {
+      const enabled = await AsyncStorage.getItem('reminder_enabled');
+      const time = await AsyncStorage.getItem('reminder_time');
+
+      setReminderEnabled(enabled === 'true');
+      setReminderTime(time || '09:00');
+    } catch (error) {
+      console.error('加载提醒设置失败:', error);
+    }
+  };
+
+  // 保存提醒设置
+  const saveReminderSettings = async () => {
+    try {
+      await AsyncStorage.setItem('reminder_enabled', String(reminderEnabled));
+      await AsyncStorage.setItem('reminder_time', reminderTime);
+
+      if (reminderEnabled) {
+        Alert.alert('成功', `复习提醒已设置为每天 ${reminderTime}`);
+      } else {
+        Alert.alert('成功', '复习提醒已关闭');
+      }
+
+      setShowReminderModal(false);
+    } catch (error) {
+      console.error('保存提醒设置失败:', error);
+      Alert.alert('错误', '保存失败，请重试');
+    }
+  };
+
+  // 获取指定日期的统计数据
+  const getStatsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return dailyStats.get(dateStr);
+  };
+
+  // 获取列表视图的数据
+  const getListData = (): DailyStats[] => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const days = parseInt(listDays);
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + days);
+
+    const result: DailyStats[] = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      const stats = dailyStats.get(dateStr);
+      if (stats && stats.totalReview > 0) {
+        result.push(stats);
+      }
+    }
+
+    return result;
+  };
+
+  // 格式化日期显示
+  const formatDateDisplay = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const dateStr = date.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split('T')[0];
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    if (dateStr === todayStr) {
+      return '今天';
+    } else if (dateStr === tomorrowStr) {
+      return '明天';
+    } else {
+      return `${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+  };
+
+  // 计算完成率
+  const calculateCompletionRate = (stats: DailyStats) => {
+    if (stats.totalReview === 0) return 0;
+    return Math.round((stats.completedReview / stats.totalReview) * 100);
+  };
+
+  // 生成日历数据
+  const generateCalendarDays = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    // 获取月份的第一天和最后一天
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    // 获取第一周需要显示的空白天数（星期几）
+    const startDay = firstDay.getDay(); // 0 = Sunday
+
+    const days: Date[] = [];
+
+    // 添加空白占位符
+    for (let i = 0; i < startDay; i++) {
+      days.push(new Date(0)); // 无效日期
+    }
+
+    // 添加实际日期
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      days.push(new Date(year, month, i));
+    }
+
+    return days;
+  }, [currentDate]);
+
+  // 切换月份
+  const changeMonth = (delta: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() + delta);
+    setCurrentDate(newDate);
+  };
+
+  // 选择日期
+  const onDayPress = (date: Date) => {
+    setSelectedDate(date);
+    const stats = getStatsForDate(date);
+    if (stats && stats.totalReview > 0) {
+      setShowHistoryModal(true);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadData();
     }, [loadData])
   );
-  
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadData();
-  }, [loadData]);
-  
-  const handleStartReview = async (startDate: Date, endDate: Date) => {
-    try {
-      const words = await getWordsByDateRange(startDate, endDate);
-      if (words.length === 0) {
-        return;
-      }
-      
-      // 跳转到复习页面
-      router.push('/review-detail', { 
-        wordIds: words.map(w => w.id).join(','),
-        source: 'plan'
-      });
-    } catch (error) {
-      console.error('开始复习失败:', error);
-    }
-  };
-  
-  const handleQuickReview = async () => {
-    // 获取今天的待复习单词
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    await handleStartReview(today, tomorrow);
-  };
-  
-  // 日期选择处理
-  const handleDateSelect = async (date: Date) => {
-    setSelectedDate(date);
-    
-    try {
-      // 获取选中日期的复习单词
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
-      
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
-      
-      const words = await getWordsByDateRange(startDate, endDate);
-      setSelectedDateWords(words);
-    } catch (error) {
-      console.error('获取选中日期复习单词失败:', error);
-      setSelectedDateWords([]);
-    }
-  };
-  
-  const formatStability = (stability: number | undefined): string => {
-    // 处理 undefined 或 null 的情况
-    if (stability === undefined || stability === null || isNaN(stability)) {
-      return '刚开始';
-    }
 
-    if (stability < 7) {
-      return '刚开始';
-    } else if (stability < 14) {
-      return '学习中';
-    } else if (stability < 30) {
-      return '较稳定';
-    } else if (stability < 60) {
-      return '稳定';
-    } else {
-      return '很稳定';
-    }
-  };
-  
-  // 切换词库分组的展开/收起状态
-  const toggleWordbookExpand = (groupIndex: number, wordbookId: number) => {
-    const key = `${groupIndex}-${wordbookId}`;
-    setExpandedWordbooks(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-  
+  if (loading) {
+    return (
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+        <View style={styles.loadingContainer}>
+          <ThemedText color={theme.textMuted}>加载中...</ThemedText>
+        </View>
+      </Screen>
+    );
+  }
+
+  const selectedDateStats = getStatsForDate(selectedDate);
+
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.primary}
-            colors={[theme.primary]}
-          />
-        }
-      >
-        {/* 统计卡片 */}
-        <ThemedView level="default" style={styles.statsCard}>
-          <ThemedText variant="h3" color={theme.textPrimary} style={styles.statsTitle}>
-            复习效果概览
-          </ThemedText>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <ThemedText variant="h2" color={theme.primary}>{stats.totalWords}</ThemedText>
-              <ThemedText variant="caption" color={theme.textMuted}>总单词</ThemedText>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <ThemedText variant="h2" color={theme.success}>{stats.masteredWords}</ThemedText>
-              <ThemedText variant="caption" color={theme.textMuted}>已掌握</ThemedText>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <ThemedText variant="h2" color={theme.warning}>{stats.pendingWords}</ThemedText>
-              <ThemedText variant="caption" color={theme.textMuted}>待复习</ThemedText>
-            </View>
-          </View>
-          
-          <View style={styles.progressRow}>
-            <ThemedText variant="caption" color={theme.textSecondary}>
-              掌握率: {stats.masteryRate}%
-            </ThemedText>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${stats.masteryRate}%` }]} />
-            </View>
-          </View>
-          
-          <View style={styles.extraStats}>
-            <View style={styles.extraStatItem}>
-              <FontAwesome6 name="chart-line" size={14} color={theme.accent} />
-              <ThemedText variant="caption" color={theme.textSecondary}>
-                平均稳定性: {formatStability(stats.averageStability)}
+      <View style={styles.container}>
+        {/* 标题栏 */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <FontAwesome6 name="arrow-left" size={24} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <ThemedText variant="h3" color={theme.textPrimary}>复习计划</ThemedText>
+          <TouchableOpacity onPress={() => setShowReminderModal(true)}>
+            <FontAwesome6 name="bell" size={24} color={reminderEnabled ? theme.primary : theme.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 智能推荐 */}
+        <ThemedView level="tertiary" style={styles.recommendationCard}>
+          <View style={styles.recommendationContent}>
+            <FontAwesome6 name="lightbulb" size={20} color={theme.accent} />
+            <View style={styles.recommendationTextContainer}>
+              <ThemedText variant="body" color={theme.textPrimary}>
+                最佳复习时间：{bestReviewTime}
               </ThemedText>
-            </View>
-            <View style={styles.extraStatItem}>
-              <FontAwesome6 name="rotate" size={14} color={theme.accent} />
-              <ThemedText variant="caption" color={theme.textSecondary}>
-                总复习次数: {stats.totalReviewCount}
+              <ThemedText variant="caption" color={theme.textMuted}>
+                基于您的学习历史推荐
               </ThemedText>
             </View>
           </View>
         </ThemedView>
-        
-        {/* 日历视图 */}
-        <CalendarView
-          selectedDate={selectedDate}
-          onDateSelect={handleDateSelect}
-          markedDates={markedDates}
-          markedDatesCount={markedDatesCount}
-        />
-        
-        {/* 选中日期的复习单词 */}
-        {selectedDate && selectedDateWords.length > 0 && (
-          <ThemedView level="default" style={styles.selectedDateCard}>
-            <View style={styles.selectedDateHeader}>
-              <ThemedText variant="h4" color={theme.textPrimary}>
-                {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日 复习计划
-              </ThemedText>
-              <TouchableOpacity onPress={() => setSelectedDate(undefined)}>
-                <FontAwesome6 name="xmark" size={20} color={theme.textMuted} />
-              </TouchableOpacity>
-            </View>
-            
-            {selectedDateWords.map((word) => (
-              <TouchableOpacity 
-                key={word.id}
-                style={styles.selectedDateWordItem}
-                onPress={() => router.push('/word-detail', { id: word.id.toString() })}
-              >
-                <View style={styles.wordInfo}>
-                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                    {word.word}
-                  </ThemedText>
-                  {word.partOfSpeech && (
-                    <ThemedText variant="caption" color={theme.primary} style={styles.partOfSpeech}>
-                      {word.partOfSpeech}
-                    </ThemedText>
-                  )}
-                  <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
-                    {word.definition}
-                  </ThemedText>
-                </View>
-              </TouchableOpacity>
-            ))}
-            
-            <TouchableOpacity
-              style={styles.startReviewButton}
-              onPress={() => {
-                const startDate = new Date(selectedDate);
-                startDate.setHours(0, 0, 0, 0);
-                const endDate = new Date(selectedDate);
-                endDate.setHours(23, 59, 59, 999);
-                handleStartReview(startDate, endDate);
-              }}
-            >
-              <FontAwesome6 name="play" size={16} color={theme.buttonPrimaryText} />
-              <ThemedText variant="caption" color={theme.buttonPrimaryText}>
-                开始复习 ({selectedDateWords.length} 个单词)
-              </ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
-        )}
-        
-        {/* 快捷操作 */}
-        <TouchableOpacity 
-          style={[
-            styles.quickReviewButton,
-            !hasTodayWords && styles.quickReviewButtonDisabled
-          ]}
-          onPress={handleQuickReview}
-          disabled={loading || !hasTodayWords}
-        >
-          <FontAwesome6 
-            name="play" 
-            size={20} 
-            color={!hasTodayWords ? theme.textMuted : theme.buttonPrimaryText} 
-          />
-          <ThemedText 
-            variant="smallMedium" 
-            color={!hasTodayWords ? theme.textMuted : theme.buttonPrimaryText}
+
+        {/* 视图切换 */}
+        <View style={styles.viewToggleContainer}>
+          <TouchableOpacity
+            style={[
+              styles.viewToggleButton,
+              viewMode === 'calendar' && { backgroundColor: theme.primary }
+            ]}
+            onPress={() => setViewMode('calendar')}
           >
-            {!hasTodayWords ? '暂无今日复习' : '开始今天复习'}
-          </ThemedText>
-        </TouchableOpacity>
-        
-        {/* 复习计划时间线 */}
-        <ThemedText variant="h3" color={theme.textPrimary} style={styles.sectionTitle}>
-          复习计划
-        </ThemedText>
-        
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.primary} />
-            <ThemedText color={theme.textMuted} style={styles.loadingText}>
-              加载中...
+            <FontAwesome6
+              name="calendar"
+              size={16}
+              color={viewMode === 'calendar' ? theme.buttonPrimaryText : theme.textMuted}
+            />
+            <ThemedText
+              variant="caption"
+              color={viewMode === 'calendar' ? theme.buttonPrimaryText : theme.textMuted}
+            >
+              日历视图
             </ThemedText>
-          </View>
-        ) : reviewGroups.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <FontAwesome6 name="calendar-check" size={48} color={theme.textMuted} />
-            <ThemedText variant="body" color={theme.textMuted} style={styles.emptyText}>
-              暂无复习计划
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.viewToggleButton,
+              viewMode === 'list' && { backgroundColor: theme.primary }
+            ]}
+            onPress={() => setViewMode('list')}
+          >
+            <FontAwesome6
+              name="list"
+              size={16}
+              color={viewMode === 'list' ? theme.buttonPrimaryText : theme.textMuted}
+            />
+            <ThemedText
+              variant="caption"
+              color={viewMode === 'list' ? theme.buttonPrimaryText : theme.textMuted}
+            >
+              列表视图
             </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted} style={styles.emptySubtext}>
-              添加单词后开始制定复习计划
-            </ThemedText>
-          </View>
-        ) : (
-          reviewGroups.map((group, groupIndex) => (
-            <View key={groupIndex} style={styles.groupContainer}>
-              <View style={styles.groupHeader}>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.scrollContent}>
+          {viewMode === 'calendar' ? (
+            /* 日历视图 */
+            <ThemedView level="default" style={styles.calendarContainer}>
+              {/* 月份导航 */}
+              <View style={styles.monthNavigation}>
+                <TouchableOpacity onPress={() => changeMonth(-1)}>
+                  <FontAwesome6 name="chevron-left" size={20} color={theme.textPrimary} />
+                </TouchableOpacity>
                 <ThemedText variant="h4" color={theme.textPrimary}>
-                  {group.label}
+                  {currentDate.getFullYear()}年{currentDate.getMonth() + 1}月
                 </ThemedText>
-                <ThemedText variant="caption" color={theme.primary}>
-                  {group.totalWords} 个单词
-                </ThemedText>
+                <TouchableOpacity onPress={() => changeMonth(1)}>
+                  <FontAwesome6 name="chevron-right" size={20} color={theme.textPrimary} />
+                </TouchableOpacity>
               </View>
-              
-              {group.items.map((item) => (
-                <View key={item.date} style={styles.dateItem}>
-                  <View style={styles.dateHeader}>
-                    <ThemedText variant="body" color={theme.textSecondary} style={styles.dateLabel}>
-                      {item.dateLabel}
-                    </ThemedText>
-                    <ThemedText variant="caption" color={theme.primary} style={styles.timeLabel}>
-                      {item.timeLabel}
-                    </ThemedText>
+
+              {/* 星期标题 */}
+              <View style={styles.weekHeader}>
+                {['日', '一', '二', '三', '四', '五', '六'].map((day, index) => (
+                  <View key={index} style={styles.weekDayItem}>
+                    <ThemedText variant="caption" color={theme.textMuted}>{day}</ThemedText>
                   </View>
-                  
-                  {/* 按词库分组显示 */}
-                  {item.wordbooks && item.wordbooks.length > 0 ? (
-                    <View style={styles.wordbookGroups}>
-                      {item.wordbooks.map((wb) => {
-                        const wordbookKey = `${groupIndex}-${wb.wordbookId}`;
-                        const isExpanded = expandedWordbooks[wordbookKey];
-                        
-                        return (
-                          <View key={wb.wordbookId} style={styles.wordbookGroup}>
-                            <TouchableOpacity 
-                              style={styles.wordbookGroupHeader}
-                              onPress={() => toggleWordbookExpand(groupIndex, wb.wordbookId)}
-                              activeOpacity={0.7}
-                            >
-                              <View style={styles.wordbookGroupHeaderLeft}>
-                                <FontAwesome6 
-                                  name={isExpanded ? "chevron-down" : "chevron-right"} 
-                                  size={14} 
-                                  color={theme.primary} 
-                                  style={styles.wordbookExpandIcon}
-                                />
-                                <ThemedText variant="smallMedium" color={theme.textSecondary}>
-                                  {wb.wordbookName}
-                                </ThemedText>
-                              </View>
-                              <View style={styles.wordbookGroupHeaderRight}>
-                                <ThemedText variant="caption" color={theme.primary}>
-                                  {wb.count} 个单词
-                                </ThemedText>
-                              </View>
-                            </TouchableOpacity>
-                            {isExpanded ? (
-                              wb.words && wb.words.length > 0 ? (
-                                wb.words.map((word) => (
-                                  <WordItem
-                                    key={word.id}
-                                    word={word}
-                                    theme={theme}
-                                    styles={styles}
-                                    router={router}
-                                    formatStability={formatStability}
-                                  />
-                                ))
-                              ) : null
-                            ) : null}
-                          </View>
-                        );
-                      })}
+                ))}
+              </View>
+
+              {/* 日期网格 */}
+              <View style={styles.daysGrid}>
+                {generateCalendarDays.map((date, index) => {
+                  const isValid = date.getTime() !== 0;
+                  const stats = isValid ? getStatsForDate(date) : null;
+                  const isSelected = isValid && date.toDateString() === selectedDate.toDateString();
+                  const isToday = isValid && date.toDateString() === new Date().toDateString();
+
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.dayCell,
+                        isSelected && styles.dayCellSelected,
+                        !isValid && styles.dayCellEmpty,
+                      ]}
+                      onPress={() => isValid && onDayPress(date)}
+                      disabled={!isValid}
+                    >
+                      {isValid && (
+                        <View>
+                          <ThemedText
+                            variant="body"
+                            color={isSelected ? theme.buttonPrimaryText : theme.textPrimary}
+                            style={[
+                              styles.dayNumber,
+                              isToday && styles.dayNumberToday,
+                            ]}
+                          >
+                            {date.getDate()}
+                          </ThemedText>
+                          {stats && stats.totalReview > 0 && (
+                            <View style={[
+                              styles.dayDot,
+                              { backgroundColor: stats.pendingReview > 0 ? theme.warning : theme.success }
+                            ]} />
+                          )}
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* 选中日期的统计 */}
+              {selectedDateStats && selectedDateStats.totalReview > 0 && (
+                <View style={styles.selectedDayStats}>
+                  <ThemedText variant="h4" color={theme.textPrimary} style={styles.selectedDayTitle}>
+                    {formatDateDisplay(selectedDate)} 复习统计
+                  </ThemedText>
+                  <View style={styles.statsRow}>
+                    <View style={styles.statItem}>
+                      <ThemedText variant="h3" color={theme.textPrimary}>
+                        {selectedDateStats.totalReview}
+                      </ThemedText>
+                      <ThemedText variant="caption" color={theme.textMuted}>总复习</ThemedText>
                     </View>
-                  ) : (
-                    // 没有词库分组时显示原始单词列表
-                    item.words && item.words.length > 0 ? (
-                      item.words.map((word) => (
-                        <WordItem
-                          key={word.id}
-                          word={word}
-                          theme={theme}
-                          styles={styles}
-                          router={router}
-                          formatStability={formatStability}
-                        />
-                      ))
-                    ) : null
-                  )}
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                      <ThemedText variant="h3" color={theme.success}>
+                        {selectedDateStats.completedReview}
+                      </ThemedText>
+                      <ThemedText variant="caption" color={theme.textMuted}>已完成</ThemedText>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                      <ThemedText variant="h3" color={theme.warning}>
+                        {selectedDateStats.pendingReview}
+                      </ThemedText>
+                      <ThemedText variant="caption" color={theme.textMuted}>待复习</ThemedText>
+                    </View>
+                  </View>
+                  <View style={styles.completionRateContainer}>
+                    <ThemedText variant="caption" color={theme.textMuted}>
+                      完成率：{calculateCompletionRate(selectedDateStats)}%
+                    </ThemedText>
+                    <View style={styles.progressBarContainer}>
+                      <View
+                        style={[
+                          styles.progressBarFill,
+                          { width: `${calculateCompletionRate(selectedDateStats)}%`, backgroundColor: theme.primary }
+                        ]}
+                      />
+                    </View>
+                  </View>
                 </View>
-              ))}
+              )}
+            </ThemedView>
+          ) : (
+            /* 列表视图 */
+            <View style={styles.listContainer}>
+              {/* 天数切换 */}
+              <View style={styles.daysToggleContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.daysToggleButton,
+                    listDays === '7' && { backgroundColor: theme.primary }
+                  ]}
+                  onPress={() => setListDays('7')}
+                >
+                  <ThemedText
+                    variant="body"
+                    color={listDays === '7' ? theme.buttonPrimaryText : theme.textMuted}
+                  >
+                    未来 7 天
+                  </ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.daysToggleButton,
+                    listDays === '30' && { backgroundColor: theme.primary }
+                  ]}
+                  onPress={() => setListDays('30')}
+                >
+                  <ThemedText
+                    variant="body"
+                    color={listDays === '30' ? theme.buttonPrimaryText : theme.textMuted}
+                  >
+                    未来 30 天
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {/* 列表数据 */}
+              {getListData().map((stats) => {
+                const date = new Date(stats.date);
+                return (
+                  <ThemedView key={stats.date} level="default" style={styles.dayCard}>
+                    <View style={styles.dayCardHeader}>
+                      <ThemedText variant="h4" color={theme.textPrimary}>
+                        {formatDateDisplay(date)}
+                      </ThemedText>
+                      <View style={styles.badgeContainer}>
+                        <View style={[styles.badge, { backgroundColor: theme.warning + '20' }]}>
+                          <ThemedText variant="caption" color={theme.warning}>
+                            {stats.pendingReview} 待复习
+                          </ThemedText>
+                        </View>
+                        <View style={[styles.badge, { backgroundColor: theme.success + '20' }]}>
+                          <ThemedText variant="caption" color={theme.success}>
+                            {stats.completedReview} 已完成
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.completionRateContainer}>
+                      <ThemedText variant="caption" color={theme.textMuted}>
+                        完成率：{calculateCompletionRate(stats)}%
+                      </ThemedText>
+                      <View style={styles.progressBarContainer}>
+                        <View
+                          style={[
+                            styles.progressBarFill,
+                            { width: `${calculateCompletionRate(stats)}%`, backgroundColor: theme.primary }
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  </ThemedView>
+                );
+              })}
+
+              {getListData().length === 0 && (
+                <View style={styles.emptyContainer}>
+                  <FontAwesome6 name="calendar-xmark" size={64} color={theme.textMuted} />
+                  <ThemedText variant="body" color={theme.textMuted}>
+                    未来 {listDays} 天暂无复习计划
+                  </ThemedText>
+                </View>
+              )}
             </View>
-          ))
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </View>
+
+      {/* 提醒设置弹窗 */}
+      <Modal
+        visible={showReminderModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReminderModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <ThemedView level="default" style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText variant="h3" color={theme.textPrimary}>复习提醒</ThemedText>
+              <TouchableOpacity onPress={() => setShowReminderModal(false)}>
+                <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <View style={styles.switchContainer}>
+                <ThemedText variant="body" color={theme.textPrimary}>开启提醒</ThemedText>
+                <TouchableOpacity
+                  style={[
+                    styles.switch,
+                    reminderEnabled && { backgroundColor: theme.primary }
+                  ]}
+                  onPress={() => setReminderEnabled(!reminderEnabled)}
+                >
+                  <View
+                    style={[
+                      styles.switchThumb,
+                      reminderEnabled && { transform: [{ translateX: 20 }] }
+                    ]}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {reminderEnabled && (
+                <View style={styles.timeInputContainer}>
+                  <ThemedText variant="body" color={theme.textPrimary}>提醒时间</ThemedText>
+                  <TextInput
+                    style={[styles.timeInput, { color: theme.textPrimary, borderColor: theme.border }]}
+                    value={reminderTime}
+                    onChangeText={setReminderTime}
+                    placeholder="09:00"
+                    maxLength={5}
+                  />
+                </View>
+              )}
+            </View>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.backgroundTertiary }]}
+                onPress={() => setShowReminderModal(false)}
+              >
+                <ThemedText variant="body" color={theme.textPrimary}>取消</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton, { backgroundColor: theme.primary }]}
+                onPress={saveReminderSettings}
+              >
+                <ThemedText variant="body" color={theme.buttonPrimaryText}>保存</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
+        </View>
+      </Modal>
+
+      {/* 复习历史弹窗 */}
+      <Modal
+        visible={showHistoryModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowHistoryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <ThemedView level="default" style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText variant="h3" color={theme.textPrimary}>
+                {selectedDateStats ? formatDateDisplay(selectedDate) : ''} 复习详情
+              </ThemedText>
+              <TouchableOpacity onPress={() => setShowHistoryModal(false)}>
+                <FontAwesome6 name="xmark" size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {selectedDateStats ? (
+                <View>
+                  <View style={styles.historyStatsContainer}>
+                    <View style={styles.historyStatItem}>
+                      <ThemedText variant="h2" color={theme.textPrimary}>
+                        {selectedDateStats.totalReview}
+                      </ThemedText>
+                      <ThemedText variant="caption" color={theme.textMuted}>总单词</ThemedText>
+                    </View>
+                    <View style={styles.historyStatItem}>
+                      <ThemedText variant="h2" color={theme.success}>
+                        {selectedDateStats.completedReview}
+                      </ThemedText>
+                      <ThemedText variant="caption" color={theme.textMuted}>已完成</ThemedText>
+                    </View>
+                    <View style={styles.historyStatItem}>
+                      <ThemedText variant="h2" color={theme.warning}>
+                        {selectedDateStats.pendingReview}
+                      </ThemedText>
+                      <ThemedText variant="caption" color={theme.textMuted}>待复习</ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={styles.completionRateContainer}>
+                    <ThemedText variant="body" color={theme.textPrimary}>
+                      完成率：{calculateCompletionRate(selectedDateStats)}%
+                    </ThemedText>
+                    <View style={styles.progressBarContainer}>
+                      <View
+                        style={[
+                          styles.progressBarFill,
+                          { width: `${calculateCompletionRate(selectedDateStats)}%`, backgroundColor: theme.primary }
+                        ]}
+                      />
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <ThemedText variant="body" color={theme.textMuted}>暂无数据</ThemedText>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton, { backgroundColor: theme.primary }]}
+                onPress={() => setShowHistoryModal(false)}
+              >
+                <ThemedText variant="body" color={theme.buttonPrimaryText}>关闭</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
+        </View>
+      </Modal>
     </Screen>
   );
 }
