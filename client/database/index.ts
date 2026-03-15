@@ -208,9 +208,44 @@ async function migrateDatabase(): Promise<void> {
     const currentVersion = await getDatabaseVersion();
     console.log(`Current database version: ${currentVersion}`);
 
-    // 如果版本已经是最新，跳过迁移
+    // 如果版本已经是最新，检查 review_logs 表的列是否完整
     if (currentVersion >= DB_VERSION) {
-      console.log('Database is already up to date');
+      console.log('Database is already up to date, checking review_logs table structure...');
+      
+      const tableInfo = await db.getFirstAsync<{ name: string }>(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='review_logs'"
+      );
+
+      if (tableInfo) {
+        const columns = await db.getAllAsync<{ name: string }>(
+          'PRAGMA table_info(review_logs)'
+        );
+        const columnNames = columns.map(col => col.name);
+        
+        const needsMigration = !columnNames.includes('stability_before') || 
+                             !columnNames.includes('stability_after') ||
+                             !columnNames.includes('difficulty_before') ||
+                             !columnNames.includes('difficulty_after');
+        
+        if (needsMigration) {
+          console.log('Review logs table missing required columns, adding them...');
+          
+          if (!columnNames.includes('stability_before')) {
+            await db.execAsync('ALTER TABLE review_logs ADD COLUMN stability_before REAL');
+          }
+          if (!columnNames.includes('stability_after')) {
+            await db.execAsync('ALTER TABLE review_logs ADD COLUMN stability_after REAL');
+          }
+          if (!columnNames.includes('difficulty_before')) {
+            await db.execAsync('ALTER TABLE review_logs ADD COLUMN difficulty_before REAL');
+          }
+          if (!columnNames.includes('difficulty_after')) {
+            await db.execAsync('ALTER TABLE review_logs ADD COLUMN difficulty_after REAL');
+          }
+          
+          console.log('Review logs table columns added successfully');
+        }
+      }
       return;
     }
 
@@ -519,8 +554,12 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
       CREATE TABLE IF NOT EXISTS review_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         word_id INTEGER NOT NULL,
-        score REAL NOT NULL,
+        score INTEGER NOT NULL,
         response_time REAL NOT NULL,
+        stability_before REAL,
+        stability_after REAL,
+        difficulty_before REAL,
+        difficulty_after REAL,
         reviewed_at TEXT NOT NULL,
         FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE
       );
