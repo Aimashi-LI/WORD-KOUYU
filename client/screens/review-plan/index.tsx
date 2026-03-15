@@ -50,13 +50,16 @@ export default function ReviewPlanScreen() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('[ReviewPlan] ========== loadData 开始 ==========');
       await initDatabase();
       const wordbooks = await getAllWordbooks();
+      console.log('[ReviewPlan] 获取到词库列表:', wordbooks);
 
       // 获取所有单词的复习信息
       const allWords: Word[] = [];
       for (const wb of wordbooks) {
         const words = await getWordsInWordbook(wb.id);
+        console.log(`[ReviewPlan] 词库 ${wb.id} (${wb.name}) 包含 ${words.length} 个单词`);
         allWords.push(...words);
       }
 
@@ -68,6 +71,17 @@ export default function ReviewPlanScreen() {
       const uniqueWords = Array.from(uniqueWordsMap.values());
 
       console.log('[ReviewPlan] 去重前单词数:', allWords.length, '去重后单词数:', uniqueWords.length);
+
+      // 检查单词的 next_review 字段
+      const wordsWithNextReview = uniqueWords.filter(w => w.next_review !== null && w.next_review !== undefined);
+      const wordsWithoutNextReview = uniqueWords.filter(w => w.next_review === null || w.next_review === undefined);
+
+      console.log('[ReviewPlan] 有 next_review 的单词数:', wordsWithNextReview.length);
+      console.log('[ReviewPlan] 没有 next_review 的单词数:', wordsWithoutNextReview.length);
+
+      if (wordsWithoutNextReview.length > 0) {
+        console.log('[ReviewPlan] 没有 next_review 的单词:', wordsWithoutNextReview.map(w => `${w.word} (ID: ${w.id})`).join(', '));
+      }
 
       // 计算未来60天的统计数据
       const statsMap = new Map<string, DailyStats>();
@@ -90,7 +104,7 @@ export default function ReviewPlanScreen() {
       // 统计每个单词的复习情况
       // 为每个日期维护一个已添加单词ID的Set，确保每个单词在每个日期只出现一次
       const dateProcessedWordIds = new Map<string, Set<number>>();
-      
+
       uniqueWords.forEach((word) => {
         if (word.next_review) {
           const reviewDate = new Date(word.next_review);
@@ -136,6 +150,19 @@ export default function ReviewPlanScreen() {
 
       setDailyStats(statsMap);
 
+      // 统计有多少日期有待复习单词
+      let datesWithPendingWords = 0;
+      let totalPendingWords = 0;
+      dailyPendingWords.forEach((words, dateStr) => {
+        if (words.length > 0) {
+          datesWithPendingWords++;
+          totalPendingWords += words.length;
+          console.log(`[ReviewPlan] 日期 ${dateStr} 有 ${words.length} 个待复习单词`);
+        }
+      });
+
+      console.log(`[ReviewPlan] 共有 ${datesWithPendingWords} 个日期有待复习单词，总计 ${totalPendingWords} 个单词`);
+
       // 检查 dailyPendingWords 中是否有重复
       dailyPendingWords.forEach((words, dateStr) => {
         const wordIdSet = new Set<number>();
@@ -159,8 +186,10 @@ export default function ReviewPlanScreen() {
 
       // 加载提醒设置
       await loadReminderSettings();
+
+      console.log('[ReviewPlan] ========== loadData 完成 ==========');
     } catch (error) {
-      console.error('加载复习数据失败:', error);
+      console.error('[ReviewPlan] 加载复习数据失败:', error);
       Alert.alert('错误', '加载复习数据失败');
     } finally {
       setLoading(false);
