@@ -11,6 +11,7 @@ import { createStyles } from './styles';
 import { getAllWordbooks, getWordsInWordbook } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
 import { updateWord } from '@/database/wordDao';
+import { calculateNextInterval } from '@/algorithm/fsrs';
 import { Word } from '@/database/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -221,6 +222,71 @@ export default function ReviewPlanScreen() {
           console.log(`[ReviewPlan] 日期 ${dateStr} 发现重复单词ID:`, duplicateIds);
         }
       });
+
+      setDailyPendingWords(pendingWordsMap);
+
+      // 模拟生成新单词的未来复习计划
+      const newWords = uniqueWords.filter(w => w.review_count === 0 && w.next_review);
+      console.log(`[ReviewPlan] 新单词数量: ${newWords.length}`);
+
+      if (newWords.length > 0) {
+        // 为每个新单词模拟生成未来5轮复习
+        for (const word of newWords) {
+          let simulatedStability = 1.0; // 初始稳定性
+          let simulatedReviewCount = 1; // 已经有第1次复习（10分钟后）
+
+          // 模拟未来5轮复习
+          for (let round = 2; round <= 6; round++) {
+            // 假设每次复习都得6分（满分）
+            const simulatedScore = 6;
+            const nextIntervalDays = calculateNextInterval(
+              { ...word, stability: simulatedStability },
+              simulatedScore,
+              simulatedReviewCount
+            );
+
+            // 计算下次复习时间（从当前时间开始）
+            const simulatedNextReview = new Date();
+            simulatedNextReview.setDate(simulatedNextReview.getDate() + nextIntervalDays);
+            const simulatedNextReviewDate = new Date(simulatedNextReview);
+            simulatedNextReviewDate.setHours(0, 0, 0, 0);
+            const simulatedDateStr = simulatedNextReviewDate.toISOString().split('T')[0];
+
+            // 添加到统计数据
+            if (statsMap.has(simulatedDateStr)) {
+              const stats = statsMap.get(simulatedDateStr)!;
+              stats.totalReview++;
+              stats.pendingReview++;
+
+              // 添加到待复习单词列表
+              if (!pendingWordsMap.has(simulatedDateStr)) {
+                pendingWordsMap.set(simulatedDateStr, []);
+              }
+              pendingWordsMap.get(simulatedDateStr)!.push(word);
+
+              console.log(`[ReviewPlan] 模拟单词 ${word.word} 第 ${round} 次复习: ${simulatedDateStr} (${nextIntervalDays.toFixed(1)} 天后)`);
+            }
+
+            // 更新模拟稳定性
+            if (nextIntervalDays > simulatedStability) {
+              simulatedStability = nextIntervalDays;
+            }
+            simulatedReviewCount++;
+          }
+        }
+
+        // 重新统计有多少日期有待复习单词
+        let datesWithPendingWordsAfterSimulation = 0;
+        let totalPendingWordsAfterSimulation = 0;
+        pendingWordsMap.forEach((words, dateStr) => {
+          if (words.length > 0) {
+            datesWithPendingWordsAfterSimulation++;
+            totalPendingWordsAfterSimulation += words.length;
+          }
+        });
+
+        console.log(`[ReviewPlan] 模拟后共有 ${datesWithPendingWordsAfterSimulation} 个日期有待复习单词，总计 ${totalPendingWordsAfterSimulation} 个单词`);
+      }
 
       setDailyPendingWords(pendingWordsMap);
 
