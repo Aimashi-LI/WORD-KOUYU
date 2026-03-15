@@ -871,7 +871,7 @@ export default function AddWordScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             keyboardVerticalOffset={0}
           >
-            <View style={styles.keyboardContainer} pointerEvents="box-none">
+            <View style={[styles.keyboardContainer, { pointerEvents: 'box-none' }]}>
               <PhoneticKeyboard
                 onKeyPress={(symbol) => setPhonetic(phonetic + symbol)}
                 onDelete={() => setPhonetic(phonetic.slice(0, -1))}
