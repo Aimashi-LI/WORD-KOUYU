@@ -18,9 +18,9 @@ jobs:
       - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: client/package-lock.json
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: 'client/pnpm-lock.yaml'
 
       - name: 🔧 Setup Java
         uses: actions/setup-java@v4
@@ -28,13 +28,18 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: 🔧 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: 🔧 Install dependencies
         working-directory: ./client
-        run: npm ci
+        run: pnpm install
 
       - name: 📦 Install EAS CLI
         working-directory: ./client
-        run: npm install -g eas-cli
+        run: pnpm add -g eas-cli
 
       - name: 🔧 Setup EAS configuration
         working-directory: ./client
@@ -74,7 +79,7 @@ jobs:
         run: |
           # 初始化 EAS 项目
           eas build:configure || true
-          
+
           # 本地构建 APK
           eas build --platform android --profile preview --non-interactive --local --output ./app-release.apk
 
