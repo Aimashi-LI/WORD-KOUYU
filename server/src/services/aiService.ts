@@ -104,6 +104,53 @@ export class AIService {
   }
 
   /**
+   * 查询 Token 余额（仅支持 DeepSeek）
+   */
+  async getTokenBalance(): Promise<{ balance: number; used: number; total: number }> {
+    if (this.settings.provider !== 'deepseek') {
+      // 豆包暂不支持余额查询，返回默认值
+      return {
+        balance: -1, // -1 表示不支持查询
+        used: 0,
+        total: 0,
+      };
+    }
+
+    try {
+      // DeepSeek 余额查询 API
+      const response = await this.client.get('/user/balance');
+      
+      if (response.data) {
+        const { is_available, balance_infos } = response.data;
+        
+        if (is_available && balance_infos && balance_infos.length > 0) {
+          const info = balance_infos[0];
+          return {
+            balance: parseFloat(info.grant_balance || '0'),
+            used: parseFloat(info.used_balance || '0'),
+            total: parseFloat(info.total_balance || '0'),
+          };
+        }
+      }
+
+      return {
+        balance: 0,
+        used: 0,
+        total: 0,
+      };
+    } catch (error: any) {
+      console.error('Get token balance error:', error.message);
+      
+      // 如果余额查询失败，返回 -1 表示查询失败
+      return {
+        balance: -1,
+        used: 0,
+        total: 0,
+      };
+    }
+  }
+
+  /**
    * 生成助记句子
    */
   async generateMnemonic(request: GenerateMnemonicRequest): Promise<GenerateMnemonicResponse> {

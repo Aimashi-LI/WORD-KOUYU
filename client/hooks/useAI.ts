@@ -37,7 +37,7 @@ interface UseAI {
 }
 
 // API 基础 URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
+const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
 /**
  * AI 功能 Hook

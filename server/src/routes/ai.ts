@@ -1,12 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { AIService, createAIService } from '../services/aiService';
-import { AISettings, AI_MODELS, AIProvider } from '../types/ai';
+import { storageService } from '../services/storageService';
+import { AISettings, AI_MODELS, AIProvider, AIModelConfig } from '../types/ai';
 
 const router = Router();
-
-// 临时存储 AI 配置（实际应该存储在数据库中）
-// 这里使用内存存储，重启后会丢失
-let aiSettings: AISettings | null = null;
 
 /**
  * 获取支持的 AI 模型列表
@@ -33,6 +30,8 @@ router.get('/models', (req: Request, res: Response) => {
  */
 router.get('/settings', (req: Request, res: Response) => {
   try {
+    const aiSettings = storageService.getAISettings();
+    
     if (!aiSettings) {
       res.json({
         success: true,
@@ -98,7 +97,7 @@ router.post('/settings', (req: Request, res: Response) => {
     }
 
     // 保存配置
-    aiSettings = {
+    const aiSettings: AISettings = {
       id: 1,
       provider,
       apiKey,
@@ -108,6 +107,8 @@ router.post('/settings', (req: Request, res: Response) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    storageService.saveAISettings(aiSettings);
 
     // 不返回完整的 API 密钥
     const maskedSettings = {
@@ -180,6 +181,9 @@ router.post('/test', async (req: Request, res: Response) => {
  */
 router.post('/generate/mnemonic', async (req: Request, res: Response) => {
   try {
+    // 获取 AI 配置
+    const aiSettings = storageService.getAISettings();
+    
     // 检查是否已配置 AI
     if (!aiSettings) {
       res.status(400).json({
@@ -211,6 +215,18 @@ router.post('/generate/mnemonic', async (req: Request, res: Response) => {
       phonetic,
     });
 
+    // 记录使用情况
+    const modelConfig = AI_MODELS.find(m => m.id === aiSettings.model) as AIModelConfig;
+    const cost = (result.tokensUsed / 1000) * (modelConfig?.costPer1kTokens || 0);
+    
+    storageService.recordAIUsage({
+      settingId: aiSettings.id!,
+      feature: 'mnemonic',
+      word,
+      tokensUsed: result.tokensUsed,
+      cost,
+    });
+
     res.json({
       success: true,
       data: result,
@@ -230,6 +246,9 @@ router.post('/generate/mnemonic', async (req: Request, res: Response) => {
  */
 router.post('/generate/phonetic', async (req: Request, res: Response) => {
   try {
+    // 获取 AI 配置
+    const aiSettings = storageService.getAISettings();
+    
     // 检查是否已配置 AI
     if (!aiSettings) {
       res.status(400).json({
@@ -256,6 +275,18 @@ router.post('/generate/phonetic', async (req: Request, res: Response) => {
     // 生成音标
     const result = await aiService.generatePhonetic({ word });
 
+    // 记录使用情况
+    const modelConfig = AI_MODELS.find(m => m.id === aiSettings.model) as AIModelConfig;
+    const cost = (result.tokensUsed / 1000) * (modelConfig?.costPer1kTokens || 0);
+    
+    storageService.recordAIUsage({
+      settingId: aiSettings.id!,
+      feature: 'phonetic',
+      word,
+      tokensUsed: result.tokensUsed,
+      cost,
+    });
+
     res.json({
       success: true,
       data: result,
@@ -275,7 +306,7 @@ router.post('/generate/phonetic', async (req: Request, res: Response) => {
  */
 router.delete('/settings', (req: Request, res: Response) => {
   try {
-    aiSettings = null;
+    storageService.deleteAISettings();
 
     res.json({
       success: true,
@@ -283,6 +314,82 @@ router.delete('/settings', (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Delete settings error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * 获取 AI 使用统计
+ * GET /api/v1/ai/usage
+ */
+router.get('/usage', (req: Request, res: Response) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30;
+    const stats = storageService.getAIUsageStats(days);
+    const recentUsage = storageService.getRecentUsage(10);
+
+    res.json({
+      success: true,
+      data: {
+        ...stats,
+        recentUsage,
+      },
+    });
+  } catch (error: any) {
+    console.error('Get usage stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * 查询 Token 余额
+ * GET /api/v1/ai/balance
+ */
+router.get('/balance', async (req: Request, res: Response) => {
+  try {
+    // 获取 AI 配置
+    const aiSettings = storageService.getAISettings();
+    
+    if (!aiSettings) {
+      res.status(400).json({
+        success: false,
+        error: '尚未配置 AI',
+      });
+      return;
+    }
+
+    // 创建 AI 服务实例
+    const aiService = createAIService(aiSettings);
+    
+    // 查询余额
+    const balance = await aiService.getTokenBalance();
+
+    // 确定警告级别
+    let warningLevel: 'normal' | 'low' | 'critical' | 'unsupported' = 'normal';
+    if (balance.balance === -1) {
+      warningLevel = 'unsupported';
+    } else if (balance.balance < 1) {
+      warningLevel = 'critical';
+    } else if (balance.balance < 5) {
+      warningLevel = 'low';
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...balance,
+        warningLevel,
+        provider: aiSettings.provider,
+      },
+    });
+  } catch (error: any) {
+    console.error('Get balance error:', error);
     res.status(500).json({
       success: false,
       error: error.message,
