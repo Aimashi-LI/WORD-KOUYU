@@ -9,6 +9,10 @@ import {
   GenerateMnemonicResponse,
   GeneratePhoneticRequest,
   GeneratePhoneticResponse,
+  GenerateReviewAdviceRequest,
+  GenerateReviewAdviceResponse,
+  GenerateAutoFillRequest,
+  GenerateAutoFillResponse,
   AITestResponse,
 } from '../types/ai';
 
@@ -245,6 +249,156 @@ export class AIService {
       };
     } catch (error: any) {
       console.error('Generate phonetic error:', error.message);
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * 生成复习建议
+   * 基于FSRS算法参数，AI分析单词学习状态并给出建议
+   */
+  async generateReviewAdvice(request: GenerateReviewAdviceRequest): Promise<GenerateReviewAdviceResponse> {
+    const { word, definition, stability, difficulty, reviewCount, lastScore, retrievability, daysSinceLastReview } = request;
+
+    const systemPrompt = `你是一个专业的英语单词复习顾问。根据FSRS记忆算法的参数分析单词的学习状态，给出简短的复习建议。
+
+参数说明：
+- stability（稳定性）：记忆持久性，值越大越不容易忘记
+- difficulty（难度）：学习难度 0-1，值越大越难
+- reviewCount：已复习次数
+- retrievability（可提取性）：当前记忆可提取概率 0-1
+- lastScore：最近一次得分 0-6
+
+请给出：
+1. 一句话的学习建议（不超过30字）
+2. 建议的复习间隔（天数）
+3. 复习优先级（high/medium/low）
+
+只返回JSON格式：{"advice":"建议","suggestedInterval":数字,"priority":"high/medium/low"}`;
+
+    const userPrompt = `单词：${word}
+释义：${definition || '未知'}
+稳定性：${stability.toFixed(1)}天
+难度：${(difficulty * 100).toFixed(0)}%
+复习次数：${reviewCount}
+可提取性：${(retrievability * 100).toFixed(0)}%
+最近得分：${lastScore !== undefined ? lastScore : '无'}
+距上次复习：${daysSinceLastReview !== undefined ? daysSinceLastReview.toFixed(1) : '未知'}天
+
+请分析学习状态并给出建议：`;
+
+    try {
+      const response = await this.client.post('/chat/completions', {
+        model: this.settings.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.5,
+        max_tokens: 150,
+      });
+
+      const content = response.data.choices[0]?.message?.content || '';
+      const tokensUsed = response.data.usage?.total_tokens || 0;
+
+      // 解析JSON响应
+      let advice, suggestedInterval, priority;
+      try {
+        const parsed = JSON.parse(content.trim());
+        advice = parsed.advice || '继续保持复习';
+        suggestedInterval = parsed.suggestedInterval || Math.round(stability * 1.2);
+        priority = parsed.priority || 'medium';
+      } catch {
+        // 如果解析失败，使用默认值
+        advice = content.trim().slice(0, 50) || '继续保持复习';
+        suggestedInterval = Math.round(stability * 1.2);
+        priority = retrievability < 0.7 ? 'high' : retrievability < 0.9 ? 'medium' : 'low';
+      }
+
+      return {
+        advice,
+        suggestedInterval: Math.max(1, suggestedInterval),
+        priority: priority as 'high' | 'medium' | 'low',
+        tokensUsed,
+      };
+    } catch (error: any) {
+      console.error('Generate review advice error:', error.message);
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * 一键自动填充单词信息
+   * 根据单词自动生成音标、释义、拆分和助记句
+   */
+  async generateAutoFill(request: GenerateAutoFillRequest): Promise<GenerateAutoFillResponse> {
+    const { word, existingData } = request;
+
+    const systemPrompt = `你是一个专业的英语单词助手。请为以下英语单词生成完整的学习信息。
+
+要求：
+1. 音标：使用国际音标格式，如 /ˈæpl/
+2. 释义：简洁准确的中文释义，包含词性，如 "n. 苹果"
+3. 拆分：将单词拆分成有意义的音节或词根，格式为 "编码-含义，编码-含义"
+4. 助记句：生动有趣的助记句，结合拆分部分
+
+返回JSON格式：
+{
+  "phonetic": "/音标/",
+  "definition": "词性 释义",
+  "split": "编码-含义，编码-含义",
+  "mnemonic": "助记句"
+}
+
+如果某个字段已有数据，可以保持或优化。`;
+
+    const existingInfo = existingData ? `
+已有信息：
+- 音标：${existingData.phonetic || '无'}
+- 释义：${existingData.definition || '无'}
+- 拆分：${existingData.split || '无'}
+- 助记句：${existingData.mnemonic || '无'}
+` : '';
+
+    const userPrompt = `单词：${word}
+${existingInfo}
+请生成完整的学习信息：`;
+
+    try {
+      const response = await this.client.post('/chat/completions', {
+        model: this.settings.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 300,
+      });
+
+      const content = response.data.choices[0]?.message?.content || '';
+      const tokensUsed = response.data.usage?.total_tokens || 0;
+
+      // 解析JSON响应
+      let result: GenerateAutoFillResponse = { tokensUsed };
+      try {
+        const parsed = JSON.parse(content.trim());
+        result = {
+          phonetic: parsed.phonetic,
+          definition: parsed.definition,
+          split: parsed.split,
+          mnemonic: parsed.mnemonic,
+          tokensUsed,
+        };
+      } catch {
+        // 如果解析失败，尝试提取信息
+        result = {
+          tokensUsed,
+        };
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Generate auto fill error:', error.message);
       throw this.handleError(error);
     }
   }

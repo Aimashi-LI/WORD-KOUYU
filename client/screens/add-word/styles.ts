@@ -295,5 +295,29 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       marginTop: Spacing.sm,
     },
+    // AI 按钮样式
+    aiButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: theme.backgroundDefault,
+      borderWidth: 1,
+      borderColor: theme.primary,
+    },
+    autoFillButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs,
+    },
+    aiButtonText: {
+      fontSize: 12,
+    },
+    helpText: {
+      marginTop: Spacing.xs,
+      fontStyle: 'italic',
+    },
   });
 };

@@ -22,6 +22,21 @@ export interface AIModel {
   description: string;
 }
 
+// 复习建议响应
+export interface ReviewAdviceResponse {
+  advice: string;
+  suggestedInterval?: number;
+  priority: 'high' | 'medium' | 'low';
+}
+
+// 自动填充响应
+export interface AutoFillResponse {
+  phonetic?: string;
+  definition?: string;
+  split?: string;
+  mnemonic?: string;
+}
+
 // Hook 返回类型
 interface UseAI {
   // 状态
@@ -32,6 +47,22 @@ interface UseAI {
   // 方法
   generateMnemonic: (word: string, definition?: string, split?: string, phonetic?: string) => Promise<string | null>;
   generatePhonetic: (word: string) => Promise<string | null>;
+  generateReviewAdvice: (params: {
+    word: string;
+    definition?: string;
+    stability: number;
+    difficulty: number;
+    reviewCount: number;
+    lastScore?: number;
+    retrievability: number;
+    daysSinceLastReview?: number;
+  }) => Promise<ReviewAdviceResponse | null>;
+  generateAutoFill: (word: string, existingData?: {
+    phonetic?: string;
+    definition?: string;
+    split?: string;
+    mnemonic?: string;
+  }) => Promise<AutoFillResponse | null>;
   checkConfiguration: () => Promise<boolean>;
   openSettings: () => void;
 }
@@ -180,6 +211,98 @@ export function useAI(): UseAI {
     }
   }, [isConfigured]);
 
+  // 生成复习建议
+  const generateReviewAdvice = useCallback(async (params: {
+    word: string;
+    definition?: string;
+    stability: number;
+    difficulty: number;
+    reviewCount: number;
+    lastScore?: number;
+    retrievability: number;
+    daysSinceLastReview?: number;
+  }): Promise<ReviewAdviceResponse | null> => {
+    // 检查是否已配置
+    if (!isConfigured) {
+      return null;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/ai/generate/review-advice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        return data.data;
+      }
+      
+      return null;
+    } catch (error: any) {
+      console.error('Generate review advice error:', error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isConfigured]);
+
+  // 一键自动填充
+  const generateAutoFill = useCallback(async (word: string, existingData?: {
+    phonetic?: string;
+    definition?: string;
+    split?: string;
+    mnemonic?: string;
+  }): Promise<AutoFillResponse | null> => {
+    // 检查是否已配置
+    if (!isConfigured) {
+      Alert.alert(
+        '提示',
+        '尚未配置 AI，请先配置 AI API 密钥',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '去配置', onPress: () => openSettings() },
+        ]
+      );
+      return null;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/ai/generate/auto-fill`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word, existingData }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        return data.data;
+      }
+      
+      // 处理错误
+      if (data.error) {
+        if (data.error.includes('余额不足') || data.error.includes('Token')) {
+          Alert.alert('提示', 'AI Token 余额不足，请充值后继续使用');
+        } else {
+          Alert.alert('错误', data.error);
+        }
+      }
+      
+      return null;
+    } catch (error: any) {
+      console.error('Generate auto fill error:', error);
+      Alert.alert('错误', error.message || '网络错误');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isConfigured]);
+
   // 打开设置页面
   const openSettings = useCallback(() => {
     router.push('/ai-settings');
@@ -191,6 +314,8 @@ export function useAI(): UseAI {
     settings,
     generateMnemonic,
     generatePhonetic,
+    generateReviewAdvice,
+    generateAutoFill,
     checkConfiguration,
     openSettings,
   };

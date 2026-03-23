@@ -17,7 +17,7 @@ export interface AISettings {
 export interface AIUsage {
   id?: number;
   settingId: number;
-  feature: 'mnemonic' | 'phonetic' | 'tts';
+  feature: 'mnemonic' | 'phonetic' | 'review_advice' | 'auto_fill';
   word: string;
   tokensUsed: number;
   cost?: number;
@@ -95,6 +95,29 @@ export interface GenerateTTSRequest {
   phonetic?: string;
 }
 
+// AI 复习建议请求
+export interface GenerateReviewAdviceRequest {
+  word: string;
+  definition?: string;
+  stability: number;        // 稳定性（天）
+  difficulty: number;       // 难度 0-1
+  reviewCount: number;      // 复习次数
+  lastScore?: number;       // 最近得分
+  retrievability: number;   // 可提取性 0-1
+  daysSinceLastReview?: number; // 距上次复习天数
+}
+
+// AI 自动填充请求
+export interface GenerateAutoFillRequest {
+  word: string;
+  existingData?: {
+    phonetic?: string;
+    definition?: string;
+    split?: string;
+    mnemonic?: string;
+  };
+}
+
 // 生成响应
 export interface GenerateMnemonicResponse {
   mnemonic: string;
@@ -108,6 +131,23 @@ export interface GeneratePhoneticResponse {
 
 export interface GenerateTTSResponse {
   audioUrl: string;
+  tokensUsed: number;
+}
+
+// AI 复习建议响应
+export interface GenerateReviewAdviceResponse {
+  advice: string;
+  suggestedInterval?: number;  // 建议复习间隔（天）
+  priority: 'high' | 'medium' | 'low';  // 复习优先级
+  tokensUsed: number;
+}
+
+// AI 自动填充响应
+export interface GenerateAutoFillResponse {
+  phonetic?: string;
+  definition?: string;
+  split?: string;
+  mnemonic?: string;
   tokensUsed: number;
 }
 

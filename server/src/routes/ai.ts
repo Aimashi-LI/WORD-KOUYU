@@ -397,4 +397,132 @@ router.get('/balance', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 生成复习建议
+ * POST /api/v1/ai/generate/review-advice
+ */
+router.post('/generate/review-advice', async (req: Request, res: Response) => {
+  try {
+    // 获取 AI 配置
+    const aiSettings = storageService.getAISettings();
+    
+    if (!aiSettings) {
+      res.status(400).json({
+        success: false,
+        error: '尚未配置 AI，请先在设置中配置 AI API 密钥',
+      });
+      return;
+    }
+
+    const { word, definition, stability, difficulty, reviewCount, lastScore, retrievability, daysSinceLastReview } = req.body;
+
+    if (!word) {
+      res.status(400).json({
+        success: false,
+        error: '缺少必填字段：word',
+      });
+      return;
+    }
+
+    // 创建 AI 服务实例
+    const aiService = createAIService(aiSettings);
+
+    // 生成复习建议
+    const result = await aiService.generateReviewAdvice({
+      word,
+      definition,
+      stability: stability || 1,
+      difficulty: difficulty || 0.5,
+      reviewCount: reviewCount || 0,
+      lastScore,
+      retrievability: retrievability || 1,
+      daysSinceLastReview,
+    });
+
+    // 记录使用情况
+    const modelConfig = AI_MODELS.find(m => m.id === aiSettings.model) as AIModelConfig;
+    const cost = (result.tokensUsed / 1000) * (modelConfig?.costPer1kTokens || 0);
+    
+    storageService.recordAIUsage({
+      settingId: aiSettings.id!,
+      feature: 'review_advice',
+      word,
+      tokensUsed: result.tokensUsed,
+      cost,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Generate review advice error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * 一键自动填充单词信息
+ * POST /api/v1/ai/generate/auto-fill
+ */
+router.post('/generate/auto-fill', async (req: Request, res: Response) => {
+  try {
+    // 获取 AI 配置
+    const aiSettings = storageService.getAISettings();
+    
+    if (!aiSettings) {
+      res.status(400).json({
+        success: false,
+        error: '尚未配置 AI，请先在设置中配置 AI API 密钥',
+      });
+      return;
+    }
+
+    const { word, existingData } = req.body;
+
+    if (!word) {
+      res.status(400).json({
+        success: false,
+        error: '缺少必填字段：word',
+      });
+      return;
+    }
+
+    // 创建 AI 服务实例
+    const aiService = createAIService(aiSettings);
+
+    // 一键生成所有信息
+    const result = await aiService.generateAutoFill({
+      word,
+      existingData,
+    });
+
+    // 记录使用情况
+    const modelConfig = AI_MODELS.find(m => m.id === aiSettings.model) as AIModelConfig;
+    const cost = (result.tokensUsed / 1000) * (modelConfig?.costPer1kTokens || 0);
+    
+    storageService.recordAIUsage({
+      settingId: aiSettings.id!,
+      feature: 'auto_fill',
+      word,
+      tokensUsed: result.tokensUsed,
+      cost,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Generate auto fill error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 export default router;

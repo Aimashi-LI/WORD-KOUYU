@@ -294,5 +294,14 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       gap: Spacing.sm,
     },
+    autoFillButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs,
+    },
+    helpText: {
+      marginTop: Spacing.xs,
+      fontStyle: 'italic',
+    },
   });
 };
