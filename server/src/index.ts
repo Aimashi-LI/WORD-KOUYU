@@ -3,6 +3,7 @@ import cors from "cors";
 import ocrRouter from "./routes/ocr";
 import searchRouter from "./routes/search";
 import userRouter from "./routes/user";
+import aiRouter from "./routes/ai";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -25,6 +26,9 @@ app.use('/api/v1/search', searchRouter);
 
 // 用户路由
 app.use('/api/v1/user', userRouter);
+
+// AI 路由
+app.use('/api/v1/ai', aiRouter);
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}/`);
