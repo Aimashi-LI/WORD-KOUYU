@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Modal,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -33,6 +34,8 @@ import {
 } from '@/utils/splitHelper';
 import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
 import { fetchPhoneticByWord } from '@/utils';
+import { useAI } from '@/hooks/useAI';
+import { useNetwork } from '@/hooks/useNetwork';
 
 // 词性列表
 const PART_OF_SPEECH_LIST = [
@@ -47,6 +50,8 @@ export default function WordDetailScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   const { id } = useSafeSearchParams<{ id: string }>();
+  const { settings: aiSettings, generateMnemonic, generatePhonetic } = useAI();
+  const { isConnected, checkNetwork, showNetworkError } = useNetwork();
 
   // 基础字段
   const [word, setWord] = useState('');
@@ -74,6 +79,10 @@ export default function WordDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [originalWord, setOriginalWord] = useState<Word | null>(null);
   const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true);
+  
+  // AI 生成状态
+  const [generatingPhonetic, setGeneratingPhonetic] = useState(false);
+  const [generatingMnemonic, setGeneratingMnemonic] = useState(false);
 
   // 追踪已补全的编码（同一编码只补全最先填写的含义）
   const completedCodesRef = React.useRef<Set<string>>(new Set());
@@ -361,7 +370,96 @@ export default function WordDetailScreen() {
     setActiveCodeIndex(-1);
   };
 
-  // 删除拆分项
+  // AI 生成音标
+  const handleGeneratePhonetic = async () => {
+    if (!word.trim()) {
+      Alert.alert('提示', '请先输入单词');
+      return;
+    }
+    
+    // 检查网络状态
+    const hasNetwork = await checkNetwork();
+    if (!hasNetwork) {
+      showNetworkError();
+      return;
+    }
+    
+    if (!aiSettings) {
+      Alert.alert(
+        'AI 未配置',
+        '请先配置 AI 设置',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '去设置', onPress: () => router.push('/ai-settings') }
+        ]
+      );
+      return;
+    }
+    
+    setGeneratingPhonetic(true);
+    try {
+      const result = await generatePhonetic(word.trim());
+      if (result) {
+        setPhonetic(result);
+        Alert.alert('成功', '音标已生成');
+      }
+    } catch (error) {
+      console.error('生成音标失败:', error);
+      Alert.alert('错误', '生成音标失败，请检查网络连接和 API 配置');
+    } finally {
+      setGeneratingPhonetic(false);
+    }
+  };
+  
+  // AI 生成助记句
+  const handleGenerateMnemonic = async () => {
+    if (!word.trim()) {
+      Alert.alert('提示', '请先输入单词');
+      return;
+    }
+    
+    // 检查网络状态
+    const hasNetwork = await checkNetwork();
+    if (!hasNetwork) {
+      showNetworkError();
+      return;
+    }
+    
+    if (!aiSettings) {
+      Alert.alert(
+        'AI 未配置',
+        '请先配置 AI 设置',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '去设置', onPress: () => router.push('/ai-settings') }
+        ]
+      );
+      return;
+    }
+    
+    setGeneratingMnemonic(true);
+    try {
+      // 将 splitItems 转换为字符串格式
+      const splitText = convertSplitItemsToString(splitItems);
+      
+      const result = await generateMnemonic(
+        word.trim(),
+        definition.trim() || undefined,
+        splitText || undefined,
+        phonetic.trim() || undefined
+      );
+      if (result) {
+        setSentence(result);
+        Alert.alert('成功', '助记句已生成');
+      }
+    } catch (error) {
+      console.error('生成助记句失败:', error);
+      Alert.alert('错误', '生成助记句失败，请检查网络连接和 API 配置');
+    } finally {
+      setGeneratingMnemonic(false);
+    }
+  };
+  
   // 表单验证
   const validateForm = (): boolean => {
     if (!word.trim()) {
@@ -492,9 +590,27 @@ export default function WordDetailScreen() {
 
           {/* 音标输入 */}
           <View style={styles.inputContainer}>
-            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-              音标
-            </ThemedText>
+            <View style={styles.labelRow}>
+              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+                音标
+              </ThemedText>
+              <TouchableOpacity
+                style={styles.aiButton}
+                onPress={handleGeneratePhonetic}
+                disabled={generatingPhonetic || !word.trim()}
+              >
+                {generatingPhonetic ? (
+                  <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                  <>
+                    <FontAwesome6 name="wand-magic-sparkles" size={14} color={theme.primary} />
+                    <ThemedText variant="caption" color={theme.primary} style={styles.aiButtonText}>
+                      AI 生成
+                    </ThemedText>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
             <TextInput
               style={styles.input}
               value={phonetic}
@@ -628,9 +744,27 @@ export default function WordDetailScreen() {
           {/* 助记句子 */}
           <View style={styles.inputContainer}>
             <View style={styles.labelRow}>
-              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-                助记句子
-              </ThemedText>
+              <View style={styles.labelRowLeft}>
+                <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+                  助记句子
+                </ThemedText>
+                <TouchableOpacity
+                  style={styles.aiButton}
+                  onPress={handleGenerateMnemonic}
+                  disabled={generatingMnemonic || !word.trim()}
+                >
+                  {generatingMnemonic ? (
+                    <ActivityIndicator size="small" color={theme.primary} />
+                  ) : (
+                    <>
+                      <FontAwesome6 name="wand-magic-sparkles" size={14} color={theme.primary} />
+                      <ThemedText variant="caption" color={theme.primary} style={styles.aiButtonText}>
+                        AI 生成
+                      </ThemedText>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
                 onPress={() => setAutoCompleteEnabled(!autoCompleteEnabled)}
                 style={styles.autoCompleteToggle}

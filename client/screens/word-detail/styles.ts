@@ -274,5 +274,25 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
       alignItems: 'center',
     },
+    // AI 按钮样式
+    aiButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: theme.backgroundDefault,
+      borderWidth: 1,
+      borderColor: theme.primary,
+    },
+    aiButtonText: {
+      fontSize: 12,
+    },
+    labelRowLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
   });
 };
