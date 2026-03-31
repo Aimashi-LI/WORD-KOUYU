@@ -1,21 +1,27 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
   ScrollView,
+  TouchableOpacity,
   Alert,
   ActivityIndicator,
   TextInput,
   Platform,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { FontAwesome6 } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import RNSSE from 'react-native-sse';
 import { useAI } from '@/hooks/useAI';
+import { createStyles } from './styles';
 
 interface Message {
   id: string;
@@ -28,11 +34,14 @@ interface Scene {
   id: string;
   name: string;
   greeting: string;
+  category?: string;
 }
 
 type SpeakingMode = 'select' | 'chat';
 
 export default function SpeakingScreen() {
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [mode, setMode] = useState<SpeakingMode>('select');
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
@@ -90,7 +99,7 @@ export default function SpeakingScreen() {
     if (!isConfigured) {
       Alert.alert(
         '提示',
-        '请先配置豆包 API 密钥',
+        '请先配置 AI API 密钥',
         [
           { text: '取消', style: 'cancel' },
           { text: '去配置', onPress: openSettings },
@@ -339,101 +348,176 @@ export default function SpeakingScreen() {
     );
   };
 
+  // 按类别分组场景
+  const groupedScenes = useMemo(() => {
+    const groups: { [key: string]: Scene[] } = {
+      '生活角色': [],
+      '母语环境': [],
+      '专业场景': [],
+    };
+    
+    scenes.forEach(scene => {
+      if (['friend', 'teacher', 'family', 'colleague'].includes(scene.id)) {
+        groups['生活角色'].push(scene);
+      } else if (['native_american', 'native_british'].includes(scene.id)) {
+        groups['母语环境'].push(scene);
+      } else {
+        groups['专业场景'].push(scene);
+      }
+    });
+    
+    return groups;
+  }, [scenes]);
+
   const renderSelectMode = () => (
     <View style={styles.selectContainer}>
-      <Text style={styles.title}>AI 口语训练</Text>
-      <Text style={styles.subtitle}>选择训练场景</Text>
-
-      <View style={styles.sceneList}>
-        {scenes.map(scene => (
-          <TouchableOpacity
-            key={scene.id}
-            style={styles.sceneCard}
-            onPress={() => startChat(scene)}
-            disabled={isProcessing}
-          >
-            <Text style={styles.sceneName}>{scene.name}</Text>
-            <Text style={styles.sceneGreeting} numberOfLines={2}>
-              {scene.greeting}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      {/* 标题 */}
+      <View style={styles.headerSection}>
+        <FontAwesome6 name="comments" size={40} color={theme.primary} />
+        <ThemedText variant="h2" color={theme.textPrimary} style={styles.title}>
+          口语训练
+        </ThemedText>
+        <ThemedText variant="body" color={theme.textMuted} style={styles.subtitle}>
+          选择一个角色开始聊天
+        </ThemedText>
       </View>
 
+      <ScrollView style={styles.scenesList} showsVerticalScrollIndicator={false}>
+        {Object.entries(groupedScenes).map(([category, categoryScenes]) => (
+          categoryScenes.length > 0 && (
+            <View key={category} style={styles.categorySection}>
+              <ThemedText variant="h4" color={theme.textSecondary} style={styles.categoryTitle}>
+                {category}
+              </ThemedText>
+              <View style={styles.sceneGrid}>
+                {categoryScenes.map(scene => (
+                  <TouchableOpacity
+                    key={scene.id}
+                    style={styles.sceneCard}
+                    onPress={() => startChat(scene)}
+                    disabled={isProcessing}
+                    activeOpacity={0.7}
+                  >
+                    <ThemedText variant="h4" color={theme.textPrimary} style={styles.sceneName}>
+                      {scene.name}
+                    </ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted} style={styles.sceneGreeting} numberOfLines={2}>
+                      "{scene.greeting}"
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )
+        ))}
+      </ScrollView>
+
+      {/* AI配置提示 */}
       {!isConfigured && (
         <TouchableOpacity style={styles.configButton} onPress={openSettings}>
-          <Text style={styles.configButtonText}>配置 AI API 密钥</Text>
+          <FontAwesome6 name="gear" size={18} color={theme.buttonPrimaryText} />
+          <ThemedText variant="body" color={theme.buttonPrimaryText}>
+            配置 AI API 密钥
+          </ThemedText>
         </TouchableOpacity>
       )}
     </View>
   );
 
   const renderChatMode = () => (
-    <View style={styles.chatContainer}>
+    <KeyboardAvoidingView 
+      style={styles.chatContainer}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       {/* Header */}
       <View style={styles.chatHeader}>
-        <TouchableOpacity onPress={handleEndChat}>
-          <Text style={styles.backButton}>← 返回</Text>
+        <TouchableOpacity onPress={handleEndChat} style={styles.backButton}>
+          <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.chatTitle}>{selectedScene?.name}</Text>
-        <View style={{ width: 60 }} />
+        <View style={styles.chatTitleContainer}>
+          <ThemedText variant="h4" color={theme.textPrimary}>
+            {selectedScene?.name}
+          </ThemedText>
+          <ThemedText variant="caption" color={theme.textMuted}>
+            点击麦克风录音或输入文字
+          </ThemedText>
+        </View>
+        <View style={{ width: 40 }} />
       </View>
 
       {/* Messages */}
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd()}
-      >
-        {messages.map(message => (
-          <View
-            key={message.id}
-            style={[
-              styles.messageBubble,
-              message.role === 'user' ? styles.userBubble : styles.assistantBubble,
-            ]}
-          >
-            <Text style={[
-              styles.messageText,
-              message.role === 'user' ? styles.userText : styles.assistantText,
-            ]}>
-              {message.content}
-            </Text>
-          </View>
-        ))}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd()}
+          keyboardShouldPersistTaps="handled"
+        >
+          {messages.map(message => (
+            <View
+              key={message.id}
+              style={[
+                styles.messageBubble,
+                message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+              ]}
+            >
+              <ThemedText
+                variant="body"
+                color={message.role === 'user' ? theme.buttonPrimaryText : theme.textPrimary}
+                style={styles.messageText}
+              >
+                {message.content}
+              </ThemedText>
+            </View>
+          ))}
 
-        {/* AI正在生成 */}
-        {isGenerating && currentResponse && (
-          <View style={[styles.messageBubble, styles.assistantBubble]}>
-            <Text style={[styles.messageText, styles.assistantText]}>
-              {currentResponse}
-            </Text>
-          </View>
-        )}
+          {/* AI正在生成 */}
+          {isGenerating && currentResponse && (
+            <View style={[styles.messageBubble, styles.assistantBubble]}>
+              <ThemedText variant="body" color={theme.textPrimary} style={styles.messageText}>
+                {currentResponse}
+              </ThemedText>
+            </View>
+          )}
 
-        {isGenerating && !currentResponse && (
-          <View style={[styles.messageBubble, styles.assistantBubble]}>
-            <ActivityIndicator size="small" color="#007AFF" />
-          </View>
-        )}
-      </ScrollView>
+          {isGenerating && !currentResponse && (
+            <View style={[styles.messageBubble, styles.assistantBubble]}>
+              <View style={styles.typingIndicator}>
+                <ActivityIndicator size="small" color={theme.primary} />
+                <ThemedText variant="caption" color={theme.textMuted} style={styles.typingText}>
+                  正在输入...
+                </ThemedText>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </TouchableWithoutFeedback>
 
       {/* Input Area */}
       <View style={styles.inputContainer}>
         {/* 录音按钮 */}
         <TouchableOpacity
-          style={[styles.recordButton, isRecording && styles.recordingButton]}
+          style={[
+            styles.recordButton,
+            isRecording && styles.recordingButton,
+            isProcessing && styles.buttonDisabled,
+          ]}
           onPressIn={startRecording}
           onPressOut={stopRecording}
           disabled={isProcessing || isGenerating}
         >
-          <Text style={styles.recordIcon}>{isRecording ? '⏹️' : '🎤'}</Text>
+          <FontAwesome6
+            name={isRecording ? 'stop' : 'microphone'}
+            size={20}
+            color={isRecording ? theme.buttonPrimaryText : theme.primary}
+          />
         </TouchableOpacity>
 
         {/* 文本输入 */}
         <TextInput
           style={styles.textInput}
-          placeholder="输入或录音..."
+          placeholder="输入消息或点击麦克风录音..."
+          placeholderTextColor={theme.textMuted}
           value={inputText}
           onChangeText={setInputText}
           multiline
@@ -449,188 +533,26 @@ export default function SpeakingScreen() {
           onPress={sendMessage}
           disabled={!inputText.trim() || isGenerating}
         >
-          <Text style={styles.sendIcon}>➤</Text>
+          <FontAwesome6 name="paper-plane" size={18} color={theme.buttonPrimaryText} />
         </TouchableOpacity>
       </View>
 
       {/* 处理中提示 */}
       {isProcessing && (
         <View style={styles.processingOverlay}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.processingText}>处理中...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <ThemedText variant="body" color={theme.textSecondary} style={styles.processingText}>
+            处理中...
+          </ThemedText>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 
   return (
-    <Screen>
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       {mode === 'select' && renderSelectMode()}
       {mode === 'chat' && renderChatMode()}
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  selectContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 30,
-    textAlign: 'center',
-  },
-  sceneList: {
-    gap: 15,
-  },
-  sceneCard: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  sceneName: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  sceneGreeting: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  configButton: {
-    marginTop: 30,
-    padding: 15,
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  configButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  chatContainer: {
-    flex: 1,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    fontSize: 16,
-    color: '#007AFF',
-  },
-  chatTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  messagesContainer: {
-    flex: 1,
-    padding: 15,
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 10,
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#007AFF',
-    borderBottomRightRadius: 4,
-  },
-  assistantBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f0f0f0',
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  userText: {
-    color: '#fff',
-  },
-  assistantText: {
-    color: '#333',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  recordButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  recordingButton: {
-    backgroundColor: '#FF3B30',
-  },
-  recordIcon: {
-    fontSize: 20,
-  },
-  textInput: {
-    flex: 1,
-    minHeight: 44,
-    maxHeight: 100,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginRight: 10,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  sendIcon: {
-    color: '#fff',
-    fontSize: 18,
-  },
-  processingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  processingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#007AFF',
-  },
-});

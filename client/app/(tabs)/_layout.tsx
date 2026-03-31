@@ -37,7 +37,7 @@ export default function TabLayout() {
         options={{
           title: '复习',
           tabBarIcon: ({ color }) => (
-            <FontAwesome6 name="graduation-cap" size={30} color={color} />
+            <FontAwesome6 name="graduation-cap" size={20} color={color} />
           ),
         }}
       />
@@ -47,6 +47,15 @@ export default function TabLayout() {
           title: '听写',
           tabBarIcon: ({ color }) => (
             <FontAwesome6 name="headphones" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="speaking"
+        options={{
+          title: '口语',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="comments" size={20} color={color} />
           ),
         }}
       />
