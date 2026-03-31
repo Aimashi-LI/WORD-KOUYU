@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import { Router, Request, Response } from 'express';
 import aiRouter from './routes/ai';
+import audioRouter from './routes/audio';
+import speakingRouter from './routes/speaking';
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -25,6 +27,14 @@ app.get('/api/v1/health', (req, res) => {
 // ==================== 挂载 AI 路由 ====================
 app.use('/api/v1/ai', aiRouter);
 // ==================== AI 路由结束 ====================
+
+// ==================== 挂载音频路由 ====================
+app.use('/api/v1/audio', audioRouter);
+// ==================== 音频路由结束 ====================
+
+// ==================== 挂载口语训练路由 ====================
+app.use('/api/v1/speaking', speakingRouter);
+// ==================== 口语训练路由结束 ====================
 
 // 简单的用户认证（基于设备ID）
 function generateDeviceId(): string {

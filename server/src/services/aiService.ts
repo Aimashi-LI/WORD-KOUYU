@@ -22,6 +22,9 @@ import {
   AITestResponse,
 } from '../types/ai';
 
+// 导出AIProvider类型供其他模块使用
+export type { AIProvider } from '../types/ai';
+
 /**
  * AI 服务类
  * 支持 DeepSeek 和豆包模型
@@ -696,6 +699,70 @@ ${JSON.stringify(wordsData, null, 2)}
       return result;
     } catch (error: any) {
       console.error('Generate review result error:', error.message);
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * 流式对话
+   * 用于口语训练等需要流式输出的场景
+   */
+  async streamChat(
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+    onChunk: (chunk: string) => void
+  ): Promise<void> {
+    try {
+      const response = await this.client.post(
+        '/chat/completions',
+        {
+          model: this.settings.model,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 500,
+          stream: true,
+        },
+        {
+          responseType: 'stream',
+        }
+      );
+
+      return new Promise((resolve, reject) => {
+        let buffer = '';
+
+        response.data.on('data', (chunk: Buffer) => {
+          buffer += chunk.toString();
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // 保留最后一个不完整的行
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine || trimmedLine === 'data: [DONE]') continue;
+            
+            if (trimmedLine.startsWith('data: ')) {
+              try {
+                const jsonStr = trimmedLine.slice(6);
+                const parsed = JSON.parse(jsonStr);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                  onChunk(content);
+                }
+              } catch (e) {
+                // 忽略解析错误
+              }
+            }
+          }
+        });
+
+        response.data.on('end', () => {
+          resolve();
+        });
+
+        response.data.on('error', (err: Error) => {
+          reject(this.handleError(err));
+        });
+      });
+    } catch (error: any) {
+      console.error('Stream chat error:', error.message);
       throw this.handleError(error);
     }
   }

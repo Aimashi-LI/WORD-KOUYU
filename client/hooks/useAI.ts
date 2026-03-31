@@ -126,6 +126,23 @@ interface UseAI {
     reviewCount: number;
     recentScores?: number[];
   }) => Promise<ReviewResultResponse | null>;
+  generateDictationAudios: (words: Array<{
+    word: string;
+    definition?: string;
+  }>) => Promise<{
+    success: boolean;
+    data?: {
+      audios: Array<{
+        word: string;
+        definition?: string;
+        wordAudioUri: string;
+        fullAudioUri: string;
+      }>;
+      interval: number;
+      totalCount: number;
+    };
+    error?: string;
+  }>;
   checkConfiguration: () => Promise<boolean>;
   openSettings: () => void;
 }
@@ -475,6 +492,52 @@ export function useAI(): UseAI {
     }
   }, [isConfigured]);
 
+  /**
+   * 生成听写音频
+   * 为指定单词列表生成TTS音频
+   */
+  const generateDictationAudios = useCallback(async (
+    words: Array<{
+      word: string;
+      definition?: string;
+    }>
+  ): Promise<{
+    success: boolean;
+    data?: {
+      audios: Array<{
+        word: string;
+        definition?: string;
+        wordAudioUri: string;
+        fullAudioUri: string;
+      }>;
+      interval: number;
+      totalCount: number;
+    };
+    error?: string;
+  }> => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/audio/dictation/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ words }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        return { success: true, data: data.data };
+      }
+      
+      return { success: false, error: data.error || '生成音频失败' };
+    } catch (error: any) {
+      console.error('Generate dictation audios error:', error);
+      return { success: false, error: error.message || '网络错误' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // 打开设置页面
   const openSettings = useCallback(() => {
     router.push('/ai-settings');
@@ -490,6 +553,7 @@ export function useAI(): UseAI {
     generateAutoFill,
     generateReviewAnalysis,
     generateReviewResult,
+    generateDictationAudios,
     checkConfiguration,
     openSettings,
   };
