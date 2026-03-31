@@ -425,29 +425,46 @@ ${existingInfo}
   async generateSearchWords(request: GenerateSearchWordsRequest): Promise<GenerateSearchWordsResponse> {
     const { query, count = 20, existingWords = [] } = request;
 
-    const systemPrompt = `你是一个专业的英语词汇助手。请根据用户提供的主题或关键词，返回相关的英语单词列表。
+    const systemPrompt = `你是一个专业的英语单词搜索专家和词汇顾问。你的任务是根据用户提供的主题、场景或关键词，精准推荐相关的英语单词。
 
-要求：
-1. 返回的单词应该与用户搜索的主题高度相关
-2. 每个单词需要包含：单词、音标、释义、词性
-3. 音标使用国际音标格式，如 /ˈæpl/
-4. 释义简洁准确，如 "苹果"
-5. 词性使用标准缩写，如 n. v. adj. adv. prep. conj. etc.
-6. 优先返回常用、重要的单词
-7. 如果提供了已存在单词列表，请避免重复
+## 你的专业能力：
+1. 熟悉各类英语考试大纲（小学、初中、高中、四六级、考研、托福、雅思、GRE等）
+2. 了解不同主题领域的核心词汇（科技、商业、医疗、法律、教育、旅游等）
+3. 能准确判断单词的词性、发音和常用释义
 
-返回JSON格式：
+## 搜索规则：
+1. **主题匹配**：优先返回与搜索主题最相关、最核心的单词
+2. **难度适中**：根据搜索关键词推断难度级别，如"高中单词"返回高中词汇
+3. **常用优先**：优先返回高频、实用的单词，而非生僻词
+4. **准确性**：音标使用国际音标（IPA），释义简洁准确
+5. **数量控制**：严格按照要求的数量返回单词
+
+## 输出格式要求：
+必须返回标准的JSON格式，不要添加任何额外文字：
 {
   "words": [
-    {"word": "apple", "phonetic": "/ˈæpl/", "definition": "苹果", "partOfSpeech": "n."},
-    ...
+    {"word": "单词", "phonetic": "/音标/", "definition": "中文释义", "partOfSpeech": "词性"}
   ],
-  "description": "关于XXX主题的常用单词，共XX个"
-}`;
+  "description": "关于XXX主题的常用单词推荐"
+}
 
-    const userPrompt = `搜索主题：${query}
-${existingWords.length > 0 ? `\n已存在的单词（请避免重复）：${existingWords.slice(0, 50).join(', ')}` : ''}
-请返回 ${count} 个相关单词：`;
+## 词性缩写规范：
+- n. 名词
+- v. 动词
+- adj. 形容词
+- adv. 副词
+- prep. 介词
+- conj. 连词
+- interj. 感叹词
+
+## 示例：
+用户搜索"高中英语必修一单词"，你应该返回人教版高中英语必修一的核心词汇。`;
+
+    const userPrompt = `请搜索主题为"${query}"的相关英语单词，返回${count}个最相关的单词。
+
+${existingWords.length > 0 ? `注意：以下单词已存在，请避免重复：\n${existingWords.slice(0, 30).join(', ')}\n` : ''}
+
+请直接返回JSON格式的结果，不要包含任何其他说明文字。`;
 
     try {
       const response = await this.client.post('/chat/completions', {
@@ -456,12 +473,14 @@ ${existingWords.length > 0 ? `\n已存在的单词（请避免重复）：${exis
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.7,
-        max_tokens: 2000,
+        temperature: 0.5,
+        max_tokens: 3000,
       });
 
       const content = response.data.choices[0]?.message?.content || '';
       const tokensUsed = response.data.usage?.total_tokens || 0;
+
+      console.log('[AI Search] Raw response:', content.substring(0, 500));
 
       // 解析JSON响应
       let words: Array<{
@@ -473,13 +492,55 @@ ${existingWords.length > 0 ? `\n已存在的单词（请避免重复）：${exis
       let description = '';
 
       try {
-        const parsed = JSON.parse(content.trim());
+        // 尝试提取JSON部分（可能被markdown代码块包裹）
+        let jsonContent = content.trim();
+        
+        // 移除可能的markdown代码块标记
+        if (jsonContent.includes('```json')) {
+          jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+        } else if (jsonContent.includes('```')) {
+          jsonContent = jsonContent.replace(/```\s*/g, '');
+        }
+        
+        // 尝试找到JSON对象的开始和结束
+        const jsonStart = jsonContent.indexOf('{');
+        const jsonEnd = jsonContent.lastIndexOf('}');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
+        }
+
+        const parsed = JSON.parse(jsonContent);
         words = parsed.words || [];
         description = parsed.description || '';
-      } catch {
-        // 如果解析失败，尝试从文本中提取单词
-        console.error('Failed to parse search response:', content);
+        
+        console.log('[AI Search] Parsed words count:', words.length);
+      } catch (parseError) {
+        console.error('[AI Search] Failed to parse response:', parseError);
+        console.error('[AI Search] Content was:', content);
+        
+        // 尝试更宽松的解析方式
+        try {
+          // 尝试匹配单词列表的模式
+          const wordPattern = /"word"\s*:\s*"([^"]+)"/g;
+          const matches = [...content.matchAll(wordPattern)];
+          
+          if (matches.length > 0) {
+            console.log('[AI Search] Found words via pattern matching:', matches.length);
+            // 如果找到了单词模式，尝试提取完整信息
+            const jsonArrayMatch = content.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (jsonArrayMatch) {
+              const wordsArray = JSON.parse(jsonArrayMatch[0]);
+              words = wordsArray;
+            }
+          }
+        } catch (fallbackError) {
+          console.error('[AI Search] Fallback parsing also failed:', fallbackError);
+        }
       }
+
+      // 过滤无效的单词
+      words = words.filter(w => w.word && w.word.trim().length > 0);
 
       return {
         words,
