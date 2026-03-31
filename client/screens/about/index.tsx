@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -186,6 +187,7 @@ const LEGAL_DOCS = {
 export default function AboutScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
   const [selectedDoc, setSelectedDoc] = useState<{ title: string; content: string } | null>(null);
   const [showLearningTruth, setShowLearningTruth] = useState(false);
 
@@ -249,6 +251,27 @@ export default function AboutScreen() {
           </ThemedText>
           <ThemedText variant="body" color={theme.textSecondary} style={styles.description}>
             基于编码记忆法的单词学习工具\n助你高效记忆英语单词
+          </ThemedText>
+        </View>
+
+        {/* AI 设置 */}
+        <View style={styles.section}>
+          <ThemedText variant="h3" color={theme.textPrimary} style={styles.sectionTitle}>
+            AI 功能
+          </ThemedText>
+
+          <TouchableOpacity
+            style={styles.linkItem}
+            onPress={() => router.push('/ai-settings')}
+          >
+            <View style={styles.linkContent}>
+              <FontAwesome6 name="wand-magic-sparkles" size={20} color={theme.primary} style={styles.linkIcon} />
+              <ThemedText variant="body" color={theme.textPrimary}>AI 设置</ThemedText>
+            </View>
+            <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} style={styles.linkArrow} />
+          </TouchableOpacity>
+          <ThemedText variant="caption" color={theme.textMuted} style={styles.developerHint}>
+            配置 AI API 密钥后可使用智能填充、复习建议等功能
           </ThemedText>
         </View>
 

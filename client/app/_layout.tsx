@@ -143,6 +143,13 @@ export default function RootLayout() {
                 presentation: 'card'
               }} 
             />
+            <Stack.Screen 
+              name="ai-settings" 
+              options={{ 
+                title: "AI 设置",
+                presentation: 'card'
+              }} 
+            />
           </Stack>
           <Toast />
         </GestureHandlerRootView>
