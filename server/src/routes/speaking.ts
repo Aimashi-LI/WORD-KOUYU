@@ -371,13 +371,13 @@ router.post('/chat', async (req: Request, res: Response) => {
       return;
     }
 
-    // 获取豆包配置（口语训练强制使用豆包）
+    // 获取AI配置
     const settings = await storageService.getAISettings() as AISettings;
     
     if (!settings || !settings.apiKey) {
       res.status(400).json({
         success: false,
-        error: '请先配置豆包 API 密钥',
+        error: '请先配置 AI API 密钥',
       });
       return;
     }
@@ -396,11 +396,12 @@ router.post('/chat', async (req: Request, res: Response) => {
       })),
     ];
 
-    // 使用豆包模型进行对话
+    // 使用用户配置的模型进行对话
     const aiService = new AIService({
-      provider: 'doubao',
+      provider: settings.provider as AIProvider,
       apiKey: settings.apiKey,
-      model: settings.model || 'doubao-pro-32k',
+      apiBaseUrl: settings.apiBaseUrl,
+      model: settings.model,
       isActive: true,
     });
 
