@@ -175,5 +175,72 @@ export const createStyles = (theme: Theme) => {
     cancelButton: {
       opacity: 1,
     },
+    // AI 分析卡片
+    aiCard: {
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+      padding: Spacing.lg,
+      borderWidth: 2,
+      borderColor: theme.primary,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    aiCardContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+    },
+    aiCardTextContainer: {
+      flex: 1,
+    },
+    // AI 分析结果卡片
+    analysisCard: {
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+      padding: Spacing.lg,
+    },
+    analysisHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginBottom: Spacing.md,
+    },
+    analysisSummary: {
+      marginBottom: Spacing.md,
+      lineHeight: 22,
+    },
+    analysisStats: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingVertical: Spacing.md,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.md,
+    },
+    analysisStatItem: {
+      alignItems: 'center',
+    },
+    recommendationsSection: {
+      marginBottom: Spacing.md,
+    },
+    recommendationItem: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+    aiReviewButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.primary,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      gap: Spacing.sm,
+    },
   });
 };

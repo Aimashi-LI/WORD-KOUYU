@@ -37,6 +37,41 @@ export interface AutoFillResponse {
   mnemonic?: string;
 }
 
+// AI 复习分析响应
+export interface ReviewAnalysisResponse {
+  analysis: {
+    summary: string;
+    urgentCount: number;
+    suggestedCount: number;
+  };
+  reviewPlan: Array<{
+    wordId: number;
+    word: string;
+    priority: 'urgent' | 'high' | 'medium' | 'low';
+    reason: string;
+    suggestedTime: string;
+    expectedRetention: number;
+    reviewStrategy: string;
+  }>;
+  recommendations: Array<{
+    type: 'timing' | 'method' | 'frequency' | 'break';
+    message: string;
+  }>;
+  nextReviewReminder?: {
+    time: string;
+    message: string;
+  };
+}
+
+// AI 复习结果响应
+export interface ReviewResultResponse {
+  newStability: number;
+  newDifficulty: number;
+  nextReviewDate: string;
+  isMastered: boolean;
+  advice: string;
+}
+
 // Hook 返回类型
 interface UseAI {
   // 状态
@@ -63,6 +98,34 @@ interface UseAI {
     split?: string;
     mnemonic?: string;
   }) => Promise<AutoFillResponse | null>;
+  generateReviewAnalysis: (words: Array<{
+    id: number;
+    word: string;
+    definition?: string;
+    stability: number;
+    difficulty: number;
+    reviewCount: number;
+    lastScore?: number;
+    retrievability: number;
+    daysSinceLastReview?: number;
+    nextReviewDate?: string;
+    isMastered: boolean;
+    lastReviewDate?: string;
+  }>, context?: {
+    currentTime?: string;
+    studyGoal?: string;
+    preferredTime?: string;
+  }) => Promise<ReviewAnalysisResponse | null>;
+  generateReviewResult: (params: {
+    word: string;
+    definition?: string;
+    score: number;
+    responseTime: number;
+    previousStability: number;
+    previousDifficulty: number;
+    reviewCount: number;
+    recentScores?: number[];
+  }) => Promise<ReviewResultResponse | null>;
   checkConfiguration: () => Promise<boolean>;
   openSettings: () => void;
 }
@@ -303,6 +366,115 @@ export function useAI(): UseAI {
     }
   }, [isConfigured]);
 
+  /**
+   * AI 复习分析
+   * 分析所有单词的学习状态，生成个性化复习计划
+   */
+  const generateReviewAnalysis = useCallback(async (
+    words: Array<{
+      id: number;
+      word: string;
+      definition?: string;
+      stability: number;
+      difficulty: number;
+      reviewCount: number;
+      lastScore?: number;
+      retrievability: number;
+      daysSinceLastReview?: number;
+      nextReviewDate?: string;
+      isMastered: boolean;
+      lastReviewDate?: string;
+    }>,
+    context?: {
+      currentTime?: string;
+      studyGoal?: string;
+      preferredTime?: string;
+    }
+  ): Promise<ReviewAnalysisResponse | null> => {
+    // 检查是否已配置
+    if (!isConfigured) {
+      Alert.alert(
+        '提示',
+        '尚未配置 AI，请先配置 AI API 密钥',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '去配置', onPress: () => openSettings() },
+        ]
+      );
+      return null;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/ai/generate/review-analysis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ words, context }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        return data.data;
+      }
+      
+      // 处理错误
+      if (data.error) {
+        Alert.alert('错误', data.error);
+      }
+      
+      return null;
+    } catch (error: any) {
+      console.error('Generate review analysis error:', error);
+      Alert.alert('错误', error.message || '网络错误');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isConfigured]);
+
+  /**
+   * AI 复习结果处理
+   * 根据用户复习表现，AI计算新的学习参数
+   */
+  const generateReviewResult = useCallback(async (params: {
+    word: string;
+    definition?: string;
+    score: number;
+    responseTime: number;
+    previousStability: number;
+    previousDifficulty: number;
+    reviewCount: number;
+    recentScores?: number[];
+  }): Promise<ReviewResultResponse | null> => {
+    // 检查是否已配置
+    if (!isConfigured) {
+      return null;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/ai/generate/review-result`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        return data.data;
+      }
+      
+      return null;
+    } catch (error: any) {
+      console.error('Generate review result error:', error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isConfigured]);
+
   // 打开设置页面
   const openSettings = useCallback(() => {
     router.push('/ai-settings');
@@ -316,6 +488,8 @@ export function useAI(): UseAI {
     generatePhonetic,
     generateReviewAdvice,
     generateAutoFill,
+    generateReviewAnalysis,
+    generateReviewResult,
     checkConfiguration,
     openSettings,
   };

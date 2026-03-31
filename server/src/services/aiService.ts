@@ -15,6 +15,10 @@ import {
   GenerateAutoFillResponse,
   GenerateSearchWordsRequest,
   GenerateSearchWordsResponse,
+  GenerateReviewAnalysisRequest,
+  GenerateReviewAnalysisResponse,
+  GenerateReviewResultRequest,
+  GenerateReviewResultResponse,
   AITestResponse,
 } from '../types/ai';
 
@@ -475,6 +479,223 @@ ${existingWords.length > 0 ? `\n已存在的单词（请避免重复）：${exis
       };
     } catch (error: any) {
       console.error('Generate search words error:', error.message);
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * AI 复习分析
+   * 分析所有单词的学习状态，生成个性化复习计划
+   */
+  async generateReviewAnalysis(request: GenerateReviewAnalysisRequest): Promise<GenerateReviewAnalysisResponse> {
+    const { words, context } = request;
+
+    const systemPrompt = `你是一个专业的英语学习顾问和记忆专家。请分析用户所有单词的学习状态，生成个性化的复习计划。
+
+你需要：
+1. 分析每个单词的学习状态（稳定性、难度、可提取性、复习历史）
+2. 判断哪些单词需要优先复习
+3. 为每个需要复习的单词建议最佳复习时间
+4. 给出复习策略建议
+
+返回JSON格式：
+{
+  "analysis": {
+    "summary": "整体学习状况总结（50字以内）",
+    "urgentCount": 紧急需要复习的单词数,
+    "suggestedCount": 建议今日复习的单词数
+  },
+  "reviewPlan": [
+    {
+      "wordId": 单词ID,
+      "word": "单词",
+      "priority": "urgent/high/medium/low",
+      "reason": "复习原因（20字以内）",
+      "suggestedTime": "建议复习时间（如：今天14:00）",
+      "expectedRetention": 预期记忆保持率0-1,
+      "reviewStrategy": "复习策略建议（30字以内）"
+    }
+  ],
+  "recommendations": [
+    {
+      "type": "timing/method/frequency/break",
+      "message": "建议内容"
+    }
+  ],
+  "nextReviewReminder": {
+    "time": "下次提醒时间",
+    "message": "提醒内容"
+  }
+}
+
+注意：
+- priority: urgent表示必须今天复习，high表示建议今天复习，medium表示可以明天复习，low表示可以稍后复习
+- 只返回需要复习的单词（排除已掌握且状态良好的单词）
+- 考虑遗忘曲线，优先安排接近遗忘临界点的单词
+- 给出合理的学习建议`;
+
+    const wordsData = words.map(w => ({
+      id: w.id,
+      word: w.word,
+      definition: w.definition,
+      stability: w.stability.toFixed(1),
+      difficulty: (w.difficulty * 100).toFixed(0) + '%',
+      reviewCount: w.reviewCount,
+      lastScore: w.lastScore,
+      retrievability: (w.retrievability * 100).toFixed(0) + '%',
+      daysSinceLastReview: w.daysSinceLastReview?.toFixed(1),
+      nextReviewDate: w.nextReviewDate,
+      isMastered: w.isMastered
+    }));
+
+    const userPrompt = `当前时间：${context?.currentTime || new Date().toLocaleString('zh-CN')}
+学习目标：${context?.studyGoal || '高效复习'}
+偏好复习时间：${context?.preferredTime || '随时'}
+
+单词列表（共${words.length}个）：
+${JSON.stringify(wordsData, null, 2)}
+
+请分析并生成复习计划：`;
+
+    try {
+      const response = await this.client.post('/chat/completions', {
+        model: this.settings.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.5,
+        max_tokens: 3000,
+      });
+
+      const content = response.data.choices[0]?.message?.content || '';
+      const tokensUsed = response.data.usage?.total_tokens || 0;
+
+      // 解析JSON响应
+      let result: GenerateReviewAnalysisResponse = {
+        analysis: {
+          summary: '暂无分析',
+          urgentCount: 0,
+          suggestedCount: 0,
+        },
+        reviewPlan: [],
+        recommendations: [],
+        tokensUsed,
+      };
+
+      try {
+        const parsed = JSON.parse(content.trim());
+        result = {
+          analysis: parsed.analysis || result.analysis,
+          reviewPlan: parsed.reviewPlan || [],
+          recommendations: parsed.recommendations || [],
+          nextReviewReminder: parsed.nextReviewReminder,
+          tokensUsed,
+        };
+      } catch {
+        console.error('Failed to parse review analysis response:', content);
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Generate review analysis error:', error.message);
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * AI 复习结果处理
+   * 根据用户复习表现，AI计算新的学习参数
+   */
+  async generateReviewResult(request: GenerateReviewResultRequest): Promise<GenerateReviewResultResponse> {
+    const { word, definition, score, responseTime, previousStability, previousDifficulty, reviewCount, recentScores } = request;
+
+    const systemPrompt = `你是一个基于认知心理学的记忆专家。请根据用户的复习表现，计算新的学习参数。
+
+你需要：
+1. 根据得分、答题时间、历史表现，计算新的稳定性和难度
+2. 决定下次复习时间
+3. 判断是否已掌握
+4. 给出简短的学习建议
+
+返回JSON格式：
+{
+  "newStability": 新的稳定性（天数，0.1-365）,
+  "newDifficulty": 新的难度（0-1）,
+  "nextReviewDate": "下次复习日期（ISO格式）",
+  "isMastered": 是否已掌握,
+  "advice": "学习建议（30字以内）"
+}
+
+规则：
+- 得分0-2：稳定性显著降低，难度增加，1-3天内复习
+- 得分3-4：稳定性小幅增加，难度不变，按原间隔延长
+- 得分5-6：稳定性显著增加，难度降低，间隔大幅延长
+- 答题时间短且正确：记忆牢固，可延长间隔
+- 答题时间长或错误：记忆不稳定，缩短间隔
+- 连续3次得分>=4且稳定性>14天：视为已掌握`;
+
+    const userPrompt = `单词：${word}
+释义：${definition || '未知'}
+本次得分：${score}/6
+答题时间：${responseTime.toFixed(1)}秒
+之前稳定性：${previousStability.toFixed(1)}天
+之前难度：${(previousDifficulty * 100).toFixed(0)}%
+复习次数：${reviewCount}
+最近得分：${recentScores?.join(', ') || '无'}
+
+请计算新的学习参数：`;
+
+    try {
+      const response = await this.client.post('/chat/completions', {
+        model: this.settings.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 200,
+      });
+
+      const content = response.data.choices[0]?.message?.content || '';
+      const tokensUsed = response.data.usage?.total_tokens || 0;
+
+      // 解析JSON响应
+      let result: GenerateReviewResultResponse = {
+        newStability: previousStability,
+        newDifficulty: previousDifficulty,
+        nextReviewDate: new Date(Date.now() + previousStability * 24 * 60 * 60 * 1000).toISOString(),
+        isMastered: false,
+        advice: '继续保持复习',
+        tokensUsed,
+      };
+
+      try {
+        const parsed = JSON.parse(content.trim());
+        const now = new Date();
+        const suggestedDate = new Date(parsed.nextReviewDate);
+        
+        // 确保下次复习时间在未来1小时到365天之间
+        const minDate = new Date(now.getTime() + 1 * 60 * 60 * 1000); // 最少1小时后
+        const maxDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 最多365天后
+        
+        const finalDate = suggestedDate < minDate ? minDate : suggestedDate > maxDate ? maxDate : suggestedDate;
+
+        result = {
+          newStability: Math.max(0.1, Math.min(365, parsed.newStability || previousStability)),
+          newDifficulty: Math.max(0, Math.min(1, parsed.newDifficulty ?? previousDifficulty)),
+          nextReviewDate: finalDate.toISOString(),
+          isMastered: parsed.isMastered || false,
+          advice: parsed.advice || '继续保持复习',
+          tokensUsed,
+        };
+      } catch {
+        console.error('Failed to parse review result response:', content);
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Generate review result error:', error.message);
       throw this.handleError(error);
     }
   }

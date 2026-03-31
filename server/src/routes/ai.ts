@@ -587,4 +587,134 @@ router.post('/generate/search-words', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * AI 复习分析
+ * POST /api/v1/ai/generate/review-analysis
+ * 分析所有单词的学习状态，生成个性化复习计划
+ */
+router.post('/generate/review-analysis', async (req: Request, res: Response) => {
+  try {
+    // 获取 AI 配置
+    const aiSettings = storageService.getAISettings();
+    
+    if (!aiSettings) {
+      res.status(400).json({
+        success: false,
+        error: '尚未配置 AI，请先在设置中配置 AI API 密钥',
+      });
+      return;
+    }
+
+    const { words, context } = req.body;
+
+    if (!words || !Array.isArray(words)) {
+      res.status(400).json({
+        success: false,
+        error: '缺少必填字段：words（数组）',
+      });
+      return;
+    }
+
+    // 创建 AI 服务实例
+    const aiService = createAIService(aiSettings);
+
+    // 分析复习计划
+    const result = await aiService.generateReviewAnalysis({
+      words,
+      context,
+    });
+
+    // 记录使用情况
+    const modelConfig = AI_MODELS.find(m => m.id === aiSettings.model) as AIModelConfig;
+    const cost = (result.tokensUsed / 1000) * (modelConfig?.costPer1kTokens || 0);
+    
+    storageService.recordAIUsage({
+      settingId: aiSettings.id!,
+      feature: 'review_advice',
+      word: `analysis-${words.length}words`,
+      tokensUsed: result.tokensUsed,
+      cost,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Generate review analysis error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * AI 复习结果处理
+ * POST /api/v1/ai/generate/review-result
+ * 根据用户复习表现，AI计算新的学习参数
+ */
+router.post('/generate/review-result', async (req: Request, res: Response) => {
+  try {
+    // 获取 AI 配置
+    const aiSettings = storageService.getAISettings();
+    
+    if (!aiSettings) {
+      res.status(400).json({
+        success: false,
+        error: '尚未配置 AI，请先在设置中配置 AI API 密钥',
+      });
+      return;
+    }
+
+    const { word, definition, score, responseTime, previousStability, previousDifficulty, reviewCount, recentScores } = req.body;
+
+    if (!word || score === undefined) {
+      res.status(400).json({
+        success: false,
+        error: '缺少必填字段：word, score',
+      });
+      return;
+    }
+
+    // 创建 AI 服务实例
+    const aiService = createAIService(aiSettings);
+
+    // 处理复习结果
+    const result = await aiService.generateReviewResult({
+      word,
+      definition,
+      score,
+      responseTime: responseTime || 5,
+      previousStability: previousStability || 1,
+      previousDifficulty: previousDifficulty || 0.5,
+      reviewCount: reviewCount || 0,
+      recentScores,
+    });
+
+    // 记录使用情况
+    const modelConfig = AI_MODELS.find(m => m.id === aiSettings.model) as AIModelConfig;
+    const cost = (result.tokensUsed / 1000) * (modelConfig?.costPer1kTokens || 0);
+    
+    storageService.recordAIUsage({
+      settingId: aiSettings.id!,
+      feature: 'review_advice',
+      word,
+      tokensUsed: result.tokensUsed,
+      cost,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Generate review result error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 export default router;

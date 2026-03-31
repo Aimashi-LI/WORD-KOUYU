@@ -184,3 +184,75 @@ export interface GenerateSearchWordsResponse {
   description?: string;    // 搜索结果描述
   tokensUsed: number;
 }
+
+// AI 复习分析请求
+export interface GenerateReviewAnalysisRequest {
+  words: Array<{
+    id: number;
+    word: string;
+    definition?: string;
+    stability: number;        // 稳定性（天）
+    difficulty: number;       // 难度 0-1
+    reviewCount: number;      // 复习次数
+    lastScore?: number;       // 最近得分
+    retrievability: number;   // 可提取性 0-1
+    daysSinceLastReview?: number; // 距上次复习天数
+    nextReviewDate?: string;  // 下次复习日期
+    isMastered: boolean;      // 是否已掌握
+    lastReviewDate?: string;  // 上次复习日期
+  }>;
+  context?: {
+    currentTime?: string;     // 当前时间
+    studyGoal?: string;       // 学习目标，如 "每天复习20个单词"
+    preferredTime?: string;   // 偏好复习时间
+  };
+}
+
+// AI 复习分析响应
+export interface GenerateReviewAnalysisResponse {
+  analysis: {
+    summary: string;          // 整体学习状况总结
+    urgentCount: number;      // 紧急需要复习的单词数
+    suggestedCount: number;   // 建议今日复习的单词数
+  };
+  reviewPlan: Array<{
+    wordId: number;
+    word: string;
+    priority: 'urgent' | 'high' | 'medium' | 'low';  // 复习优先级
+    reason: string;           // AI给出的复习原因
+    suggestedTime: string;    // 建议复习时间
+    expectedRetention: number; // 预期记忆保持率 0-1
+    reviewStrategy: string;   // 复习策略建议
+  }>;
+  recommendations: Array<{
+    type: 'timing' | 'method' | 'frequency' | 'break';
+    message: string;
+  }>;
+  nextReviewReminder?: {
+    time: string;             // 下次提醒时间
+    message: string;          // 提醒内容
+  };
+  tokensUsed: number;
+}
+
+// AI 复习结果处理请求
+export interface GenerateReviewResultRequest {
+  word: string;
+  definition?: string;
+  score: number;              // 本次得分 0-6
+  responseTime: number;       // 答题时间（秒）
+  previousStability: number;  // 之前的稳定性
+  previousDifficulty: number; // 之前的难度
+  reviewCount: number;        // 复习次数
+  recentScores?: number[];    // 最近几次得分
+}
+
+// AI 复习结果处理响应
+export interface GenerateReviewResultResponse {
+  newStability: number;       // 新的稳定性
+  newDifficulty: number;      // 新的难度
+  nextReviewDate: string;     // 下次复习日期
+  isMastered: boolean;        // 是否已掌握
+  advice: string;             // AI学习建议
+  tokensUsed: number;
+}
