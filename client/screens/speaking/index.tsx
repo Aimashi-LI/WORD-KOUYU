@@ -215,28 +215,40 @@ export default function SpeakingScreen() {
         throw new Error('录音文件不存在');
       }
 
-      // 上传音频进行语音识别
-      const formData = new FormData();
-      formData.append('audio', {
-        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
-        type: 'audio/m4a',
-        name: 'recording.m4a',
-      } as any);
+      console.log('[Speaking] 录音完成，URI:', uri);
 
+      // 读取音频文件并转为 base64
+      const audioBase64 = await (FileSystem as any).readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
+
+      console.log('[Speaking] 音频已转为base64，长度:', audioBase64.length);
+
+      // 发送到后端进行语音识别
       const asrResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/audio/asr`, {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64Data: audioBase64 }),
       });
       
       const asrData = await asrResponse.json();
+      console.log('[Speaking] ASR响应:', asrData);
       
       if (asrData.success && asrData.data?.text) {
-        setInputText(asrData.data.text);
+        const recognizedText = asrData.data.text.trim();
+        if (recognizedText) {
+          setInputText(recognizedText);
+          console.log('[Speaking] 识别成功:', recognizedText);
+        } else {
+          Alert.alert('提示', '未识别到语音内容，请重试');
+        }
       } else {
-        Alert.alert('提示', '语音识别失败，请重试');
+        const errorMsg = asrData.error || '语音识别失败';
+        console.error('[Speaking] ASR错误:', errorMsg);
+        Alert.alert('提示', errorMsg);
       }
     } catch (error: any) {
-      console.error('Stop recording error:', error);
+      console.error('[Speaking] 停止录音错误:', error);
       Alert.alert('错误', error.message || '语音识别失败');
     } finally {
       setIsProcessing(false);

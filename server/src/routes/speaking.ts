@@ -347,7 +347,7 @@ router.post('/chat', async (req: Request, res: Response) => {
 
     // 构建消息列表
     const fullMessages = [
-      { role: 'system' as const, content: systemPrompt || SPEAKING_SCENES.daily.systemPrompt },
+      { role: 'system' as const, content: systemPrompt || SPEAKING_SCENES.friend.systemPrompt },
       ...messages.map((m: any) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,

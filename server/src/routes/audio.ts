@@ -1,9 +1,16 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
 import { TTSClient, ASRClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 import { storageService } from '../services/storageService';
 import { AISettings, AI_MODELS } from '../types/ai';
 
 const router = Router();
+
+// 配置 multer 用于处理文件上传
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 } // 最大 100MB
+});
 
 /**
  * 文本转语音 (TTS)
@@ -56,15 +63,39 @@ router.post('/tts', async (req: Request, res: Response) => {
 /**
  * 语音转文字 (ASR)
  * POST /api/v1/audio/asr
+ * 
+ * 支持三种方式：
+ * 1. 上传音频文件（FormData，字段名：audio）
+ * 2. 提供音频URL（JSON: { audioUrl: "..." }）
+ * 3. 提供Base64数据（JSON: { base64Data: "..." }）
  */
-router.post('/asr', async (req: Request, res: Response) => {
+router.post('/asr', upload.single('audio'), async (req: Request, res: Response) => {
   try {
-    const { audioUrl, base64Data } = req.body;
+    let audioUrl: string | undefined;
+    let base64Data: string | undefined;
+
+    // 方式1：处理上传的音频文件
+    if (req.file) {
+      console.log('[ASR] 收到上传的音频文件:', {
+        fieldname: req.file.fieldname,
+        originalname: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+      });
+
+      // 将音频文件转为 base64
+      base64Data = req.file.buffer.toString('base64');
+      console.log('[ASR] 音频文件已转为base64，长度:', base64Data.length);
+    } else {
+      // 方式2/3：从JSON body获取URL或base64
+      audioUrl = req.body.audioUrl;
+      base64Data = req.body.base64Data;
+    }
 
     if (!audioUrl && !base64Data) {
       res.status(400).json({
         success: false,
-        error: '缺少必填字段：audioUrl 或 base64Data',
+        error: '请上传音频文件或提供 audioUrl/base64Data',
       });
       return;
     }
@@ -77,11 +108,14 @@ router.post('/asr', async (req: Request, res: Response) => {
     const asrClient = new ASRClient(config, customHeaders);
 
     // 识别语音
+    console.log('[ASR] 开始识别语音...');
     const result = await asrClient.recognize({
       uid: 'user',
       url: audioUrl,
       base64Data: base64Data,
     });
+
+    console.log('[ASR] 识别结果:', result.text);
 
     res.json({
       success: true,
@@ -91,7 +125,7 @@ router.post('/asr', async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('ASR error:', error);
+    console.error('[ASR] 语音识别错误:', error);
     res.status(500).json({
       success: false,
       error: error.message || '语音识别失败',
