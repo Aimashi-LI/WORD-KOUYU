@@ -111,6 +111,8 @@ export default function AddWordScreen() {
   const [partOfSpeech, setPartOfSpeech] = useState('');
   const [sentence, setSentence] = useState('');
   const [example, setExample] = useState('');
+  const [inspirationalSentence, setInspirationalSentence] = useState('');  // 励志例句
+  const [funnySentence, setFunnySentence] = useState('');  // 搞笑例句
   
   // AI 相关状态
   const [autoFilling, setAutoFilling] = useState(false);
@@ -571,6 +573,8 @@ export default function AddWordScreen() {
           }
         }
         if (result.mnemonic) setSentence(result.mnemonic);
+        if (result.inspirationalSentence) setInspirationalSentence(result.inspirationalSentence);
+        if (result.funnySentence) setFunnySentence(result.funnySentence);
         
         Alert.alert('成功', 'AI 已填充所有字段，请检查并保存');
       }
@@ -633,6 +637,8 @@ export default function AddWordScreen() {
         split: splitText || undefined,
         mnemonic: sentence.trim() || undefined, // 助记句子
         sentence: example.trim() || undefined, // 例句
+        inspirational_sentence: inspirationalSentence.trim() || undefined, // 励志例句
+        funny_sentence: funnySentence.trim() || undefined, // 搞笑例句
       };
 
       console.log('[AddWord] 准备保存的单词数据:', JSON.stringify(newWord, null, 2));
@@ -641,6 +647,8 @@ export default function AddWordScreen() {
       console.log('[AddWord] partOfSpeech 是否为空:', partOfSpeech === '' || partOfSpeech === null || partOfSpeech === undefined);
       console.log('[AddWord] 助记句子 (mnemonic):', newWord.mnemonic);
       console.log('[AddWord] 例句 (sentence):', newWord.sentence);
+      console.log('[AddWord] 励志例句 (inspirational_sentence):', newWord.inspirational_sentence);
+      console.log('[AddWord] 搞笑例句 (funny_sentence):', newWord.funny_sentence);
 
       const wordId = await createWord(newWord);
       console.log('[AddWord] 单词保存成功，ID:', wordId);
@@ -741,7 +749,7 @@ export default function AddWordScreen() {
             autoCapitalize="none"
           />
           <ThemedText variant="caption" color={theme.textMuted} style={styles.helpText}>
-            输入单词后点击「一键 AI 填充」可自动生成音标、释义、拆分和助记句
+            输入单词后点击「一键 AI 填充」可自动生成音标、释义、拆分、助记句、励志例句和搞笑例句
           </ThemedText>
         </ThemedView>
 
@@ -931,6 +939,38 @@ export default function AddWordScreen() {
             placeholderTextColor={theme.textMuted}
             value={example}
             onChangeText={setExample}
+            multiline
+            numberOfLines={2}
+          />
+        </ThemedView>
+
+        {/* 励志例句输入 */}
+        <ThemedView level="tertiary" style={styles.inputContainer}>
+          <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
+            💪 励志例句
+          </ThemedText>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="AI 生成的励志英语句子，激励学习者"
+            placeholderTextColor={theme.textMuted}
+            value={inspirationalSentence}
+            onChangeText={setInspirationalSentence}
+            multiline
+            numberOfLines={2}
+          />
+        </ThemedView>
+
+        {/* 搞笑例句输入 */}
+        <ThemedView level="tertiary" style={styles.inputContainer}>
+          <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
+            😄 搞笑例句
+          </ThemedText>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="AI 生成的幽默英语句子，让学习更有趣"
+            placeholderTextColor={theme.textMuted}
+            value={funnySentence}
+            onChangeText={setFunnySentence}
             multiline
             numberOfLines={2}
           />

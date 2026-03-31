@@ -122,20 +122,23 @@ export async function createWord(word: NewWord): Promise<number> {
     word.split || null,
     word.mnemonic || null,
     word.sentence || null,
+    word.inspirational_sentence || null,
+    word.funny_sentence || null,
     word.difficulty || 0,
     word.stability || 0,
     now, // last_review 设置为创建时间
     nextReview, // next_review 设置为10分钟后
     word.avg_response_time || 0,
     word.is_mastered || 0,
+    word.review_count || 0,
     now
   ];
 
   console.log('[createWord] SQL 参数数组:', params.map((p, i) => `参数${i}: ${p}`));
 
   const result = await db.runAsync(
-    `INSERT INTO words (word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, difficulty, stability, last_review, next_review, avg_response_time, is_mastered, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO words (word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, inspirational_sentence, funny_sentence, difficulty, stability, last_review, next_review, avg_response_time, is_mastered, review_count, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     params
   );
 
@@ -158,8 +161,8 @@ export async function createWords(words: NewWord[]): Promise<number[]> {
       const nextReview = nextReviewDate.toISOString();
 
       const result = await db.runAsync(
-        `INSERT INTO words (word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, difficulty, stability, last_review, next_review, avg_response_time, is_mastered, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO words (word, phonetic, definition, partOfSpeech, split, mnemonic, sentence, inspirational_sentence, funny_sentence, difficulty, stability, last_review, next_review, avg_response_time, is_mastered, review_count, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           word.word,
           word.phonetic || null,
@@ -168,12 +171,15 @@ export async function createWords(words: NewWord[]): Promise<number[]> {
           word.split || null,
           word.mnemonic || null,
           word.sentence || null,
+          word.inspirational_sentence || null,
+          word.funny_sentence || null,
           word.difficulty || 0,
           word.stability || 0,
           now, // last_review 设置为创建时间
           nextReview, // next_review 设置为10分钟后
           word.avg_response_time || 0,
           word.is_mastered || 0,
+          word.review_count || 0,
           now
         ]
       );
@@ -197,6 +203,8 @@ export async function updateWord(id: number, updates: Partial<Omit<Word, 'id' | 
   if (updates.split !== undefined) { fields.push('split = ?'); values.push(updates.split); }
   if (updates.mnemonic !== undefined) { fields.push('mnemonic = ?'); values.push(updates.mnemonic); }
   if (updates.sentence !== undefined) { fields.push('sentence = ?'); values.push(updates.sentence); }
+  if (updates.inspirational_sentence !== undefined) { fields.push('inspirational_sentence = ?'); values.push(updates.inspirational_sentence); }
+  if (updates.funny_sentence !== undefined) { fields.push('funny_sentence = ?'); values.push(updates.funny_sentence); }
   if (updates.difficulty !== undefined) { fields.push('difficulty = ?'); values.push(updates.difficulty); }
   if (updates.stability !== undefined) { fields.push('stability = ?'); values.push(updates.stability); }
   if (updates.last_review !== undefined) { fields.push('last_review = ?'); values.push(updates.last_review); }
@@ -382,6 +390,8 @@ function mapToWord(row: any): Word {
     split: row.split,
     mnemonic: row.mnemonic,
     sentence: row.sentence,
+    inspirational_sentence: row.inspirational_sentence,
+    funny_sentence: row.funny_sentence,
     difficulty: row.difficulty || 0,
     stability: row.stability || 0,
     last_review: row.last_review,

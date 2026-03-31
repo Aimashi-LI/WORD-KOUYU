@@ -148,6 +148,8 @@ export interface GenerateAutoFillResponse {
   definition?: string;
   split?: string;
   mnemonic?: string;
+  inspirationalSentence?: string;  // 励志例句
+  funnySentence?: string;          // 搞笑例句
   tokensUsed: number;
 }
 

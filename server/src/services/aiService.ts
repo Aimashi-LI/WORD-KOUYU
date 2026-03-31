@@ -338,7 +338,7 @@ export class AIService {
 
   /**
    * 一键自动填充单词信息
-   * 根据单词自动生成音标、释义、拆分和助记句
+   * 根据单词自动生成音标、释义、拆分、助记句和例句
    */
   async generateAutoFill(request: GenerateAutoFillRequest): Promise<GenerateAutoFillResponse> {
     const { word, existingData } = request;
@@ -349,14 +349,18 @@ export class AIService {
 1. 音标：使用国际音标格式，如 /ˈæpl/
 2. 释义：简洁准确的中文释义，包含词性，如 "n. 苹果"
 3. 拆分：将单词拆分成有意义的音节或词根，格式为 "编码-含义，编码-含义"
-4. 助记句：生动有趣的助记句，结合拆分部分
+4. 助记句：生动有趣的助记句，结合拆分部分帮助记忆
+5. 励志例句：使用该单词造一个励志、积极向上的英语句子，能激励学习者
+6. 搞笑例句：使用该单词造一个幽默、有趣的英语句子，让学习更有趣
 
 返回JSON格式：
 {
   "phonetic": "/音标/",
   "definition": "词性 释义",
   "split": "编码-含义，编码-含义",
-  "mnemonic": "助记句"
+  "mnemonic": "助记句",
+  "inspirationalSentence": "励志英语例句 with Chinese translation",
+  "funnySentence": "搞笑英语例句 with Chinese translation"
 }
 
 如果某个字段已有数据，可以保持或优化。`;
@@ -381,7 +385,7 @@ ${existingInfo}
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 300,
+        max_tokens: 500,
       });
 
       const content = response.data.choices[0]?.message?.content || '';
@@ -396,6 +400,8 @@ ${existingInfo}
           definition: parsed.definition,
           split: parsed.split,
           mnemonic: parsed.mnemonic,
+          inspirationalSentence: parsed.inspirationalSentence,
+          funnySentence: parsed.funnySentence,
           tokensUsed,
         };
       } catch {

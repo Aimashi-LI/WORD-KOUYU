@@ -35,6 +35,8 @@ export interface AutoFillResponse {
   definition?: string;
   split?: string;
   mnemonic?: string;
+  inspirationalSentence?: string;  // 励志例句
+  funnySentence?: string;          // 搞笑例句
 }
 
 // AI 复习分析响应
