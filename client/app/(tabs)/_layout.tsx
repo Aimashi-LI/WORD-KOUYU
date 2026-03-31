@@ -42,6 +42,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="dictation"
+        options={{
+          title: '听写',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="headphones" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="codebase"
         options={{
           title: '编码库',
