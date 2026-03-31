@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
+  Text,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -28,6 +29,13 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  corrections?: {
+    grammar?: string;
+    vocabulary?: string;
+    pronunciation?: string;
+    expression?: string;
+    feedback?: string;
+  };
 }
 
 interface Scene {
@@ -59,6 +67,95 @@ export default function SpeakingScreen() {
   const sseRef = useRef<RNSSE | null>(null);
 
   const { isConfigured, openSettings } = useAI();
+
+  // 解析纠正信息
+  const parseCorrections = (content: string): { mainContent: string; corrections?: Message['corrections'] } => {
+    // 检查是否包含纠正标记
+    const hasCorrectionMarker = content.includes('📝 **Corrections**') || 
+                                 content.includes('📝**Corrections**') ||
+                                 content.includes('**Corrections**:') ||
+                                 content.includes('🎯 **Interview Feedback**') ||
+                                 content.includes('🎯**Interview Feedback**');
+
+    if (!hasCorrectionMarker) {
+      // 检查是否有内联纠正（老师场景的格式）
+      const inlineCorrectionPatterns = [
+        /By the way, we (?:usually |often |)say ['"]([^'"]+)['"] instead of ['"]([^'"]+)['"]/i,
+        /we'd say ['"]([^'"]+)['"] instead of ['"]([^'"]+)['"]/i,
+        /Instead of ['"]([^'"]+)['"][,，] (?:you could |try |)say ['"]([^'"]+)['"]/i,
+        /['"]([^'"]+)['"] (?:is pronounced |sounds )like ['"]([^'"]+)['"]/i,
+      ];
+
+      const corrections: Message['corrections'] = {};
+      let hasInlineCorrection = false;
+
+      // 检查内联纠正
+      inlineCorrectionPatterns.forEach((pattern, index) => {
+        const match = content.match(pattern);
+        if (match) {
+          hasInlineCorrection = true;
+          if (index < 2) {
+            corrections.grammar = `Should say: "${match[1]}" instead of "${match[2]}"`;
+          } else if (index === 2) {
+            corrections.expression = `Try: "${match[2]}" instead of "${match[1]}"`;
+          } else {
+            corrections.pronunciation = `"${match[1]}" sounds like "${match[2]}"`;
+          }
+        }
+      });
+
+      if (hasInlineCorrection) {
+        return { mainContent: content, corrections };
+      }
+
+      return { mainContent: content };
+    }
+
+    // 分离主要内容和纠正部分
+    const parts = content.split(/📝\s*\*?\*?Corrections\*?\*?:?|🎯\s*\*?\*?Interview Feedback\*?\*?:?/i);
+    const mainContent = parts[0].trim();
+    
+    const corrections: Message['corrections'] = {};
+    
+    if (parts[1]) {
+      const correctionText = parts[1];
+      
+      // 提取语法纠正
+      const grammarMatch = correctionText.match(/\*?\*?Grammar\*?\*?:?\s*([^\n*]+)/i);
+      if (grammarMatch) {
+        corrections.grammar = grammarMatch[1].trim();
+      }
+      
+      // 提取词汇纠正
+      const vocabMatch = correctionText.match(/\*?\*?Vocabulary\*?\*?:?\s*([^\n*]+)/i);
+      if (vocabMatch) {
+        corrections.vocabulary = vocabMatch[1].trim();
+      }
+      
+      // 提取发音纠正
+      const pronMatch = correctionText.match(/\*?\*?Pronunciation\*?\*?:?\s*([^\n*]+)/i);
+      if (pronMatch) {
+        corrections.pronunciation = pronMatch[1].trim();
+      }
+      
+      // 提取自然表达建议
+      const exprMatch = correctionText.match(/\*?\*?Natural Expression\*?\*?:?\s*([^\n*]+)/i) ||
+                        correctionText.match(/\*?\*?Better Phrases\*?\*?:?\s*([^\n*]+)/i);
+      if (exprMatch) {
+        corrections.expression = exprMatch[1].trim();
+      }
+      
+      // 提取鼓励语
+      const feedbackMatch = correctionText.match(/\*?\*?Keep practicing!\*?\*?\s*([^\n*]+)/i) ||
+                            correctionText.match(/\*?\*?Tip\*?\*?:?\s*([^\n*]+)/i) ||
+                            correctionText.match(/✨\s*\*?\*?Keep practicing!\*?\*?\s*([^\n*]+)/i);
+      if (feedbackMatch) {
+        corrections.feedback = feedbackMatch[1].trim();
+      }
+    }
+
+    return { mainContent, corrections };
+  };
 
   // 清理音频资源
   useEffect(() => {
@@ -298,19 +395,21 @@ export default function SpeakingScreen() {
       sseRef.current.addEventListener('message', (event: any) => {
         if (event.data === '[DONE]') {
           // 流结束
+          const { mainContent, corrections } = parseCorrections(fullResponse);
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
-            content: fullResponse,
+            content: mainContent,
             timestamp: new Date(),
+            corrections,
           };
           
           setMessages(prev => [...prev, assistantMessage]);
           setCurrentResponse('');
           setIsGenerating(false);
           
-          // 播放回复
-          playTTS(fullResponse);
+          // 播放回复（只播放主要内容）
+          playTTS(mainContent);
           
           return;
         }
@@ -466,20 +565,82 @@ export default function SpeakingScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {messages.map(message => (
-            <View
-              key={message.id}
-              style={[
-                styles.messageBubble,
-                message.role === 'user' ? styles.userBubble : styles.assistantBubble,
-              ]}
-            >
-              <ThemedText
-                variant="body"
-                color={message.role === 'user' ? theme.buttonPrimaryText : theme.textPrimary}
-                style={styles.messageText}
+            <View key={message.id} style={styles.messageWrapper}>
+              <View
+                style={[
+                  styles.messageBubble,
+                  message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                ]}
               >
-                {message.content}
-              </ThemedText>
+                <ThemedText
+                  variant="body"
+                  color={message.role === 'user' ? theme.buttonPrimaryText : theme.textPrimary}
+                  style={styles.messageText}
+                >
+                  {message.content}
+                </ThemedText>
+              </View>
+              
+              {/* 纠正信息显示 */}
+              {message.role === 'assistant' && message.corrections && (
+                <View style={styles.correctionsContainer}>
+                  <View style={styles.correctionsHeader}>
+                    <FontAwesome6 name="lightbulb" size={14} color={theme.warning} />
+                    <ThemedText variant="caption" color={theme.warning} style={styles.correctionsTitle}>
+                      学习要点
+                    </ThemedText>
+                  </View>
+                  
+                  {message.corrections.grammar && (
+                    <View style={styles.correctionItem}>
+                      <FontAwesome6 name="spell-check" size={12} color={theme.primary} />
+                      <ThemedText variant="caption" color={theme.textSecondary} style={styles.correctionText}>
+                        <Text style={{ fontWeight: '600', color: theme.textPrimary }}>语法: </Text>
+                        {message.corrections.grammar}
+                      </ThemedText>
+                    </View>
+                  )}
+                  
+                  {message.corrections.vocabulary && (
+                    <View style={styles.correctionItem}>
+                      <FontAwesome6 name="book" size={12} color={theme.primary} />
+                      <ThemedText variant="caption" color={theme.textSecondary} style={styles.correctionText}>
+                        <Text style={{ fontWeight: '600', color: theme.textPrimary }}>词汇: </Text>
+                        {message.corrections.vocabulary}
+                      </ThemedText>
+                    </View>
+                  )}
+                  
+                  {message.corrections.pronunciation && (
+                    <View style={styles.correctionItem}>
+                      <FontAwesome6 name="volume-high" size={12} color={theme.primary} />
+                      <ThemedText variant="caption" color={theme.textSecondary} style={styles.correctionText}>
+                        <Text style={{ fontWeight: '600', color: theme.textPrimary }}>发音: </Text>
+                        {message.corrections.pronunciation}
+                      </ThemedText>
+                    </View>
+                  )}
+                  
+                  {message.corrections.expression && (
+                    <View style={styles.correctionItem}>
+                      <FontAwesome6 name="comment-dots" size={12} color={theme.primary} />
+                      <ThemedText variant="caption" color={theme.textSecondary} style={styles.correctionText}>
+                        <Text style={{ fontWeight: '600', color: theme.textPrimary }}>表达: </Text>
+                        {message.corrections.expression}
+                      </ThemedText>
+                    </View>
+                  )}
+                  
+                  {message.corrections.feedback && (
+                    <View style={styles.feedbackItem}>
+                      <FontAwesome6 name="star" size={12} color={theme.success} />
+                      <ThemedText variant="caption" color={theme.success} style={styles.feedbackText}>
+                        {message.corrections.feedback}
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           ))}
 

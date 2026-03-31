@@ -104,6 +104,50 @@ export const createStyles = (theme: any) => StyleSheet.create({
   messageText: {
     lineHeight: 22,
   },
+  messageWrapper: {
+    marginBottom: 12,
+  },
+  correctionsContainer: {
+    marginTop: 8,
+    marginLeft: 4,
+    padding: 12,
+    backgroundColor: theme.warningBackground || '#FFF9E6',
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.warning,
+  },
+  correctionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 6,
+  },
+  correctionsTitle: {
+    fontWeight: '600',
+  },
+  correctionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 8,
+  },
+  correctionText: {
+    flex: 1,
+    lineHeight: 20,
+  },
+  feedbackItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    gap: 8,
+  },
+  feedbackText: {
+    flex: 1,
+    fontWeight: '500',
+  },
   typingIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
