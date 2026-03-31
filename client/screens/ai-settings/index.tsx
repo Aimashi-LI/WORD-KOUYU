@@ -13,6 +13,7 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { createStyles } from './styles';
+import { useNetwork } from '@/hooks/useNetwork';
 
 // AI 提供商
 type AIProvider = 'deepseek' | 'doubao';
@@ -44,6 +45,7 @@ const API_BASE_URLS: Record<AIProvider, string> = {
 export default function AISettingsScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { isConnected, checkNetwork, showNetworkError } = useNetwork();
 
   // 状态
   const [loading, setLoading] = useState(false);
@@ -115,6 +117,13 @@ export default function AISettingsScreen() {
 
   // 测试连接
   const handleTest = async () => {
+    // 先检查网络
+    const hasNetwork = await checkNetwork();
+    if (!hasNetwork) {
+      showNetworkError();
+      return;
+    }
+
     // 测试已保存配置（当显示的是掩码密钥且没有修改）
     if (apiKey === '••••••••••••' && currentSettings) {
       setTesting(true);
@@ -131,6 +140,8 @@ export default function AISettingsScreen() {
         if (data.success && data.data.isValid) {
           setTestResult('success');
           setTestMessage(data.data.message);
+          // 测试成功后重新加载配置，更新 isActive 状态
+          loadSettings();
         } else {
           setTestResult('error');
           setTestMessage(data.data?.message || data.error || '测试失败');
@@ -177,6 +188,13 @@ export default function AISettingsScreen() {
 
   // 保存配置
   const handleSave = async () => {
+    // 先检查网络
+    const hasNetwork = await checkNetwork();
+    if (!hasNetwork) {
+      showNetworkError();
+      return;
+    }
+
     if (!apiKey.trim()) {
       Alert.alert('提示', '请输入 API 密钥');
       return;
@@ -264,6 +282,18 @@ export default function AISettingsScreen() {
   return (
     <Screen>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        {/* 网络状态提示 */}
+        {!isConnected && (
+          <View style={[styles.card, { backgroundColor: theme.error + '20', borderColor: theme.error }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <FontAwesome6 name="wifi-slash" size={16} color={theme.error} />
+              <ThemedText style={{ color: theme.error, flex: 1 }}>
+                网络未连接，AI 功能需要网络才能使用
+              </ThemedText>
+            </View>
+          </View>
+        )}
+
         {/* 当前配置状态 */}
         {currentSettings && (
           <View style={styles.section}>
@@ -333,6 +363,12 @@ export default function AISettingsScreen() {
               style={styles.input}
               value={apiKey}
               onChangeText={setApiKey}
+              onFocus={() => {
+                // 如果当前是占位符，清除它让用户输入新密钥
+                if (apiKey === '••••••••••••') {
+                  setApiKey('');
+                }
+              }}
               placeholder="请输入 API 密钥"
               placeholderTextColor={theme.textMuted}
               secureTextEntry={apiKey !== '••••••••••••'}
