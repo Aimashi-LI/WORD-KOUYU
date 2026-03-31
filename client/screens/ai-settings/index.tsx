@@ -115,16 +115,12 @@ export default function AISettingsScreen() {
 
   // 测试连接
   const handleTest = async () => {
-    if (!apiKey.trim()) {
-      Alert.alert('提示', '请输入 API 密钥');
-      return;
-    }
-
+    // 测试已保存配置（当显示的是掩码密钥且没有修改）
     if (apiKey === '••••••••••••' && currentSettings) {
-      // 使用已保存的配置测试
       setTesting(true);
       setTestResult(null);
       try {
+        // 不发送 apiKey，让后端使用已保存的配置
         const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ai/test`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -137,7 +133,7 @@ export default function AISettingsScreen() {
           setTestMessage(data.data.message);
         } else {
           setTestResult('error');
-          setTestMessage(data.data?.message || '测试失败');
+          setTestMessage(data.data?.message || data.error || '测试失败');
         }
       } catch (error: any) {
         setTestResult('error');
@@ -148,7 +144,12 @@ export default function AISettingsScreen() {
       return;
     }
 
-    // 使用新密钥测试
+    // 测试新密钥
+    if (!apiKey.trim()) {
+      Alert.alert('提示', '请输入 API 密钥');
+      return;
+    }
+
     setTesting(true);
     setTestResult(null);
     try {
@@ -164,7 +165,7 @@ export default function AISettingsScreen() {
         setTestMessage(data.data.message);
       } else {
         setTestResult('error');
-        setTestMessage(data.data?.message || '测试失败');
+        setTestMessage(data.data?.message || data.error || '测试失败');
       }
     } catch (error: any) {
       setTestResult('error');
@@ -196,12 +197,19 @@ export default function AISettingsScreen() {
       const data = await response.json();
       
       if (data.success) {
-        Alert.alert('成功', 'AI 配置保存成功');
+        Alert.alert('成功', data.message || 'AI 配置保存成功');
+        setTestResult('success');
+        setTestMessage('API 密钥已验证有效');
         loadSettings();
       } else {
-        Alert.alert('错误', data.error || '保存失败');
+        // 保存失败（通常是 API 密钥验证失败）
+        setTestResult('error');
+        setTestMessage(data.error || '保存失败');
+        Alert.alert('保存失败', data.error || 'API 密钥验证失败，请检查您的密钥是否正确');
       }
     } catch (error: any) {
+      setTestResult('error');
+      setTestMessage(error.message || '网络错误');
       Alert.alert('错误', error.message || '网络错误');
     } finally {
       setSaving(false);

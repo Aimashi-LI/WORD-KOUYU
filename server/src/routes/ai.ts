@@ -63,8 +63,9 @@ router.get('/settings', (req: Request, res: Response) => {
 /**
  * 保存 AI 配置
  * POST /api/v1/ai/settings
+ * 保存前会先验证 API 密钥，只有验证成功才会激活配置
  */
-router.post('/settings', (req: Request, res: Response) => {
+router.post('/settings', async (req: Request, res: Response) => {
   try {
     const { provider, apiKey, apiBaseUrl, model } = req.body;
 
@@ -96,14 +97,36 @@ router.post('/settings', (req: Request, res: Response) => {
       return;
     }
 
-    // 保存配置
+    // 先测试 API 密钥是否有效
+    const testSettings: AISettings = {
+      provider,
+      apiKey,
+      apiBaseUrl: apiBaseUrl || undefined,
+      model,
+      isActive: false, // 测试时先设为 false
+    };
+
+    const aiService = createAIService(testSettings);
+    const testResult = await aiService.testConnection();
+
+    if (!testResult.isValid) {
+      // API 密钥无效，返回错误
+      res.status(400).json({
+        success: false,
+        error: testResult.message || 'API 密钥验证失败',
+        testResult,
+      });
+      return;
+    }
+
+    // API 密钥有效，保存配置并标记为已激活
     const aiSettings: AISettings = {
       id: 1,
       provider,
       apiKey,
       apiBaseUrl: apiBaseUrl || undefined,
       model,
-      isActive: true,
+      isActive: true, // 测试成功才激活
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -119,7 +142,7 @@ router.post('/settings', (req: Request, res: Response) => {
     res.json({
       success: true,
       data: maskedSettings,
-      message: 'AI 配置保存成功',
+      message: 'AI 配置保存成功，API 密钥已验证有效',
     });
   } catch (error: any) {
     console.error('Save settings error:', error);
@@ -133,34 +156,74 @@ router.post('/settings', (req: Request, res: Response) => {
 /**
  * 测试 AI 配置
  * POST /api/v1/ai/test
+ * 支持两种模式：
+ * 1. 测试新配置：传入 provider, apiKey, model
+ * 2. 测试已保存配置：只传入 provider, model（不传apiKey，使用已保存的配置）
  */
 router.post('/test', async (req: Request, res: Response) => {
   try {
     const { provider, apiKey, apiBaseUrl, model } = req.body;
 
-    // 验证必填字段
-    if (!provider || !apiKey || !model) {
-      res.status(400).json({
-        success: false,
-        error: '缺少必填字段：provider, apiKey, model',
-      });
-      return;
-    }
+    // 如果没有传入 apiKey，尝试使用已保存的配置
+    let testSettings: AISettings;
+    let usingSavedConfig = false;
+    
+    if (!apiKey) {
+      // 使用已保存的配置测试
+      const savedSettings = storageService.getAISettings();
+      
+      if (!savedSettings) {
+        res.status(400).json({
+          success: false,
+          error: '没有已保存的配置，请输入 API 密钥',
+        });
+        return;
+      }
 
-    // 创建临时配置进行测试
-    const testSettings: AISettings = {
-      provider,
-      apiKey,
-      apiBaseUrl: apiBaseUrl || undefined,
-      model,
-      isActive: true,
-    };
+      usingSavedConfig = true;
+      // 使用已保存的配置
+      testSettings = {
+        ...savedSettings,
+        // 如果传入了新的 provider 或 model，使用传入的值
+        provider: provider || savedSettings.provider,
+        model: model || savedSettings.model,
+        apiBaseUrl: apiBaseUrl || savedSettings.apiBaseUrl,
+      };
+    } else {
+      // 验证必填字段
+      if (!provider || !model) {
+        res.status(400).json({
+          success: false,
+          error: '缺少必填字段：provider, model',
+        });
+        return;
+      }
+
+      // 创建临时配置进行测试
+      testSettings = {
+        provider,
+        apiKey,
+        apiBaseUrl: apiBaseUrl || undefined,
+        model,
+        isActive: true,
+      };
+    }
 
     // 创建 AI 服务实例
     const aiService = createAIService(testSettings);
 
     // 测试连接
     const result = await aiService.testConnection();
+
+    // 如果使用的是已保存的配置，根据测试结果更新 isActive 状态
+    if (usingSavedConfig) {
+      const savedSettings = storageService.getAISettings();
+      if (savedSettings) {
+        savedSettings.isActive = result.isValid;
+        savedSettings.updatedAt = new Date().toISOString();
+        storageService.saveAISettings(savedSettings);
+      }
+    }
 
     res.json({
       success: true,
