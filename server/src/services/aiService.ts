@@ -13,6 +13,8 @@ import {
   GenerateReviewAdviceResponse,
   GenerateAutoFillRequest,
   GenerateAutoFillResponse,
+  GenerateSearchWordsRequest,
+  GenerateSearchWordsResponse,
   AITestResponse,
 } from '../types/ai';
 
@@ -399,6 +401,80 @@ ${existingInfo}
       return result;
     } catch (error: any) {
       console.error('Generate auto fill error:', error.message);
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * AI 搜索单词
+   * 根据用户输入的主题搜索相关单词
+   */
+  async generateSearchWords(request: GenerateSearchWordsRequest): Promise<GenerateSearchWordsResponse> {
+    const { query, count = 20, existingWords = [] } = request;
+
+    const systemPrompt = `你是一个专业的英语词汇助手。请根据用户提供的主题或关键词，返回相关的英语单词列表。
+
+要求：
+1. 返回的单词应该与用户搜索的主题高度相关
+2. 每个单词需要包含：单词、音标、释义、词性
+3. 音标使用国际音标格式，如 /ˈæpl/
+4. 释义简洁准确，如 "苹果"
+5. 词性使用标准缩写，如 n. v. adj. adv. prep. conj. etc.
+6. 优先返回常用、重要的单词
+7. 如果提供了已存在单词列表，请避免重复
+
+返回JSON格式：
+{
+  "words": [
+    {"word": "apple", "phonetic": "/ˈæpl/", "definition": "苹果", "partOfSpeech": "n."},
+    ...
+  ],
+  "description": "关于XXX主题的常用单词，共XX个"
+}`;
+
+    const userPrompt = `搜索主题：${query}
+${existingWords.length > 0 ? `\n已存在的单词（请避免重复）：${existingWords.slice(0, 50).join(', ')}` : ''}
+请返回 ${count} 个相关单词：`;
+
+    try {
+      const response = await this.client.post('/chat/completions', {
+        model: this.settings.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      });
+
+      const content = response.data.choices[0]?.message?.content || '';
+      const tokensUsed = response.data.usage?.total_tokens || 0;
+
+      // 解析JSON响应
+      let words: Array<{
+        word: string;
+        phonetic?: string;
+        definition?: string;
+        partOfSpeech?: string;
+      }> = [];
+      let description = '';
+
+      try {
+        const parsed = JSON.parse(content.trim());
+        words = parsed.words || [];
+        description = parsed.description || '';
+      } catch {
+        // 如果解析失败，尝试从文本中提取单词
+        console.error('Failed to parse search response:', content);
+      }
+
+      return {
+        words,
+        description,
+        tokensUsed,
+      };
+    } catch (error: any) {
+      console.error('Generate search words error:', error.message);
       throw this.handleError(error);
     }
   }

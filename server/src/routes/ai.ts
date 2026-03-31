@@ -525,4 +525,66 @@ router.post('/generate/auto-fill', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * AI 搜索单词
+ * POST /api/v1/ai/generate/search-words
+ */
+router.post('/generate/search-words', async (req: Request, res: Response) => {
+  try {
+    // 获取 AI 配置
+    const aiSettings = storageService.getAISettings();
+    
+    if (!aiSettings) {
+      res.status(400).json({
+        success: false,
+        error: '尚未配置 AI，请先在设置中配置 AI API 密钥',
+      });
+      return;
+    }
+
+    const { query, count, existingWords } = req.body;
+
+    if (!query) {
+      res.status(400).json({
+        success: false,
+        error: '缺少必填字段：query',
+      });
+      return;
+    }
+
+    // 创建 AI 服务实例
+    const aiService = createAIService(aiSettings);
+
+    // 搜索单词
+    const result = await aiService.generateSearchWords({
+      query,
+      count: count || 20,
+      existingWords: existingWords || [],
+    });
+
+    // 记录使用情况
+    const modelConfig = AI_MODELS.find(m => m.id === aiSettings.model) as AIModelConfig;
+    const cost = (result.tokensUsed / 1000) * (modelConfig?.costPer1kTokens || 0);
+    
+    storageService.recordAIUsage({
+      settingId: aiSettings.id!,
+      feature: 'auto_fill',
+      word: query,
+      tokensUsed: result.tokensUsed,
+      cost,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Generate search words error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 export default router;

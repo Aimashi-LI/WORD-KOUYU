@@ -150,6 +150,13 @@ export default function RootLayout() {
                 presentation: 'card'
               }} 
             />
+            <Stack.Screen 
+              name="ai-word-search" 
+              options={{ 
+                title: "AI 搜索单词",
+                presentation: 'card'
+              }} 
+            />
           </Stack>
           <Toast />
         </GestureHandlerRootView>

@@ -165,3 +165,22 @@ export interface AITestResponse {
   message: string;
   models?: string[];
 }
+
+// AI 搜索单词请求
+export interface GenerateSearchWordsRequest {
+  query: string;           // 搜索关键词，如 "高中单词"、"大学四级单词"
+  count?: number;          // 返回单词数量，默认20
+  existingWords?: string[]; // 已存在的单词列表，避免重复
+}
+
+// AI 搜索单词响应
+export interface GenerateSearchWordsResponse {
+  words: Array<{
+    word: string;          // 单词
+    phonetic?: string;     // 音标
+    definition?: string;   // 释义
+    partOfSpeech?: string; // 词性
+  }>;
+  description?: string;    // 搜索结果描述
+  tokensUsed: number;
+}
