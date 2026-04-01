@@ -201,13 +201,12 @@ export default function DictationScreen() {
     }
   };
 
-  const playWordAudio = useCallback(async (audioUri: string): Promise<void> => {
+  // 播放单次音频
+  const playAudioOnce = useCallback(async (audioUri: string): Promise<void> => {
     if (!audioUri) return Promise.resolve();
 
     return new Promise(async (resolve, reject) => {
       try {
-        setPlaying(true);
-        
         if (sound) {
           await sound.unloadAsync();
         }
@@ -221,17 +220,34 @@ export default function DictationScreen() {
 
         newSound.setOnPlaybackStatusUpdate((status) => {
           if (status.isLoaded && status.didJustFinish) {
-            setPlaying(false);
             resolve();
           }
         });
       } catch (error) {
         console.error('Failed to play audio:', error);
-        setPlaying(false);
         reject(error);
       }
     });
   }, [sound]);
+
+  // 播放单词音频（读两遍）
+  const playWordAudio = useCallback(async (audioUri: string): Promise<void> => {
+    if (!audioUri) return Promise.resolve();
+
+    setPlaying(true);
+    try {
+      // 第一遍
+      await playAudioOnce(audioUri);
+      // 短暂停顿后第二遍
+      await new Promise(resolve => setTimeout(resolve, 500));
+      // 第二遍
+      await playAudioOnce(audioUri);
+    } catch (e) {
+      console.error('Play error:', e);
+    } finally {
+      setPlaying(false);
+    }
+  }, [playAudioOnce, sound]);
 
   // 自动播放下一个单词
   const autoPlayNext = useCallback(async () => {
@@ -240,7 +256,7 @@ export default function DictationScreen() {
     const currentWord = dictationWords[currentIndex];
     if (!currentWord?.wordAudioUri) return;
 
-    // 播放当前单词
+    // 播放当前单词（读两遍）
     try {
       await playWordAudio(currentWord.wordAudioUri);
     } catch (e) {
