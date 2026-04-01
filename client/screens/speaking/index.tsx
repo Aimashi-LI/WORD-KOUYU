@@ -68,8 +68,12 @@ export default function SpeakingScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   
-  // 防止重复播放
+  // 防止重复播放和重复请求
   const isPlayingRef = useRef(false);
+  const isRequestingRef = useRef(false); // 防止重复发送请求
+  
+  // 使用 ref 存储消息历史，确保在异步操作中获取最新值
+  const messagesRef = useRef<Message[]>([]);
 
   const { isConfigured, openSettings, refresh } = useAI();
 
@@ -95,11 +99,17 @@ export default function SpeakingScreen() {
     }
   }, [conversationState]);
 
+  // 同步 messages 到 ref
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   // 清理所有资源
   const cleanupResources = useCallback(async () => {
     try {
       // 重置状态标志
       isPlayingRef.current = false;
+      isRequestingRef.current = false;
       
       // 停止并卸载录音
       if (recordingRef.current) {
@@ -239,6 +249,7 @@ export default function SpeakingScreen() {
     try {
       // 重置状态
       isPlayingRef.current = false;
+      isRequestingRef.current = false;
       
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/speaking/start`, {
         method: 'POST',
@@ -433,18 +444,29 @@ export default function SpeakingScreen() {
 
   // 发送给AI
   const sendToAI = async (userText: string) => {
+    // 防止重复请求
+    if (isRequestingRef.current) {
+      console.log('[Speaking] 已有请求在进行中，跳过');
+      return;
+    }
+    isRequestingRef.current = true;
+    
     // 关闭之前的SSE连接
     if (sseRef.current) {
       sseRef.current.close();
+      sseRef.current = null;
     }
 
     try {
       const url = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/speaking/chat`;
       
-      // 直接构建完整的消息列表（包括新消息），而不是依赖可能还没更新的 state
-      const updatedMessages = [...messages, { role: 'user' as const, content: userText }];
+      // 使用 ref 获取最新的消息历史
+      const currentMessages = messagesRef.current;
       
-      console.log('[Speaking] 发送消息给AI，消息数量:', updatedMessages.length);
+      // 构建完整的消息列表（包括新消息）
+      const updatedMessages = [...currentMessages, { role: 'user' as const, content: userText }];
+      
+      console.log('[Speaking] 发送消息给AI，历史消息数:', currentMessages.length, '总消息数:', updatedMessages.length);
       console.log('[Speaking] 用户输入:', userText);
       
       sseRef.current = new RNSSE(url, {
@@ -460,10 +482,18 @@ export default function SpeakingScreen() {
       });
 
       let fullResponse = '';
+      let responseAdded = false; // 防止重复添加回复
 
       sseRef.current.addEventListener('message', (event: any) => {
         if (event.data === '[DONE]') {
-          console.log('[Speaking] AI回复完成:', fullResponse);
+          if (responseAdded) {
+            console.log('[Speaking] 响应已添加，跳过重复的 [DONE]');
+            return;
+          }
+          responseAdded = true;
+          isRequestingRef.current = false; // 重置请求状态
+          
+          console.log('[Speaking] AI回复完成，长度:', fullResponse.length);
           const { mainContent, corrections } = parseCorrections(fullResponse);
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
@@ -494,11 +524,13 @@ export default function SpeakingScreen() {
 
       sseRef.current.addEventListener('error', (error: any) => {
         console.error('SSE error:', error);
+        isRequestingRef.current = false;
         setConversationState('idle');
       });
 
     } catch (error: any) {
       console.error('Send to AI error:', error);
+      isRequestingRef.current = false;
       setConversationState('idle');
     }
   };
