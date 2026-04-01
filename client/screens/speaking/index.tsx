@@ -454,14 +454,17 @@ export default function SpeakingScreen() {
     try {
       const url = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/speaking/chat`;
       
-      // 获取当前消息列表（不包括刚添加的用户消息，因为会在下面添加）
-      const currentMessages = messages.slice();
+      // 直接构建完整的消息列表（包括新消息），而不是依赖可能还没更新的 state
+      const updatedMessages = [...messages, { role: 'user' as const, content: userText }];
+      
+      console.log('[Speaking] 发送消息给AI，消息数量:', updatedMessages.length);
+      console.log('[Speaking] 用户输入:', userText);
       
       sseRef.current = new RNSSE(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...currentMessages, { role: 'user', content: userText }].map(m => ({
+          messages: updatedMessages.map(m => ({
             role: m.role,
             content: m.content,
           })),
@@ -473,6 +476,7 @@ export default function SpeakingScreen() {
 
       sseRef.current.addEventListener('message', (event: any) => {
         if (event.data === '[DONE]') {
+          console.log('[Speaking] AI回复完成:', fullResponse);
           const { mainContent, corrections } = parseCorrections(fullResponse);
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
