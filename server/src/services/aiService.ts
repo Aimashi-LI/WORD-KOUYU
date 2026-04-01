@@ -482,22 +482,34 @@ ${existingInfo}
 必须返回标准的JSON格式，不要添加任何额外文字：
 {
   "words": [
-    {"word": "单词", "phonetic": "/音标/", "definition": "中文释义", "partOfSpeech": "词性"}
+    {"word": "单词", "phonetic": "/音标/", "definition": "中文释义", "partOfSpeech": "n."}
   ],
   "description": "关于XXX主题的常用单词推荐"
 }
 
-## 词性缩写规范：
-- n. 名词
-- v. 动词
-- adj. 形容词
-- adv. 副词
-- prep. 介词
-- conj. 连词
-- interj. 感叹词
+## 重要：词性字段 (partOfSpeech) 是必填项！
+每个单词必须包含词性，使用以下标准缩写：
+- n. 名词 (如: apple, book, water)
+- v. 动词 (如: run, eat, think)
+- adj. 形容词 (如: happy, big, beautiful)
+- adv. 副词 (如: quickly, very, always)
+- prep. 介词 (如: in, on, at)
+- conj. 连词 (如: and, but, because)
+- interj. 感叹词 (如: oh, wow, hello)
+- pron. 代词 (如: I, you, he)
+- art. 冠词 (如: a, an, the)
 
-## 示例：
-用户搜索"高中英语必修一单词"，你应该返回人教版高中英语必修一的核心词汇。`;
+如果一个单词有多种词性，只标注最常见的词性。
+
+## 示例输出：
+{
+  "words": [
+    {"word": "apple", "phonetic": "/ˈæpl/", "definition": "苹果", "partOfSpeech": "n."},
+    {"word": "run", "phonetic": "/rʌn/", "definition": "跑，奔跑", "partOfSpeech": "v."},
+    {"word": "beautiful", "phonetic": "/ˈbjuːtɪfl/", "definition": "美丽的，漂亮的", "partOfSpeech": "adj."}
+  ],
+  "description": "基础英语单词推荐"
+}`;
 
     const userPrompt = `请搜索主题为"${query}"的相关英语单词，返回${count}个最相关的单词。
 
