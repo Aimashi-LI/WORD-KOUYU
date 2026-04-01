@@ -67,6 +67,10 @@ export default function SpeakingScreen() {
   const sseRef = useRef<RNSSE | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  // 防止重复触发
+  const isPlayingRef = useRef(false);
+  const hasCalledAutoStartRef = useRef(false);
 
   const { isConfigured, openSettings, refresh } = useAI();
 
@@ -95,6 +99,10 @@ export default function SpeakingScreen() {
   // 清理所有资源
   const cleanupResources = useCallback(async () => {
     try {
+      // 重置状态标志
+      isPlayingRef.current = false;
+      hasCalledAutoStartRef.current = false;
+      
       // 停止并卸载录音
       if (recordingRef.current) {
         try {
@@ -231,6 +239,10 @@ export default function SpeakingScreen() {
     }
 
     try {
+      // 重置状态
+      isPlayingRef.current = false;
+      hasCalledAutoStartRef.current = false;
+      
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/speaking/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -262,6 +274,13 @@ export default function SpeakingScreen() {
   // 播放TTS
   const playTTS = async (text: string, autoStartListening: boolean = false) => {
     try {
+      // 防止重复播放
+      if (isPlayingRef.current) {
+        return;
+      }
+      isPlayingRef.current = true;
+      hasCalledAutoStartRef.current = false;
+      
       setConversationState('speaking');
       
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/audio/tts`, {
@@ -275,7 +294,11 @@ export default function SpeakingScreen() {
       if (data.success && data.data?.audioUri) {
         // 卸载之前的音频
         if (soundRef.current) {
-          await soundRef.current.unloadAsync();
+          try {
+            await soundRef.current.unloadAsync();
+          } catch (e) {
+            // 忽略
+          }
         }
         
         // 播放新音频
@@ -286,21 +309,29 @@ export default function SpeakingScreen() {
         
         soundRef.current = sound;
         
-        // 监听播放完成
+        // 监听播放完成 - 使用 ref 防止重复触发
         sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
+          if (status.isLoaded && status.didJustFinish && !hasCalledAutoStartRef.current) {
+            isPlayingRef.current = false;
+            
             if (autoStartListening) {
-              startListening();
+              hasCalledAutoStartRef.current = true;
+              // 延迟一下再开始监听，给用户一点准备时间
+              setTimeout(() => {
+                startListening();
+              }, 500);
             } else {
               setConversationState('idle');
             }
           }
         });
       } else {
+        isPlayingRef.current = false;
         setConversationState('idle');
       }
     } catch (error) {
       console.error('TTS error:', error);
+      isPlayingRef.current = false;
       setConversationState('idle');
     }
   };
@@ -484,6 +515,8 @@ export default function SpeakingScreen() {
   // 打断AI说话
   const interruptSpeaking = async () => {
     if (soundRef.current && conversationState === 'speaking') {
+      isPlayingRef.current = false;
+      hasCalledAutoStartRef.current = true; // 阻止自动开始
       await soundRef.current.stopAsync();
       setConversationState('idle');
     }
