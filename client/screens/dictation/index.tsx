@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Text,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/Screen';
@@ -26,9 +27,19 @@ interface DictationWord extends Word {
   fullAudioUri?: string;
 }
 
-type DictationMode = 'select' | 'listening' | 'answering' | 'result';
+type DictationMode = 'select' | 'listening' | 'result';
 
-const MAX_WORDS = 30; // 最多30个单词
+// 答题模式
+type AnswerMode = 'typing' | 'paper';
+
+// 时间间隔选项（毫秒）
+const INTERVAL_OPTIONS = [
+  { label: '1秒', value: 1000 },
+  { label: '2秒', value: 2000 },
+  { label: '3秒', value: 3000 },
+];
+
+const MAX_WORDS = 30;
 
 export default function DictationScreen() {
   const { theme } = useTheme();
@@ -45,18 +56,39 @@ export default function DictationScreen() {
   const [correctCount, setCorrectCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedRange, setSelectedRange] = useState<'today' | 'all' | 'unmastered'>('today');
-  const [wordCount, setWordCount] = useState(10); // 选择的单词数量
+  const [wordCount, setWordCount] = useState(10);
+  
+  // 新增状态
+  const [answerMode, setAnswerMode] = useState<AnswerMode>('typing');
+  const [interval, setInterval] = useState(2000); // 默认2秒
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  
+  // 用于自动播放的 ref
+  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
   const { generateDictationAudios } = useAI();
 
+  // 清理定时器
+  const clearAutoPlayTimer = useCallback(() => {
+    if (autoPlayTimerRef.current) {
+      clearTimeout(autoPlayTimerRef.current);
+      autoPlayTimerRef.current = null;
+    }
+  }, []);
+
   // 清理音频资源
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
+      clearAutoPlayTimer();
       if (sound) {
         sound.unloadAsync();
       }
     };
-  }, [sound]);
+  }, [sound, clearAutoPlayTimer]);
 
   // 加载单词
   useFocusEffect(
@@ -102,7 +134,6 @@ export default function DictationScreen() {
 
     switch (selectedRange) {
       case 'today':
-        // 今天需要复习的单词
         const today = new Date().toISOString().split('T')[0];
         filteredWords = words.filter(w => {
           if (!w.next_review) return false;
@@ -110,7 +141,6 @@ export default function DictationScreen() {
         });
         break;
       case 'unmastered':
-        // 未掌握的单词
         filteredWords = words.filter(w => w.stability < 30);
         break;
       case 'all':
@@ -118,13 +148,11 @@ export default function DictationScreen() {
         break;
     }
 
-    // 随机打乱并限制数量
     const shuffled = filteredWords.sort(() => Math.random() - 0.5);
     return shuffled.slice(0, Math.min(wordCount, MAX_WORDS));
   }, [words, selectedRange, wordCount]);
 
   const startDictation = async () => {
-    // 检查网络
     const hasNetwork = await checkNetwork();
     if (!hasNetwork) {
       showNetworkError();
@@ -140,7 +168,6 @@ export default function DictationScreen() {
 
     setGeneratingAudio(true);
     try {
-      // 生成听写音频
       const response = await generateDictationAudios(
         selectedWords.map(w => ({
           word: w.word,
@@ -152,7 +179,6 @@ export default function DictationScreen() {
         throw new Error(response.error || '生成音频失败');
       }
 
-      // 初始化听写单词列表
       const dictWords: DictationWord[] = selectedWords.map((w, index) => ({
         ...w,
         userInput: '',
@@ -165,6 +191,8 @@ export default function DictationScreen() {
       setCurrentIndex(0);
       setCorrectCount(0);
       setTotalCount(dictWords.length);
+      setIsPaused(false);
+      setIsAutoPlaying(false);
       setMode('listening');
     } catch (error: any) {
       Alert.alert('错误', error.message || '生成听写音频失败');
@@ -173,46 +201,129 @@ export default function DictationScreen() {
     }
   };
 
-  const playWordAudio = async (audioUri: string) => {
-    if (!audioUri) return;
+  const playWordAudio = useCallback(async (audioUri: string): Promise<void> => {
+    if (!audioUri) return Promise.resolve();
 
-    try {
-      setPlaying(true);
-      
-      // 卸载之前的音频
-      if (sound) {
-        await sound.unloadAsync();
-      }
-
-      // 加载并播放新音频
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: audioUri },
-        { shouldPlay: true }
-      );
-
-      setSound(newSound);
-
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          setPlaying(false);
+    return new Promise(async (resolve, reject) => {
+      try {
+        setPlaying(true);
+        
+        if (sound) {
+          await sound.unloadAsync();
         }
-      });
-    } catch (error) {
-      console.error('Failed to play audio:', error);
-      setPlaying(false);
-    }
-  };
 
-  const handleNext = () => {
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: audioUri },
+          { shouldPlay: true }
+        );
+
+        setSound(newSound);
+
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setPlaying(false);
+            resolve();
+          }
+        });
+      } catch (error) {
+        console.error('Failed to play audio:', error);
+        setPlaying(false);
+        reject(error);
+      }
+    });
+  }, [sound]);
+
+  // 自动播放下一个单词
+  const autoPlayNext = useCallback(async () => {
+    if (!isMountedRef.current || isPaused || !isAutoPlaying) return;
+    
+    const currentWord = dictationWords[currentIndex];
+    if (!currentWord?.wordAudioUri) return;
+
+    // 播放当前单词
+    try {
+      await playWordAudio(currentWord.wordAudioUri);
+    } catch (e) {
+      console.error('Play error:', e);
+    }
+
+    // 等待间隔时间后自动进入下一个
+    if (!isPaused && isAutoPlaying && isMountedRef.current) {
+      autoPlayTimerRef.current = setTimeout(() => {
+        if (!isMountedRef.current || isPaused || !isAutoPlaying) return;
+        
+        if (currentIndex < dictationWords.length - 1) {
+          setCurrentIndex(prev => prev + 1);
+        } else {
+          // 播放完毕，显示结果
+          setIsAutoPlaying(false);
+          setMode('result');
+        }
+      }, interval);
+    }
+  }, [currentIndex, dictationWords, isPaused, isAutoPlaying, interval, playWordAudio]);
+
+  // 开始自动播放
+  const startAutoPlay = useCallback(() => {
+    setIsAutoPlaying(true);
+    setIsPaused(false);
+    setCurrentIndex(0);
+  }, []);
+
+  // 暂停
+  const handlePause = useCallback(() => {
+    setIsPaused(true);
+    clearAutoPlayTimer();
+  }, [clearAutoPlayTimer]);
+
+  // 继续
+  const handleResume = useCallback(() => {
+    setIsPaused(false);
+  }, []);
+
+  // 手动上一个
+  const handlePrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      clearAutoPlayTimer();
+      setCurrentIndex(prev => prev - 1);
+    }
+  }, [currentIndex, clearAutoPlayTimer]);
+
+  // 手动下一个
+  const handleNext = useCallback(() => {
+    clearAutoPlayTimer();
     if (currentIndex < dictationWords.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      setCurrentIndex(prev => prev + 1);
     } else {
-      // 显示结果
+      setIsAutoPlaying(false);
       setMode('result');
     }
-  };
+  }, [currentIndex, dictationWords.length, clearAutoPlayTimer]);
 
-  const handleCheckAnswer = () => {
+  // 播放当前单词音频
+  const handlePlayCurrent = useCallback(async () => {
+    const currentWord = dictationWords[currentIndex];
+    if (currentWord?.wordAudioUri) {
+      await playWordAudio(currentWord.wordAudioUri);
+    }
+  }, [currentIndex, dictationWords, playWordAudio]);
+
+  // 纸上书写模式：用户自评
+  const handleSelfGrade = useCallback((isCorrect: boolean) => {
+    setDictationWords(prev => prev.map((w, i) => 
+      i === currentIndex ? { ...w, isCorrect } : w
+    ));
+    
+    if (isCorrect) {
+      setCorrectCount(prev => prev + 1);
+    }
+    
+    // 自动进入下一个
+    handleNext();
+  }, [currentIndex, handleNext]);
+
+  // 打字模式：检查答案
+  const handleCheckAnswer = useCallback(() => {
     const currentWord = dictationWords[currentIndex];
     const isCorrect = currentWord.userInput.toLowerCase().trim() === currentWord.word.toLowerCase().trim();
 
@@ -223,19 +334,29 @@ export default function DictationScreen() {
     if (isCorrect) {
       setCorrectCount(prev => prev + 1);
     }
-  };
+  }, [currentIndex, dictationWords]);
 
-  const handleRestart = () => {
+  const handleRestart = useCallback(() => {
+    clearAutoPlayTimer();
     setDictationWords([]);
     setCurrentIndex(0);
     setCorrectCount(0);
     setTotalCount(0);
+    setIsAutoPlaying(false);
+    setIsPaused(false);
     setMode('select');
-  };
+  }, [clearAutoPlayTimer]);
 
-  // 可选单词数量选项
+  // 当自动播放状态变化时触发播放
+  useEffect(() => {
+    if (mode === 'listening' && isAutoPlaying && !isPaused) {
+      autoPlayNext();
+    }
+  }, [mode, isAutoPlaying, isPaused, currentIndex, autoPlayNext]);
+
   const countOptions = [5, 10, 15, 20, 25, 30];
   const availableCount = getAvailableWordCount();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <Screen>
@@ -243,9 +364,8 @@ export default function DictationScreen() {
         {mode === 'select' && (
           <View style={styles.selectContainer}>
             <ThemedText variant="h1" style={styles.title}>听写练习</ThemedText>
-            <ThemedText variant="body" style={styles.subtitle}>选择听写范围和数量</ThemedText>
+            <ThemedText variant="body" style={styles.subtitle}>选择听写范围和模式</ThemedText>
 
-            {/* 网络状态提示 */}
             {!isConnected && (
               <View style={[styles.networkWarning, { backgroundColor: theme.error + '20', borderColor: theme.error }]}>
                 <FontAwesome6 name="wifi-slash" size={16} color={theme.error} />
@@ -256,51 +376,101 @@ export default function DictationScreen() {
             )}
 
             {/* 听写范围选择 */}
-            <View style={styles.rangeOptions}>
-              <TouchableOpacity
-                style={[styles.rangeOption, { backgroundColor: theme.backgroundDefault }, selectedRange === 'today' && { borderColor: theme.primary, backgroundColor: theme.primary + '15' }]}
-                onPress={() => setSelectedRange('today')}
-              >
-                <ThemedText style={[styles.rangeText, selectedRange === 'today' && { color: theme.primary }]}>
-                  📅 今日复习
-                </ThemedText>
-                <ThemedText style={styles.rangeCount}>
-                  {words.filter(w => {
-                    if (!w.next_review) return false;
-                    return w.next_review.split('T')[0] <= new Date().toISOString().split('T')[0];
-                  }).length} 个单词待复习
-                </ThemedText>
-              </TouchableOpacity>
+            <View style={styles.sectionContainer}>
+              <ThemedText style={styles.sectionTitle}>听写范围</ThemedText>
+              <View style={styles.rangeOptions}>
+                <TouchableOpacity
+                  style={[styles.rangeOption, selectedRange === 'today' && styles.rangeOptionSelected]}
+                  onPress={() => setSelectedRange('today')}
+                >
+                  <ThemedText style={[styles.rangeText, selectedRange === 'today' && styles.rangeTextSelected]}>
+                    📅 今日复习
+                  </ThemedText>
+                  <ThemedText style={styles.rangeCount}>
+                    {words.filter(w => {
+                      if (!w.next_review) return false;
+                      return w.next_review.split('T')[0] <= new Date().toISOString().split('T')[0];
+                    }).length} 个单词
+                  </ThemedText>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.rangeOption, { backgroundColor: theme.backgroundDefault }, selectedRange === 'unmastered' && { borderColor: theme.primary, backgroundColor: theme.primary + '15' }]}
-                onPress={() => setSelectedRange('unmastered')}
-              >
-                <ThemedText style={[styles.rangeText, selectedRange === 'unmastered' && { color: theme.primary }]}>
-                  📚 未掌握
-                </ThemedText>
-                <ThemedText style={styles.rangeCount}>
-                  {words.filter(w => w.stability < 30).length} 个单词未掌握
-                </ThemedText>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.rangeOption, selectedRange === 'unmastered' && styles.rangeOptionSelected]}
+                  onPress={() => setSelectedRange('unmastered')}
+                >
+                  <ThemedText style={[styles.rangeText, selectedRange === 'unmastered' && styles.rangeTextSelected]}>
+                    📚 未掌握
+                  </ThemedText>
+                  <ThemedText style={styles.rangeCount}>
+                    {words.filter(w => w.stability < 30).length} 个单词
+                  </ThemedText>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.rangeOption, { backgroundColor: theme.backgroundDefault }, selectedRange === 'all' && { borderColor: theme.primary, backgroundColor: theme.primary + '15' }]}
-                onPress={() => setSelectedRange('all')}
-              >
-                <ThemedText style={[styles.rangeText, selectedRange === 'all' && { color: theme.primary }]}>
-                  📖 全部单词
-                </ThemedText>
-                <ThemedText style={styles.rangeCount}>
-                  {words.length} 个单词
-                </ThemedText>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.rangeOption, selectedRange === 'all' && styles.rangeOptionSelected]}
+                  onPress={() => setSelectedRange('all')}
+                >
+                  <ThemedText style={[styles.rangeText, selectedRange === 'all' && styles.rangeTextSelected]}>
+                    📖 全部单词
+                  </ThemedText>
+                  <ThemedText style={styles.rangeCount}>
+                    {words.length} 个单词
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 答题模式选择 */}
+            <View style={styles.sectionContainer}>
+              <ThemedText style={styles.sectionTitle}>答题模式</ThemedText>
+              <View style={styles.modeOptions}>
+                <TouchableOpacity
+                  style={[styles.modeOption, answerMode === 'typing' && styles.modeOptionSelected]}
+                  onPress={() => setAnswerMode('typing')}
+                >
+                  <FontAwesome6 name="keyboard" size={24} color={answerMode === 'typing' ? theme.primary : theme.textSecondary} />
+                  <ThemedText style={[styles.modeText, answerMode === 'typing' && styles.modeTextSelected]}>
+                    手机打字
+                  </ThemedText>
+                  <ThemedText style={styles.modeDesc}>系统自动评分</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modeOption, answerMode === 'paper' && styles.modeOptionSelected]}
+                  onPress={() => setAnswerMode('paper')}
+                >
+                  <FontAwesome6 name="pencil" size={24} color={answerMode === 'paper' ? theme.primary : theme.textSecondary} />
+                  <ThemedText style={[styles.modeText, answerMode === 'paper' && styles.modeTextSelected]}>
+                    纸上书写
+                  </ThemedText>
+                  <ThemedText style={styles.modeDesc}>自己评分</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 时间间隔选择 */}
+            <View style={styles.sectionContainer}>
+              <ThemedText style={styles.sectionTitle}>播放间隔</ThemedText>
+              <View style={styles.intervalOptions}>
+                {INTERVAL_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.intervalOption, interval === opt.value && styles.intervalOptionSelected]}
+                    onPress={() => setInterval(opt.value)}
+                  >
+                    <ThemedText style={[styles.intervalText, interval === opt.value && styles.intervalTextSelected]}>
+                      {opt.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <ThemedText style={styles.intervalHint}>每个单词播放完毕后的等待时间</ThemedText>
             </View>
 
             {/* 数量选择 */}
-            <View style={styles.countSelector}>
-              <ThemedText style={styles.countLabel}>
-                选择听写数量（最多 {Math.min(availableCount, MAX_WORDS)} 个）
+            <View style={styles.sectionContainer}>
+              <ThemedText style={styles.sectionTitle}>
+                听写数量（最多 {Math.min(availableCount, MAX_WORDS)} 个）
               </ThemedText>
               <View style={styles.countButtons}>
                 {countOptions.map(count => (
@@ -308,17 +478,13 @@ export default function DictationScreen() {
                     key={count}
                     style={[
                       styles.countButton,
-                      { backgroundColor: theme.backgroundDefault, borderColor: theme.border },
-                      wordCount === count && { backgroundColor: theme.primary, borderColor: theme.primary },
+                      wordCount === count && styles.countButtonSelected,
                       count > availableCount && { opacity: 0.5 }
                     ]}
                     onPress={() => count <= availableCount && setWordCount(count)}
                     disabled={count > availableCount}
                   >
-                    <ThemedText style={[
-                      styles.countButtonText,
-                      wordCount === count && { color: '#FFFFFF' }
-                    ]}>
+                    <ThemedText style={[styles.countButtonText, wordCount === count && styles.countButtonTextSelected]}>
                       {count}
                     </ThemedText>
                   </TouchableOpacity>
@@ -327,7 +493,7 @@ export default function DictationScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.startButton, { backgroundColor: theme.primary }, (generatingAudio || availableCount === 0) && { backgroundColor: theme.textMuted }]}
+              style={[styles.startButton, (generatingAudio || availableCount === 0) && styles.startButtonDisabled]}
               onPress={startDictation}
               disabled={generatingAudio || availableCount === 0}
             >
@@ -352,89 +518,151 @@ export default function DictationScreen() {
 
           return (
             <View style={styles.dictationContainer}>
+              {/* 进度条 */}
               <View style={styles.progressContainer}>
                 <ThemedText style={styles.progressText}>
                   {currentIndex + 1} / {dictationWords.length}
                 </ThemedText>
-                <View style={[styles.progressBar, { backgroundColor: theme.backgroundTertiary }]}>
+                <View style={styles.progressBar}>
                   <View 
                     style={[
                       styles.progressFill, 
-                      { backgroundColor: theme.primary, width: `${((currentIndex + 1) / dictationWords.length) * 100}%` }
+                      { width: `${((currentIndex + 1) / dictationWords.length) * 100}%` }
                     ]} 
                   />
                 </View>
               </View>
 
-              <View style={styles.audioSection}>
-                <ThemedText style={styles.instructionText}>点击播放，听写单词</ThemedText>
-                
-                <TouchableOpacity
-                  style={[styles.playButton, { backgroundColor: theme.primary }, playing && { backgroundColor: theme.primary + 'CC' }]}
-                  onPress={() => playWordAudio(currentWord.wordAudioUri!)}
-                  disabled={playing}
-                >
-                  <ThemedText style={styles.playIcon}>🔊</ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.playFullButton}
-                  onPress={() => playWordAudio(currentWord.fullAudioUri!)}
-                  disabled={playing}
-                >
-                  <ThemedText style={{ color: theme.primary, fontSize: 14 }}>播放单词+释义</ThemedText>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputSection}>
-                <TextInput
-                  style={[styles.input, { backgroundColor: theme.backgroundTertiary, color: theme.textPrimary, borderColor: theme.border }]}
-                  placeholder="输入你听到的单词"
-                  placeholderTextColor={theme.textMuted}
-                  value={currentWord.userInput}
-                  onChangeText={(text) => {
-                    setDictationWords(prev => prev.map((w, i) => 
-                      i === currentIndex ? { ...w, userInput: text } : w
-                    ));
-                  }}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-
-                <TouchableOpacity
-                  style={[styles.checkButton, { backgroundColor: theme.success }, !currentWord.userInput.trim() && { opacity: 0.5 }]}
-                  onPress={handleCheckAnswer}
-                  disabled={!currentWord.userInput.trim()}
-                >
-                  <ThemedText style={styles.checkButtonText}>确认</ThemedText>
-                </TouchableOpacity>
-              </View>
-
-              {currentWord.isCorrect !== null && (
-                <View style={styles.feedbackSection}>
-                  <ThemedText style={[
-                    styles.feedbackText, 
-                    currentWord.isCorrect ? { color: theme.success } : { color: theme.error }
-                  ]}>
-                    {currentWord.isCorrect ? '✓ 正确!' : '✗ 错误'}
-                  </ThemedText>
-                  
-                  {!currentWord.isCorrect && (
-                    <ThemedText style={styles.correctAnswer}>
-                      正确答案: {currentWord.word}
-                    </ThemedText>
-                  )}
+              {/* 控制按钮 */}
+              <View style={styles.controlSection}>
+                {/* 上一个/下一个 */}
+                <View style={styles.navButtons}>
+                  <TouchableOpacity
+                    style={[styles.navButton, currentIndex === 0 && styles.navButtonDisabled]}
+                    onPress={handlePrevious}
+                    disabled={currentIndex === 0}
+                  >
+                    <FontAwesome6 name="backward" size={20} color={currentIndex === 0 ? theme.textMuted : theme.primary} />
+                  </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.nextButton, { backgroundColor: theme.primary }]}
+                    style={styles.navButton}
                     onPress={handleNext}
                   >
-                    <ThemedText style={styles.nextButtonText}>
-                      {currentIndex < dictationWords.length - 1 ? '下一个' : '查看结果'}
-                    </ThemedText>
+                    <FontAwesome6 name="forward" size={20} color={theme.primary} />
                   </TouchableOpacity>
                 </View>
-              )}
+
+                {/* 播放/暂停 */}
+                <View style={styles.playControls}>
+                  {!isAutoPlaying ? (
+                    <TouchableOpacity style={styles.playControlButton} onPress={startAutoPlay}>
+                      <FontAwesome6 name="play" size={32} color={theme.buttonPrimaryText} />
+                      <ThemedText style={styles.playControlText}>自动播放</ThemedText>
+                    </TouchableOpacity>
+                  ) : isPaused ? (
+                    <TouchableOpacity style={styles.playControlButton} onPress={handleResume}>
+                      <FontAwesome6 name="play" size={32} color={theme.buttonPrimaryText} />
+                      <ThemedText style={styles.playControlText}>继续</ThemedText>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={styles.playControlButton} onPress={handlePause}>
+                      <FontAwesome6 name="pause" size={32} color={theme.buttonPrimaryText} />
+                      <ThemedText style={styles.playControlText}>暂停</ThemedText>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* 重播当前 */}
+                <TouchableOpacity style={styles.replayButton} onPress={handlePlayCurrent} disabled={playing}>
+                  <FontAwesome6 name="rotate-left" size={20} color={playing ? theme.textMuted : theme.textSecondary} />
+                  <ThemedText style={styles.replayText}>重播</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {/* 答题区域 */}
+              <View style={styles.answerSection}>
+                {answerMode === 'typing' ? (
+                  // 打字模式
+                  <>
+                    <ThemedText style={styles.answerHint}>输入你听到的单词</ThemedText>
+                    <TextInput
+                      style={[styles.input, currentWord.isCorrect !== null && (
+                        currentWord.isCorrect ? styles.inputCorrect : styles.inputWrong
+                      )]}
+                      placeholder="输入单词..."
+                      placeholderTextColor={theme.textMuted}
+                      value={currentWord.userInput}
+                      onChangeText={(text) => {
+                        setDictationWords(prev => prev.map((w, i) => 
+                          i === currentIndex ? { ...w, userInput: text, isCorrect: null } : w
+                        ));
+                      }}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={currentWord.isCorrect === null}
+                    />
+
+                    {currentWord.isCorrect === null ? (
+                      <TouchableOpacity
+                        style={[styles.checkButton, !currentWord.userInput.trim() && styles.checkButtonDisabled]}
+                        onPress={handleCheckAnswer}
+                        disabled={!currentWord.userInput.trim()}
+                      >
+                        <ThemedText style={styles.checkButtonText}>确认答案</ThemedText>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.feedbackContainer}>
+                        <ThemedText style={currentWord.isCorrect ? styles.feedbackCorrect : styles.feedbackWrong}>
+                          {currentWord.isCorrect ? '✓ 正确!' : `✗ 错误，正确答案: ${currentWord.word}`}
+                        </ThemedText>
+                        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                          <ThemedText style={styles.nextButtonText}>
+                            {currentIndex < dictationWords.length - 1 ? '下一个' : '查看结果'}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  // 纸上书写模式
+                  <>
+                    <ThemedText style={styles.answerHint}>在纸上写下答案后自评</ThemedText>
+                    
+                    <View style={styles.paperModeContainer}>
+                      <TouchableOpacity
+                        style={styles.showAnswerButton}
+                        onPress={() => {
+                          Alert.alert('正确答案', currentWord.word);
+                        }}
+                      >
+                        <FontAwesome6 name="eye" size={20} color={theme.primary} />
+                        <ThemedText style={styles.showAnswerText}>查看答案</ThemedText>
+                      </TouchableOpacity>
+
+                      <ThemedText style={styles.selfGradeHint}>你写对了吗？</ThemedText>
+                      
+                      <View style={styles.selfGradeButtons}>
+                        <TouchableOpacity
+                          style={[styles.gradeButton, styles.gradeCorrect]}
+                          onPress={() => handleSelfGrade(true)}
+                        >
+                          <FontAwesome6 name="check" size={24} color="#FFFFFF" />
+                          <ThemedText style={styles.gradeButtonText}>对了</ThemedText>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity
+                          style={[styles.gradeButton, styles.gradeWrong]}
+                          onPress={() => handleSelfGrade(false)}
+                        >
+                          <FontAwesome6 name="xmark" size={24} color="#FFFFFF" />
+                          <ThemedText style={styles.gradeButtonText}>错了</ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </>
+                )}
+              </View>
             </View>
           );
         })()}
@@ -443,11 +671,11 @@ export default function DictationScreen() {
           <View style={styles.resultContainer}>
             <ThemedText variant="h1" style={styles.resultTitle}>听写完成!</ThemedText>
             
-            <View style={[styles.scoreCard, { backgroundColor: theme.primary + '15' }]}>
+            <View style={styles.scoreCard}>
               <ThemedText variant="h2" style={styles.scoreText}>
                 正确: {correctCount} / {totalCount}
               </ThemedText>
-              <ThemedText style={{ color: theme.primary, fontSize: 18 }}>
+              <ThemedText style={styles.scorePercent}>
                 正确率: {Math.round((correctCount / totalCount) * 100)}%
               </ThemedText>
             </View>
@@ -460,24 +688,30 @@ export default function DictationScreen() {
                     key={index}
                     style={[
                       styles.resultItem,
-                      { backgroundColor: theme.backgroundDefault },
-                      word.isCorrect ? { borderLeftColor: theme.success } : { borderLeftColor: theme.error }
+                      word.isCorrect ? styles.resultItemCorrect : styles.resultItemWrong
                     ]}
                   >
-                    <ThemedText style={styles.resultWord}>{word.word}</ThemedText>
-                    {word.isCorrect ? (
-                      <ThemedText style={{ color: theme.success, fontSize: 18 }}>✓</ThemedText>
-                    ) : (
-                      <ThemedText style={{ color: theme.textMuted, fontSize: 14 }}>
-                        你的答案: {word.userInput || '(未作答)'}
-                      </ThemedText>
-                    )}
+                    <View style={styles.resultItemContent}>
+                      <ThemedText style={styles.resultWord}>{word.word}</ThemedText>
+                      {word.isCorrect ? (
+                        <FontAwesome6 name="check" size={18} color={theme.success} />
+                      ) : (
+                        <View>
+                          <FontAwesome6 name="xmark" size={18} color={theme.error} />
+                          {word.userInput && (
+                            <ThemedText style={styles.wrongAnswer}>
+                              你的答案: {word.userInput}
+                            </ThemedText>
+                          )}
+                        </View>
+                      )}
+                    </View>
                   </View>
                 ))}
               </ScrollView>
             </View>
 
-            <TouchableOpacity style={[styles.restartButton, { backgroundColor: theme.primary }]} onPress={handleRestart}>
+            <TouchableOpacity style={styles.restartButton} onPress={handleRestart}>
               <ThemedText style={styles.restartButtonText}>再来一次</ThemedText>
             </TouchableOpacity>
           </View>
@@ -487,7 +721,7 @@ export default function DictationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -496,14 +730,15 @@ const styles = StyleSheet.create({
   },
   selectContainer: {
     flex: 1,
-    alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: 10,
   },
   title: {
-    marginBottom: 10,
+    marginBottom: 5,
+    textAlign: 'center',
   },
   subtitle: {
-    marginBottom: 30,
+    marginBottom: 20,
+    textAlign: 'center',
   },
   networkWarning: {
     flexDirection: 'row',
@@ -513,34 +748,99 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     marginBottom: 20,
-    width: '100%',
+  },
+  sectionContainer: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   rangeOptions: {
-    width: '100%',
-    marginBottom: 20,
+    gap: 10,
   },
   rangeOption: {
     borderRadius: 12,
-    padding: 20,
-    marginBottom: 12,
+    padding: 16,
     borderWidth: 2,
     borderColor: 'transparent',
+    backgroundColor: theme.backgroundDefault,
+  },
+  rangeOptionSelected: {
+    borderColor: theme.primary,
+    backgroundColor: theme.primary + '15',
   },
   rangeText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 5,
+    marginBottom: 4,
+  },
+  rangeTextSelected: {
+    color: theme.primary,
   },
   rangeCount: {
-    fontSize: 14,
+    fontSize: 13,
+    color: theme.textSecondary,
   },
-  countSelector: {
-    width: '100%',
-    marginBottom: 30,
+  modeOptions: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  countLabel: {
+  modeOption: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: theme.backgroundDefault,
+  },
+  modeOptionSelected: {
+    borderColor: theme.primary,
+    backgroundColor: theme.primary + '15',
+  },
+  modeText: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  modeTextSelected: {
+    color: theme.primary,
+  },
+  modeDesc: {
+    fontSize: 12,
+    color: theme.textMuted,
+    marginTop: 4,
+  },
+  intervalOptions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  intervalOption: {
+    flex: 1,
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: theme.backgroundDefault,
+  },
+  intervalOptionSelected: {
+    borderColor: theme.primary,
+    backgroundColor: theme.primary + '15',
+  },
+  intervalText: {
     fontSize: 16,
-    marginBottom: 10,
+    fontWeight: '600',
+  },
+  intervalTextSelected: {
+    color: theme.primary,
+  },
+  intervalHint: {
+    fontSize: 12,
+    color: theme.textMuted,
+    marginTop: 8,
   },
   countButtons: {
     flexDirection: 'row',
@@ -552,9 +852,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.backgroundDefault,
+  },
+  countButtonSelected: {
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   countButtonText: {
     fontSize: 16,
+  },
+  countButtonTextSelected: {
+    color: '#FFFFFF',
   },
   startButton: {
     borderRadius: 25,
@@ -562,101 +871,210 @@ const styles = StyleSheet.create({
     paddingHorizontal: 50,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
+    backgroundColor: theme.primary,
+    marginTop: 10,
+  },
+  startButtonDisabled: {
+    backgroundColor: theme.textMuted,
   },
   startButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
   },
+  
+  // 听写界面
   dictationContainer: {
-    flex: 1,
-    paddingVertical: 20,
+    paddingTop: 10,
   },
   progressContainer: {
-    marginBottom: 30,
+    marginBottom: 20,
   },
   progressText: {
     fontSize: 16,
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: 'center',
+    fontWeight: '600',
   },
   progressBar: {
     height: 8,
     borderRadius: 4,
+    backgroundColor: theme.backgroundTertiary,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
+    backgroundColor: theme.primary,
   },
-  audioSection: {
+  
+  // 控制区域
+  controlSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
-  instructionText: {
-    fontSize: 16,
+  navButtons: {
+    flexDirection: 'row',
+    gap: 20,
     marginBottom: 20,
   },
-  playButton: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  navButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.primary + '20',
+  },
+  navButtonDisabled: {
+    backgroundColor: theme.backgroundTertiary,
+  },
+  playControls: {
+    marginBottom: 15,
+  },
+  playControlButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    backgroundColor: theme.primary,
   },
-  playIcon: {
-    fontSize: 40,
+  playControlText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    marginTop: 4,
   },
-  playFullButton: {
+  replayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     padding: 10,
   },
-  inputSection: {
-    marginBottom: 20,
+  replayText: {
+    fontSize: 14,
+    color: theme.textSecondary,
+  },
+  
+  // 答题区域
+  answerSection: {
+    backgroundColor: theme.backgroundDefault,
+    borderRadius: 16,
+    padding: 20,
+  },
+  answerHint: {
+    textAlign: 'center',
+    marginBottom: 15,
+    color: theme.textSecondary,
   },
   input: {
     borderRadius: 12,
     padding: 15,
     fontSize: 18,
     textAlign: 'center',
+    borderWidth: 2,
+    borderColor: theme.border,
+    backgroundColor: theme.backgroundTertiary,
+    color: theme.textPrimary,
     marginBottom: 15,
-    borderWidth: 1,
+  },
+  inputCorrect: {
+    borderColor: theme.success,
+    backgroundColor: theme.success + '10',
+  },
+  inputWrong: {
+    borderColor: theme.error,
+    backgroundColor: theme.error + '10',
   },
   checkButton: {
     borderRadius: 25,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
+    backgroundColor: theme.success,
+  },
+  checkButtonDisabled: {
+    backgroundColor: theme.textMuted,
   },
   checkButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  feedbackSection: {
+  feedbackContainer: {
     alignItems: 'center',
   },
-  feedbackText: {
-    fontSize: 24,
+  feedbackCorrect: {
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: theme.success,
+    marginBottom: 15,
   },
-  correctAnswer: {
+  feedbackWrong: {
     fontSize: 16,
-    marginBottom: 20,
+    color: theme.error,
+    marginBottom: 15,
   },
   nextButton: {
     borderRadius: 25,
     paddingVertical: 12,
     paddingHorizontal: 40,
+    backgroundColor: theme.primary,
   },
   nextButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
+  
+  // 纸上书写模式
+  paperModeContainer: {
+    alignItems: 'center',
+  },
+  showAnswerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: theme.primary + '15',
+    marginBottom: 20,
+  },
+  showAnswerText: {
+    color: theme.primary,
+    fontWeight: '600',
+  },
+  selfGradeHint: {
+    fontSize: 16,
+    marginBottom: 15,
+    color: theme.textSecondary,
+  },
+  selfGradeButtons: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  gradeButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gradeCorrect: {
+    backgroundColor: theme.success,
+  },
+  gradeWrong: {
+    backgroundColor: theme.error,
+  },
+  gradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  
+  // 结果界面
   resultContainer: {
-    flex: 1,
-    paddingVertical: 20,
+    paddingTop: 10,
   },
   resultTitle: {
     textAlign: 'center',
@@ -667,12 +1085,16 @@ const styles = StyleSheet.create({
     padding: 30,
     alignItems: 'center',
     marginBottom: 30,
+    backgroundColor: theme.primary + '15',
   },
   scoreText: {
     marginBottom: 10,
   },
+  scorePercent: {
+    color: theme.primary,
+    fontSize: 18,
+  },
   resultList: {
-    flex: 1,
     marginBottom: 20,
   },
   resultListTitle: {
@@ -684,15 +1106,33 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderLeftWidth: 4,
   },
+  resultItemCorrect: {
+    backgroundColor: theme.success + '10',
+    borderLeftColor: theme.success,
+  },
+  resultItemWrong: {
+    backgroundColor: theme.error + '10',
+    borderLeftColor: theme.error,
+  },
+  resultItemContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   resultWord: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 5,
+  },
+  wrongAnswer: {
+    fontSize: 13,
+    color: theme.textMuted,
+    marginTop: 4,
   },
   restartButton: {
     borderRadius: 25,
     paddingVertical: 15,
     alignItems: 'center',
+    backgroundColor: theme.primary,
   },
   restartButtonText: {
     color: '#FFFFFF',
