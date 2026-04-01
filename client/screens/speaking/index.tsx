@@ -68,9 +68,8 @@ export default function SpeakingScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   
-  // 防止重复触发
+  // 防止重复播放
   const isPlayingRef = useRef(false);
-  const hasCalledAutoStartRef = useRef(false);
 
   const { isConfigured, openSettings, refresh } = useAI();
 
@@ -101,7 +100,6 @@ export default function SpeakingScreen() {
     try {
       // 重置状态标志
       isPlayingRef.current = false;
-      hasCalledAutoStartRef.current = false;
       
       // 停止并卸载录音
       if (recordingRef.current) {
@@ -241,7 +239,6 @@ export default function SpeakingScreen() {
     try {
       // 重置状态
       isPlayingRef.current = false;
-      hasCalledAutoStartRef.current = false;
       
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/speaking/start`, {
         method: 'POST',
@@ -263,8 +260,8 @@ export default function SpeakingScreen() {
         setMode('chat');
         setConversationState('idle');
         
-        // 播放欢迎语后自动开始监听
-        await playTTS(data.data.greeting, true);
+        // 只播放欢迎语，播放完后等待用户点击按钮开始说话（一人一句模式）
+        await playTTS(data.data.greeting);
       }
     } catch (error: any) {
       Alert.alert('错误', error.message || '启动对话失败');
@@ -272,14 +269,13 @@ export default function SpeakingScreen() {
   };
 
   // 播放TTS
-  const playTTS = async (text: string, autoStartListening: boolean = false) => {
+  const playTTS = async (text: string) => {
     try {
       // 防止重复播放
       if (isPlayingRef.current) {
         return;
       }
       isPlayingRef.current = true;
-      hasCalledAutoStartRef.current = false;
       
       setConversationState('speaking');
       
@@ -309,20 +305,11 @@ export default function SpeakingScreen() {
         
         soundRef.current = sound;
         
-        // 监听播放完成 - 使用 ref 防止重复触发
+        // 监听播放完成 - 一人一句模式，播放完后回到idle等待用户点击
         sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish && !hasCalledAutoStartRef.current) {
+          if (status.isLoaded && status.didJustFinish) {
             isPlayingRef.current = false;
-            
-            if (autoStartListening) {
-              hasCalledAutoStartRef.current = true;
-              // 延迟一下再开始监听，给用户一点准备时间
-              setTimeout(() => {
-                startListening();
-              }, 500);
-            } else {
-              setConversationState('idle');
-            }
+            setConversationState('idle');
           }
         });
       } else {
@@ -489,8 +476,8 @@ export default function SpeakingScreen() {
           setMessages(prev => [...prev, assistantMessage]);
           setCurrentResponse('');
           
-          // 播放回复并自动继续监听
-          playTTS(mainContent, true);
+          // 只播放回复，播放完后等待用户点击按钮（一人一句模式）
+          playTTS(mainContent);
           return;
         }
 
@@ -520,7 +507,6 @@ export default function SpeakingScreen() {
   const interruptSpeaking = async () => {
     if (soundRef.current && conversationState === 'speaking') {
       isPlayingRef.current = false;
-      hasCalledAutoStartRef.current = true; // 阻止自动开始
       await soundRef.current.stopAsync();
       setConversationState('idle');
     }
