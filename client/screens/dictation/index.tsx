@@ -51,7 +51,6 @@ export default function DictationScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [generatingAudio, setGeneratingAudio] = useState(false);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [playing, setPlaying] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -64,7 +63,9 @@ export default function DictationScreen() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   
-  // 用于自动播放的 ref
+  // 使用 ref 管理音频对象和播放状态
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const isPlayingRef = useRef(false);
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
 
@@ -84,11 +85,12 @@ export default function DictationScreen() {
     return () => {
       isMountedRef.current = false;
       clearAutoPlayTimer();
-      if (sound) {
-        sound.unloadAsync();
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+        soundRef.current = null;
       }
     };
-  }, [sound, clearAutoPlayTimer]);
+  }, [clearAutoPlayTimer]);
 
   // 加载单词
   useFocusEffect(
@@ -207,8 +209,14 @@ export default function DictationScreen() {
 
     return new Promise(async (resolve, reject) => {
       try {
-        if (sound) {
-          await sound.unloadAsync();
+        // 先卸载之前的音频
+        if (soundRef.current) {
+          try {
+            await soundRef.current.unloadAsync();
+          } catch (e) {
+            // 忽略卸载错误
+          }
+          soundRef.current = null;
         }
 
         const { sound: newSound } = await Audio.Sound.createAsync(
@@ -216,7 +224,7 @@ export default function DictationScreen() {
           { shouldPlay: true }
         );
 
-        setSound(newSound);
+        soundRef.current = newSound;
 
         newSound.setOnPlaybackStatusUpdate((status) => {
           if (status.isLoaded && status.didJustFinish) {
@@ -228,13 +236,21 @@ export default function DictationScreen() {
         reject(error);
       }
     });
-  }, [sound]);
+  }, []);
 
   // 播放单词音频（读两遍）
   const playWordAudio = useCallback(async (audioUri: string): Promise<void> => {
     if (!audioUri) return Promise.resolve();
+    
+    // 防止重复点击
+    if (isPlayingRef.current) {
+      console.log('[Dictation] Already playing, skip');
+      return Promise.resolve();
+    }
 
+    isPlayingRef.current = true;
     setPlaying(true);
+    
     try {
       // 第一遍
       await playAudioOnce(audioUri);
@@ -245,9 +261,12 @@ export default function DictationScreen() {
     } catch (e) {
       console.error('Play error:', e);
     } finally {
-      setPlaying(false);
+      isPlayingRef.current = false;
+      if (isMountedRef.current) {
+        setPlaying(false);
+      }
     }
-  }, [playAudioOnce, sound]);
+  }, [playAudioOnce]);
 
   // 自动播放下一个单词
   const autoPlayNext = useCallback(async () => {
@@ -255,6 +274,9 @@ export default function DictationScreen() {
     
     const currentWord = dictationWords[currentIndex];
     if (!currentWord?.wordAudioUri) return;
+    
+    // 等待之前的播放完成
+    if (isPlayingRef.current) return;
 
     // 播放当前单词（读两遍）
     try {
@@ -281,6 +303,7 @@ export default function DictationScreen() {
 
   // 开始自动播放
   const startAutoPlay = useCallback(() => {
+    isPlayingRef.current = false; // 重置播放状态
     setIsAutoPlaying(true);
     setIsPaused(false);
     setCurrentIndex(0);
@@ -318,11 +341,12 @@ export default function DictationScreen() {
 
   // 播放当前单词音频
   const handlePlayCurrent = useCallback(async () => {
+    if (isPlayingRef.current || playing) return; // 防止重复点击
     const currentWord = dictationWords[currentIndex];
     if (currentWord?.wordAudioUri) {
       await playWordAudio(currentWord.wordAudioUri);
     }
-  }, [currentIndex, dictationWords, playWordAudio]);
+  }, [currentIndex, dictationWords, playWordAudio, playing]);
 
   // 纸上书写模式：用户自评
   const handleSelfGrade = useCallback((isCorrect: boolean) => {
