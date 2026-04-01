@@ -68,7 +68,7 @@ export default function SpeakingScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  const { isConfigured, openSettings } = useAI();
+  const { isConfigured, openSettings, refresh } = useAI();
 
   // 脉冲动画
   useEffect(() => {
@@ -135,11 +135,12 @@ export default function SpeakingScreen() {
     };
   }, []);
 
-  // 加载场景列表
+  // 加载场景列表和刷新AI配置
   useFocusEffect(
     useCallback(() => {
       loadScenes();
-    }, [])
+      refresh(); // 刷新AI配置状态
+    }, [refresh])
   );
 
   const loadScenes = async () => {

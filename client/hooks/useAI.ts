@@ -146,6 +146,7 @@ interface UseAI {
     error?: string;
   }>;
   checkConfiguration: () => Promise<boolean>;
+  refresh: () => Promise<boolean>;
   openSettings: () => void;
 }
 
@@ -557,6 +558,7 @@ export function useAI(): UseAI {
     generateReviewResult,
     generateDictationAudios,
     checkConfiguration,
+    refresh: loadSettings,
     openSettings,
   };
 }
