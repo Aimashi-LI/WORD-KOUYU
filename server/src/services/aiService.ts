@@ -873,8 +873,8 @@ ${JSON.stringify(wordsData, null, 2)}
     const body = {
       model: this.settings.model,
       messages: messages,
-      temperature: 0.7,
-      max_tokens: 500,
+      temperature: 0.5, // 降低温度，使回答更一致
+      max_tokens: 150, // 限制回答长度，防止生成多个版本
       stream: true,
     };
 
