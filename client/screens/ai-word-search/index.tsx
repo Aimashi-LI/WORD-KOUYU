@@ -346,9 +346,18 @@ export default function AIWordSearchScreen() {
                       </ThemedText>
                     )}
                     {item.example && (
-                      <ThemedText variant="caption" color={theme.textMuted} style={styles.exampleText}>
-                        例: {item.example}
-                      </ThemedText>
+                      <View style={styles.exampleContainer}>
+                        {item.example.split('\n').map((line, idx) => (
+                          <ThemedText 
+                            key={idx} 
+                            variant="caption" 
+                            color={idx === 0 ? theme.textMuted : theme.textSecondary} 
+                            style={styles.exampleText}
+                          >
+                            {idx === 0 ? `例: ${line}` : line}
+                          </ThemedText>
+                        ))}
+                      </View>
                     )}
                   </View>
                 </TouchableOpacity>

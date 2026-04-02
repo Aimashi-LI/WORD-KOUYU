@@ -484,10 +484,17 @@ ${existingInfo}
 必须返回标准的JSON格式，不要添加任何额外文字：
 {
   "words": [
-    {"word": "单词", "phonetic": "/音标/", "definition": "中文释义", "partOfSpeech": "n.", "example": "英文例句"}
+    {"word": "单词", "phonetic": "/音标/", "definition": "中文释义", "partOfSpeech": "n.", "example": "英文例句\n中文翻译"}
   ],
   "description": "关于XXX主题的常用单词推荐"
 }
+
+## 重要：例句格式要求！
+每个单词的example字段必须包含两行：
+- 第一行：英文例句
+- 第二行：中文翻译
+格式：英文例句\n中文翻译
+例如："I eat an apple every day.\n我每天吃一个苹果。"
 
 ## 重要：词性字段 (partOfSpeech) 是必填项！
 每个单词必须包含词性，使用以下标准缩写：
@@ -506,9 +513,9 @@ ${existingInfo}
 ## 示例输出：
 {
   "words": [
-    {"word": "apple", "phonetic": "/ˈæpl/", "definition": "苹果", "partOfSpeech": "n.", "example": "I eat an apple every day."},
-    {"word": "run", "phonetic": "/rʌn/", "definition": "跑，奔跑", "partOfSpeech": "v.", "example": "He runs in the park every morning."},
-    {"word": "beautiful", "phonetic": "/ˈbjuːtɪfl/", "definition": "美丽的，漂亮的", "partOfSpeech": "adj.", "example": "The flowers in the garden are beautiful."}
+    {"word": "apple", "phonetic": "/ˈæpl/", "definition": "苹果", "partOfSpeech": "n.", "example": "I eat an apple every day.\n我每天吃一个苹果。"},
+    {"word": "run", "phonetic": "/rʌn/", "definition": "跑，奔跑", "partOfSpeech": "v.", "example": "He runs in the park every morning.\n他每天早上在公园跑步。"},
+    {"word": "beautiful", "phonetic": "/ˈbjuːtɪfl/", "definition": "美丽的，漂亮的", "partOfSpeech": "adj.", "example": "The flowers in the garden are beautiful.\n花园里的花朵很美丽。"}
   ],
   "description": "基础英语单词推荐"
 }`;
