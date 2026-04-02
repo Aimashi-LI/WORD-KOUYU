@@ -324,15 +324,16 @@ export default function WordDetailScreen() {
   };
 
   // 执行拆分
-  const handlePerformSplit = (splitIndex: number, charIndex: number) => {
-    const splitItem = splitItems[splitIndex];
+  const handlePerformSplit = (splitItemIndex: number, splitPoint: number) => {
+    const splitItem = splitItems[splitItemIndex];
     if (!splitItem || !splitItem.code) {
       Alert.alert('提示', '请先输入单词');
       return;
     }
 
     const code = splitItem.code;
-    if (charIndex <= 0 || charIndex >= code.length) {
+    // splitPoint 是分割点位置，必须在 1 到 code.length-1 之间
+    if (splitPoint < 1 || splitPoint >= code.length) {
       Alert.alert('提示', '请在单词中间位置拆分');
       return;
     }
@@ -340,11 +341,11 @@ export default function WordDetailScreen() {
     // 保存历史记录
     setSplitHistory(prev => [...prev, [...splitItems]]);
 
-    const result = performSplit(code, charIndex, codes);
+    const result = performSplit(code, splitPoint, codes);
     if (result) {
       const [left, right] = result;
       const newSplitItems = [...splitItems];
-      newSplitItems.splice(splitIndex, 1, left, right);
+      newSplitItems.splice(splitItemIndex, 1, left, right);
       setSplitItems(newSplitItems);
       setActiveCodeIndex(-1);
     }
@@ -722,7 +723,7 @@ export default function WordDetailScreen() {
                     {item.code.split('').map((char, charIndex) => (
                       <TouchableOpacity
                         key={charIndex}
-                        onPress={() => handlePerformSplit(index, charIndex)}
+                        onPress={() => handlePerformSplit(index, charIndex + 1)}
                         style={styles.splitCharButton}
                       >
                         <ThemedText variant="h3" color={theme.textPrimary}>
