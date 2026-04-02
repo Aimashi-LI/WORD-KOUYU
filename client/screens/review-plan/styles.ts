@@ -409,6 +409,21 @@ export const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 12,
     maxHeight: 300,
   },
+  // AI 状态提示卡片
+  aiStatusCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  aiStatusContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  aiStatusText: {
+    marginLeft: 8,
+  },
   aiStreamText: {
     lineHeight: 22,
     marginTop: 8,

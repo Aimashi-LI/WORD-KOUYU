@@ -70,6 +70,7 @@ export default function ReviewPlanScreen() {
   const [aiAnalysisResult, setAiAnalysisResult] = useState<ReviewAnalysisResponse | null>(null);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false); // 是否显示AI分析结果
   const [aiStreamText, setAiStreamText] = useState(''); // 流式输出的文本
+  const [aiStatusText, setAiStatusText] = useState(''); // AI状态提示文字
   const sseRef = useRef<any>(null);
 
   // 加载复习数据
@@ -392,6 +393,7 @@ export default function ReviewPlanScreen() {
     setAiAnalyzing(true);
     setAiStreamText('');
     setAiAnalysisResult(null);
+    setAiStatusText('正在获取单词数据...');
     
     try {
       // 获取所有单词
@@ -406,6 +408,7 @@ export default function ReviewPlanScreen() {
       if (allWords.length === 0) {
         Alert.alert('提示', '没有单词可以分析');
         setAiAnalyzing(false);
+        setAiStatusText('');
         return;
       }
 
@@ -417,6 +420,7 @@ export default function ReviewPlanScreen() {
       const uniqueWords = Array.from(uniqueWordsMap.values());
 
       // 计算每个单词的可提取性
+      setAiStatusText('正在计算单词记忆状态...');
       const now = new Date();
       const wordsWithAnalysis = uniqueWords.map(w => {
         const lastReview = w.last_review ? new Date(w.last_review) : null;
@@ -447,6 +451,7 @@ export default function ReviewPlanScreen() {
       });
 
       // 使用流式API
+      setAiStatusText('正在连接AI服务...');
       const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
       const url = `${API_BASE_URL}/api/v1/ai/generate/review-analysis-stream`;
       
@@ -465,11 +470,13 @@ export default function ReviewPlanScreen() {
       });
       
       sseRef.current = sse;
+      let firstChunk = true;
       
       sse.addEventListener('message', (event: any) => {
         if (event.data === '[DONE]') {
           sse.close();
           setAiAnalyzing(false);
+          setAiStatusText('');
           
           // 尝试从完整内容中解析JSON
           try {
@@ -524,6 +531,10 @@ export default function ReviewPlanScreen() {
         try {
           const data = JSON.parse(event.data);
           if (data.content) {
+            if (firstChunk) {
+              setAiStatusText('AI正在分析...');
+              firstChunk = false;
+            }
             fullContent += data.content;
             setAiStreamText(prev => prev + data.content);
           }
@@ -536,6 +547,7 @@ export default function ReviewPlanScreen() {
         console.error('SSE error:', error);
         sse.close();
         setAiAnalyzing(false);
+        setAiStatusText('');
         Alert.alert('错误', 'AI 分析失败，请重试');
       });
       
@@ -543,6 +555,7 @@ export default function ReviewPlanScreen() {
       console.error('AI 分析失败:', error);
       Alert.alert('错误', 'AI 分析失败，请重试');
       setAiAnalyzing(false);
+      setAiStatusText('');
     }
   }, [isConfigured, router]);
 
@@ -884,7 +897,7 @@ export default function ReviewPlanScreen() {
             <View style={styles.aiAnalysisLoading}>
               <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
               <ThemedText variant="body" color={theme.buttonPrimaryText} style={styles.aiAnalysisText}>
-                AI 正在分析...
+                {aiStatusText || 'AI 正在分析...'}
               </ThemedText>
             </View>
           ) : (
@@ -896,6 +909,21 @@ export default function ReviewPlanScreen() {
             </View>
           )}
         </TouchableOpacity>
+
+        {/* AI 分析状态提示（流式输出前） */}
+        {aiAnalyzing && !aiStreamText && (
+          <ThemedView level="default" style={styles.aiStatusCard}>
+            <View style={styles.aiStatusContent}>
+              <ActivityIndicator size="small" color={theme.primary} />
+              <ThemedText variant="body" color={theme.textPrimary} style={styles.aiStatusText}>
+                {aiStatusText || '准备中...'}
+              </ThemedText>
+            </View>
+            <ThemedText variant="caption" color={theme.textMuted}>
+              请稍候，AI正在处理您的学习数据
+            </ThemedText>
+          </ThemedView>
+        )}
 
         {/* AI 流式输出显示 */}
         {aiAnalyzing && aiStreamText && (
