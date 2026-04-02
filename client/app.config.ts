@@ -54,6 +54,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           "iCloudContainerEnvironment": "Production"
         }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "允许应用使用麦克风进行口语训练录音"
+        }
       ]
     ],
     "experiments": {
