@@ -136,6 +136,11 @@ export const createStyles = (theme: Theme) => {
     definitionText: {
       flexWrap: 'wrap',
     },
+    exampleText: {
+      marginTop: 4,
+      fontStyle: 'italic',
+      flexWrap: 'wrap',
+    },
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',

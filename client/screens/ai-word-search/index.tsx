@@ -28,6 +28,7 @@ interface SearchedWord {
   phonetic?: string;
   definition?: string;
   partOfSpeech?: string;
+  example?: string; // 英文例句
 }
 
 export default function AIWordSearchScreen() {
@@ -141,7 +142,7 @@ export default function AIWordSearchScreen() {
             phonetic: wordData.phonetic || '',
             definition: wordData.definition || '',
             partOfSpeech: wordData.partOfSpeech || '',
-            sentence: '',
+            sentence: wordData.example || '', // 保存AI生成的例句
             split: '',
             mnemonic: '',
             is_mastered: 0,
@@ -342,6 +343,11 @@ export default function AIWordSearchScreen() {
                     {item.definition && (
                       <ThemedText variant="caption" color={theme.textSecondary} style={styles.definitionText}>
                         {item.definition}
+                      </ThemedText>
+                    )}
+                    {item.example && (
+                      <ThemedText variant="caption" color={theme.textMuted} style={styles.exampleText}>
+                        例: {item.example}
                       </ThemedText>
                     )}
                   </View>

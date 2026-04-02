@@ -182,6 +182,7 @@ export interface GenerateSearchWordsResponse {
     phonetic?: string;     // 音标
     definition?: string;   // 释义
     partOfSpeech?: string; // 词性
+    example?: string;      // 英文例句
   }>;
   description?: string;    // 搜索结果描述
   tokensUsed: number;
