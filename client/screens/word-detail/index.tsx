@@ -201,20 +201,19 @@ export default function WordDetailScreen() {
       
       // 如果拆分不完整或者没有拆分数据，则自动拆分
       if (!splitValidation.valid || splitItems.length === 0 || (splitItems.length === 1 && splitItems[0].code === '')) {
-        // 保存当前状态到历史记录（用于撤销）
-        const currentSplitItems = [...splitItems];
+        // 准备"完整单词本体"状态作为撤销的最后一步
+        const wholeWordState: SplitItem[] = [{ code: word, content: autoFillMeaning(word, codes) }];
         
         // 尝试自动拆分
         const autoSplitResult = autoSplitByCodeLib(word, codes);
         if (autoSplitResult && autoSplitResult.length > 0) {
-          // 拆分成功，保存历史并使用拆分结果
-          setSplitHistory([currentSplitItems]);
+          // 拆分成功，保存"完整单词"状态到历史记录，便于撤销后手动拆分
+          setSplitHistory([wholeWordState]);
           setSplitItems(autoSplitResult);
         } else {
-          // 拆分失败，使用单个项（编码框显示单词）
-          setSplitHistory([currentSplitItems]);
-          const meaning = autoFillMeaning(word, codes);
-          setSplitItems([{ code: word, content: meaning }]);
+          // 拆分失败，直接使用完整单词状态，无需保存历史
+          setSplitHistory([]);
+          setSplitItems(wholeWordState);
         }
       }
     }
@@ -267,8 +266,9 @@ export default function WordDetailScreen() {
     
     const autoSplitResult = autoSplitByCodeLib(word, codes);
     if (autoSplitResult && autoSplitResult.length > 0) {
-      // 保存历史记录
-      setSplitHistory(prev => [...prev, [...splitItems]]);
+      // 保存"完整单词本体"状态到历史记录
+      const wholeWordState: SplitItem[] = [{ code: word, content: autoFillMeaning(word, codes) }];
+      setSplitHistory([wholeWordState]);
       setSplitItems(autoSplitResult);
     }
   };
