@@ -615,13 +615,16 @@ router.post('/generate/search-words', async (req: Request, res: Response) => {
       return;
     }
 
+    // 限制数量最大为100
+    const limitedCount = Math.min(Math.max(count || 20, 1), 100);
+
     // 创建 AI 服务实例
     const aiService = createAIService(aiSettings);
 
     // 搜索单词
     const result = await aiService.generateSearchWords({
       query,
-      count: count || 20,
+      count: limitedCount,
       existingWords: existingWords || [],
     });
 

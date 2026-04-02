@@ -39,6 +39,7 @@ export default function AIWordSearchScreen() {
   const { isConfigured, settings: aiSettings } = useAI();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchCount, setSearchCount] = useState('30');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchedWord[]>([]);
   const [description, setDescription] = useState('');
@@ -51,6 +52,15 @@ export default function AIWordSearchScreen() {
     if (!searchQuery.trim()) {
       Alert.alert('提示', '请输入搜索关键词');
       return;
+    }
+
+    // 解析并限制数量
+    let count = parseInt(searchCount, 10);
+    if (isNaN(count) || count < 1) {
+      count = 30;
+    } else if (count > 100) {
+      count = 100;
+      Alert.alert('提示', '单词数量上限为100个，已自动调整为100');
     }
 
     setSearching(true);
@@ -66,7 +76,7 @@ export default function AIWordSearchScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: searchQuery.trim(),
-          count: 30,
+          count,
         }),
       });
 
@@ -88,7 +98,7 @@ export default function AIWordSearchScreen() {
     } finally {
       setSearching(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, searchCount]);
 
   // 切换单词选择
   const toggleWordSelection = (word: string) => {
@@ -261,6 +271,17 @@ export default function AIWordSearchScreen() {
                 returnKeyType="search"
               />
             </View>
+            <View style={styles.countInputRow}>
+              <ThemedText variant="caption" color={theme.textSecondary}>数量：</ThemedText>
+              <TextInput
+                style={styles.countInput}
+                value={searchCount}
+                onChangeText={setSearchCount}
+                keyboardType="number-pad"
+                maxLength={3}
+              />
+              <ThemedText variant="caption" color={theme.textMuted}>（最多100个）</ThemedText>
+            </View>
             <TouchableOpacity
               style={[styles.searchButton, searching && styles.searchButtonDisabled]}
               onPress={handleSearch}
@@ -297,6 +318,16 @@ export default function AIWordSearchScreen() {
               </ThemedText>
             </View>
           ) : null}
+
+          {/* 达到上限提示 */}
+          {searchResults.length >= 100 && (
+            <View style={styles.limitTipCard}>
+              <FontAwesome6 name="circle-info" size={16} color={theme.accent} />
+              <ThemedText variant="caption" color={theme.textSecondary} style={styles.limitTipText}>
+                已显示全部100个单词。如需更多，可调整关键词后重新搜索。
+              </ThemedText>
+            </View>
+          )}
 
           {/* 搜索结果列表 */}
           {searchResults.length > 0 && (

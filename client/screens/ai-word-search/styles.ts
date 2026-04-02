@@ -75,6 +75,24 @@ export const createStyles = (theme: Theme) => {
       marginTop: Spacing.sm,
       textAlign: 'center',
     },
+    countInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    countInput: {
+      width: 60,
+      height: 36,
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: Spacing.sm,
+      textAlign: 'center',
+      fontSize: 16,
+      color: theme.textPrimary,
+      marginHorizontal: Spacing.xs,
+    },
     resultsSection: {
       flex: 1,
     },
@@ -143,6 +161,18 @@ export const createStyles = (theme: Theme) => {
       marginTop: 2,
       fontStyle: 'italic',
       flexWrap: 'wrap',
+    },
+    limitTipCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+      gap: Spacing.sm,
+    },
+    limitTipText: {
+      flex: 1,
     },
     loadingContainer: {
       flex: 1,
