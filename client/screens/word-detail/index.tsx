@@ -201,18 +201,21 @@ export default function WordDetailScreen() {
       
       // 如果拆分不完整或者没有拆分数据，则自动拆分
       if (!splitValidation.valid || splitItems.length === 0 || (splitItems.length === 1 && splitItems[0].code === '')) {
+        // 保存当前状态到历史记录（用于撤销）
+        const currentSplitItems = [...splitItems];
+        
         // 尝试自动拆分
         const autoSplitResult = autoSplitByCodeLib(word, codes);
         if (autoSplitResult && autoSplitResult.length > 0) {
-          // 拆分成功，使用拆分结果
+          // 拆分成功，保存历史并使用拆分结果
+          setSplitHistory([currentSplitItems]);
           setSplitItems(autoSplitResult);
         } else {
           // 拆分失败，使用单个项（编码框显示单词）
+          setSplitHistory([currentSplitItems]);
           const meaning = autoFillMeaning(word, codes);
           setSplitItems([{ code: word, content: meaning }]);
         }
-        // 清空历史记录
-        setSplitHistory([]);
       }
     }
     setEditMode('edit');
