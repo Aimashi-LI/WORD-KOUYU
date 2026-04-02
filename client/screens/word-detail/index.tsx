@@ -594,61 +594,74 @@ export default function WordDetailScreen() {
                 </TouchableOpacity>
               )}
             </View>
-            {splitItems.map((item, index) => (
-              <View key={index} style={styles.splitItemContainer}>
-                <View style={styles.splitCodeRow}>
-                  <TextInput
-                    style={styles.splitCodeInput}
-                    value={item.code}
-                    onChangeText={text => handleCodeChange(index, text)}
-                    onFocus={() => setActiveCodeIndex(index)}
-                    onBlur={() => setActiveCodeIndex(-1)}
-                    placeholder="编码"
-                    placeholderTextColor={theme.textMuted}
-                  />
-                  <ThemedText variant="body" color={theme.textMuted}>-</ThemedText>
-                  <TextInput
-                    style={styles.splitContentInput}
-                    value={item.content}
-                    onChangeText={text => handleContentChange(index, text)}
-                    placeholder="含义"
-                    placeholderTextColor={theme.textMuted}
-                  />
-                </View>
-
-                {/* 编码建议 */}
-                {codeSuggestions[`code_${index}`] && activeCodeIndex === index && (
-                  <TouchableOpacity
-                    onPress={() => handleSelectSuggestion(index)}
-                    style={styles.codeSuggestion}
-                  >
-                    <ThemedText variant="body" color={theme.textPrimary}>
-                      {codeSuggestions[`code_${index}`].userInput}
-                    </ThemedText>
-                    <ThemedText variant="body" color={theme.primary}>
-                      {codeSuggestions[`code_${index}`].completedText}
-                    </ThemedText>
-                  </TouchableOpacity>
-                )}
-
-                {/* 字符拆分按钮 */}
-                {item.code && (
-                  <View style={styles.splitCharsContainer}>
-                    {item.code.split('').map((char, charIndex) => (
-                      <TouchableOpacity
-                        key={charIndex}
-                        onPress={() => handlePerformSplit(index, charIndex + 1)}
-                        style={styles.splitCharButton}
-                      >
-                        <ThemedText variant="h3" color={theme.textPrimary}>
-                          {char}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    ))}
+            {splitItems.map((item, index) => {
+              // 空格分隔符特殊处理
+              if (item.code === ' ') {
+                return (
+                  <View key={index} style={styles.spaceDivider}>
+                    <View style={styles.spaceDividerLine} />
+                    <ThemedText variant="caption" color={theme.textMuted}>空格</ThemedText>
+                    <View style={styles.spaceDividerLine} />
                   </View>
-                )}
-              </View>
-            ))}
+                );
+              }
+              
+              return (
+                <View key={index} style={styles.splitItemContainer}>
+                  <View style={styles.splitCodeRow}>
+                    <TextInput
+                      style={styles.splitCodeInput}
+                      value={item.code}
+                      onChangeText={text => handleCodeChange(index, text)}
+                      onFocus={() => setActiveCodeIndex(index)}
+                      onBlur={() => setActiveCodeIndex(-1)}
+                      placeholder="编码"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <ThemedText variant="body" color={theme.textMuted}>-</ThemedText>
+                    <TextInput
+                      style={styles.splitContentInput}
+                      value={item.content}
+                      onChangeText={text => handleContentChange(index, text)}
+                      placeholder="含义"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                  </View>
+
+                  {/* 编码建议 */}
+                  {codeSuggestions[`code_${index}`] && activeCodeIndex === index && (
+                    <TouchableOpacity
+                      onPress={() => handleSelectSuggestion(index)}
+                      style={styles.codeSuggestion}
+                    >
+                      <ThemedText variant="body" color={theme.textPrimary}>
+                        {codeSuggestions[`code_${index}`].userInput}
+                      </ThemedText>
+                      <ThemedText variant="body" color={theme.primary}>
+                        {codeSuggestions[`code_${index}`].completedText}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* 字符拆分按钮 */}
+                  {item.code && (
+                    <View style={styles.splitCharsContainer}>
+                      {item.code.split('').map((char, charIndex) => (
+                        <TouchableOpacity
+                          key={charIndex}
+                          onPress={() => handlePerformSplit(index, charIndex + 1)}
+                          style={styles.splitCharButton}
+                        >
+                          <ThemedText variant="h3" color={theme.textPrimary}>
+                            {char}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
 
           {/* 助记句子 */}

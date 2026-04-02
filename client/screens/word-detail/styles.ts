@@ -193,6 +193,18 @@ export const createStyles = (theme: Theme) => {
       borderWidth: 1,
       borderColor: theme.borderLight,
     },
+    spaceDivider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: Spacing.md,
+      gap: Spacing.sm,
+    },
+    spaceDividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: theme.border,
+    },
     autoCompleteToggle: {
       flexDirection: 'row',
       alignItems: 'center',

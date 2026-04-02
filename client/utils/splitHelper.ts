@@ -15,6 +15,7 @@ export interface SplitHistory {
  * 自动拆分算法：使用贪婪算法在编码库中找到拆分方案
  * 从左到右，尽可能找到最长的匹配编码
  * 如果开头不匹配，跳过直到找到第一个匹配
+ * 空格会被保留但不需要填写编码含义
  * @param word 要拆分的单词
  * @param codes 编码库
  * @returns 拆分后的数组，如果无法拆分返回 null
@@ -37,6 +38,16 @@ export function autoSplitByCodeLib(word: string, codes: Code[]): SplitItem[] | n
 
   // 贪婪算法：从左到右查找匹配
   while (currentIndex < n) {
+    // 跳过空格，空格作为分隔符不需要拆分
+    if (lowerWord[currentIndex] === ' ') {
+      result.push({
+        code: ' ',  // 空格保留
+        content: ' '  // 空格内容标记为空格
+      });
+      currentIndex++;
+      continue;
+    }
+
     let matched = false;
     let maxLength = 0;
     let matchedCode: string | null = null;
@@ -67,8 +78,8 @@ export function autoSplitByCodeLib(word: string, codes: Code[]): SplitItem[] | n
       // 未找到匹配，处理未匹配部分
       const unmatchedStartIndex = currentIndex;
 
-      // 跳过未匹配的字母，直到找到下一个匹配
-      while (currentIndex < n) {
+      // 跳过未匹配的字母，直到找到下一个匹配或空格
+      while (currentIndex < n && lowerWord[currentIndex] !== ' ') {
         let foundMatch = false;
         const maxSubstringLength = Math.min(n - currentIndex, 10);
 
@@ -157,10 +168,15 @@ export function validateSplitCompleteness(splitItems: SplitItem[], fullWord: str
     return { valid: true, message: '' };
   }
 
-  // 检查每个拆分项都有内容
+  // 检查每个拆分项都有内容（空格除外）
   for (let i = 0; i < splitItems.length; i++) {
     const item = splitItems[i];
     if (!item.code || item.code.trim() === '') {
+      continue;
+    }
+
+    // 空格不需要填写含义
+    if (item.code === ' ') {
       continue;
     }
 
@@ -172,10 +188,16 @@ export function validateSplitCompleteness(splitItems: SplitItem[], fullWord: str
     }
   }
 
-  // 检查拼写是否完整
+  // 检查拼写是否完整（包含空格）
   const combinedLetters = splitItems
     .filter(item => item.code && item.code.trim() !== '')
-    .map(item => item.code.trim().toLowerCase())
+    .map(item => {
+      // 空格保留
+      if (item.code === ' ') {
+        return ' ';
+      }
+      return item.code.trim().toLowerCase();
+    })
     .join('');
 
   const targetWord = fullWord ? fullWord.toLowerCase() : '';
@@ -193,14 +215,24 @@ export function validateSplitCompleteness(splitItems: SplitItem[], fullWord: str
 /**
  * 将拆分项数组转换为字符串格式
  * 格式：code1,content1。code2,content2
+ * 空格会保存为特殊标记
  */
 export function convertSplitItemsToString(splitItems: SplitItem[]): string {
-  const validItems = splitItems.filter(item => 
-    item.code.trim() && item.content.trim()
-  );
+  const validItems = splitItems.filter(item => {
+    // 空格也要保留
+    if (item.code === ' ') {
+      return true;
+    }
+    return item.code.trim() && item.content.trim();
+  });
   
   return validItems
-    .map(item => `${item.code.trim()},${item.content.trim()}`)
+    .map(item => {
+      if (item.code === ' ') {
+        return ' , '; // 空格的特殊格式
+      }
+      return `${item.code.trim()},${item.content.trim()}`;
+    })
     .join('。');
 }
 
@@ -254,9 +286,15 @@ export function parseSplitString(splitStr: string): SplitItem[] {
     const splitItems = groups.map(group => {
       const parts = group.split(',');
       if (parts.length >= 2) {
+        const code = parts[0].trim();
+        const content = parts.slice(1).join(',').trim();
+        // 处理空格的特殊格式
+        if (code === ' ' || code === '') {
+          return { code: ' ', content: ' ' };
+        }
         return {
-          code: parts[0].trim(),
-          content: parts.slice(1).join(',').trim()
+          code: code,
+          content: content
         };
       } else {
         return { code: '', content: '' };
@@ -264,7 +302,7 @@ export function parseSplitString(splitStr: string): SplitItem[] {
     });
 
     const validItems = splitItems.filter(item => 
-      item.code.trim() || item.content.trim()
+      item.code.trim() || item.content.trim() || item.code === ' '
     );
 
     return validItems.length > 0 ? validItems : [{ code: '', content: '' }];
