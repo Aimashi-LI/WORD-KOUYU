@@ -46,7 +46,7 @@ export default function WordDetailScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   const { id } = useSafeSearchParams<{ id: string }>();
-  const { settings: aiSettings, generateMnemonic, generateAutoFill } = useAI();
+  const { settings: aiSettings, generateMnemonic } = useAI();
   const { isConnected, checkNetwork, showNetworkError } = useNetwork();
 
   // 基础字段
@@ -75,7 +75,6 @@ export default function WordDetailScreen() {
   
   // AI 生成状态
   const [generatingMnemonic, setGeneratingMnemonic] = useState(false);
-  const [autoFilling, setAutoFilling] = useState(false);
 
   // 追踪已补全的编码（同一编码只补全最先填写的含义）
   const completedCodesRef = React.useRef<Set<string>>(new Set());
@@ -413,77 +412,6 @@ export default function WordDetailScreen() {
     }
   };
   
-  // 一键 AI 填充所有字段
-  const handleAutoFill = async () => {
-    if (!word.trim()) {
-      Alert.alert('提示', '请先输入单词');
-      return;
-    }
-    
-    // 检查网络状态
-    const hasNetwork = await checkNetwork();
-    if (!hasNetwork) {
-      showNetworkError();
-      return;
-    }
-    
-    if (!aiSettings) {
-      Alert.alert(
-        'AI 未配置',
-        '请先配置 AI 设置',
-        [
-          { text: '取消', style: 'cancel' },
-          { text: '去设置', onPress: () => router.push('/ai-settings') }
-        ]
-      );
-      return;
-    }
-    
-    setAutoFilling(true);
-    try {
-      const result = await generateAutoFill(word.trim(), {
-        phonetic: phonetic.trim() || undefined,
-        definition: definition.trim() || undefined,
-        split: convertSplitItemsToString(splitItems) || undefined,
-        mnemonic: sentence.trim() || undefined,
-      });
-      
-      if (result) {
-        // 填充所有字段
-        if (result.phonetic) setPhonetic(result.phonetic);
-        if (result.definition) {
-          // 尝试从释义中提取词性
-          const posMatch = result.definition.match(/^([a-z]+\.)\s*/i);
-          if (posMatch) {
-            const pos = PART_OF_SPEECH_LIST.find(p => p.startsWith(posMatch[1]));
-            if (pos) {
-              setPartOfSpeech(pos);
-              setDefinition(result.definition.replace(posMatch[0], ''));
-            } else {
-              setDefinition(result.definition);
-            }
-          } else {
-            setDefinition(result.definition);
-          }
-        }
-        if (result.split) {
-          const parsedSplits = parseSplitString(result.split);
-          if (parsedSplits && parsedSplits.length > 0) {
-            setSplitItems(parsedSplits);
-          }
-        }
-        if (result.mnemonic) setSentence(result.mnemonic);
-        
-        Alert.alert('成功', 'AI 已填充所有字段，请检查并保存');
-      }
-    } catch (error) {
-      console.error('一键填充失败:', error);
-      Alert.alert('错误', '一键填充失败，请检查网络连接和 API 配置');
-    } finally {
-      setAutoFilling(false);
-    }
-  };
-  
   // 表单验证
   const validateForm = (): boolean => {
     if (!word.trim()) {
@@ -606,20 +534,6 @@ export default function WordDetailScreen() {
                   <FontAwesome6 name="spell-check" size={16} color={theme.primary} />
                   <ThemedText variant="body" color={theme.textSecondary}>单词</ThemedText>
                 </View>
-                <TouchableOpacity
-                  style={styles.aiCardButton}
-                  onPress={handleAutoFill}
-                  disabled={autoFilling}
-                >
-                  {autoFilling ? (
-                    <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
-                  ) : (
-                    <>
-                      <FontAwesome6 name="wand-magic-sparkles" size={12} color={theme.buttonPrimaryText} />
-                      <ThemedText variant="caption" color={theme.buttonPrimaryText}>一键AI填充</ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
               </View>
               <ThemedText variant="h2" color={theme.textPrimary} style={styles.infoCardValue}>
                 {word || '—'}

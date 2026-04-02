@@ -293,14 +293,5 @@ export const createStyles = (theme: Theme) => {
     infoCardValue: {
       lineHeight: 28,
     },
-    aiCardButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: Spacing.xs,
-      borderRadius: BorderRadius.sm,
-      backgroundColor: theme.primary,
-    },
   });
 };
