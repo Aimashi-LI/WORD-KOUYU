@@ -5,9 +5,6 @@ import {
   TextInput,
   Alert,
   TouchableOpacity,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
@@ -32,7 +29,6 @@ import {
   getCodeSuggestion,
   CodeSuggestion
 } from '@/utils/splitHelper';
-import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
 import { fetchPhoneticByWord } from '@/utils';
 import { useAI } from '@/hooks/useAI';
 import { useNetwork } from '@/hooks/useNetwork';
@@ -50,7 +46,7 @@ export default function WordDetailScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   const { id } = useSafeSearchParams<{ id: string }>();
-  const { settings: aiSettings, generateMnemonic, generatePhonetic, generateAutoFill } = useAI();
+  const { settings: aiSettings, generateMnemonic, generateAutoFill } = useAI();
   const { isConnected, checkNetwork, showNetworkError } = useNetwork();
 
   // 基础字段
@@ -60,9 +56,6 @@ export default function WordDetailScreen() {
   const [partOfSpeech, setPartOfSpeech] = useState('');
   const [sentence, setSentence] = useState('');
   const [example, setExample] = useState('');
-  
-  // 音标键盘
-  const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
   
   // 拆分相关
   const [splitItems, setSplitItems] = useState<SplitItem[]>([{ code: '', content: '' }]);
@@ -81,7 +74,6 @@ export default function WordDetailScreen() {
   const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true);
   
   // AI 生成状态
-  const [generatingPhonetic, setGeneratingPhonetic] = useState(false);
   const [generatingMnemonic, setGeneratingMnemonic] = useState(false);
   const [autoFilling, setAutoFilling] = useState(false);
 
@@ -371,47 +363,6 @@ export default function WordDetailScreen() {
     setActiveCodeIndex(-1);
   };
 
-  // AI 生成音标
-  const handleGeneratePhonetic = async () => {
-    if (!word.trim()) {
-      Alert.alert('提示', '请先输入单词');
-      return;
-    }
-    
-    // 检查网络状态
-    const hasNetwork = await checkNetwork();
-    if (!hasNetwork) {
-      showNetworkError();
-      return;
-    }
-    
-    if (!aiSettings) {
-      Alert.alert(
-        'AI 未配置',
-        '请先配置 AI 设置',
-        [
-          { text: '取消', style: 'cancel' },
-          { text: '去设置', onPress: () => router.push('/ai-settings') }
-        ]
-      );
-      return;
-    }
-    
-    setGeneratingPhonetic(true);
-    try {
-      const result = await generatePhonetic(word.trim());
-      if (result) {
-        setPhonetic(result);
-        Alert.alert('成功', '音标已生成');
-      }
-    } catch (error) {
-      console.error('生成音标失败:', error);
-      Alert.alert('错误', '生成音标失败，请检查网络连接和 API 配置');
-    } finally {
-      setGeneratingPhonetic(false);
-    }
-  };
-  
   // AI 生成助记句
   const handleGenerateMnemonic = async () => {
     if (!word.trim()) {
@@ -630,7 +581,7 @@ export default function WordDetailScreen() {
   }
 
   if (editMode === 'edit') {
-    // 编辑模式 - 使用 add-word 页面的样式
+    // 编辑模式 - 单词基本信息使用信息卡片展示（不可编辑）
     return (
       <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -645,116 +596,67 @@ export default function WordDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 单词输入 */}
-          <View style={styles.inputContainer}>
-            <View style={styles.labelRow}>
-              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-                单词 *
+          {/* 单词信息卡片区域 - 不可编辑 */}
+          <View style={styles.infoCardSection}>
+            {/* 单词卡片 */}
+            <ThemedView level="default" style={styles.infoCard}>
+              <View style={styles.infoCardHeader}>
+                <View style={styles.infoCardTitleRow}>
+                  <FontAwesome6 name="spell-check" size={16} color={theme.primary} />
+                  <ThemedText variant="body" color={theme.textSecondary}>单词</ThemedText>
+                </View>
+                <TouchableOpacity
+                  style={styles.aiCardButton}
+                  onPress={handleAutoFill}
+                  disabled={autoFilling}
+                >
+                  {autoFilling ? (
+                    <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
+                  ) : (
+                    <>
+                      <FontAwesome6 name="wand-magic-sparkles" size={12} color={theme.buttonPrimaryText} />
+                      <ThemedText variant="caption" color={theme.buttonPrimaryText}>一键AI填充</ThemedText>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+              <ThemedText variant="h2" color={theme.textPrimary} style={styles.infoCardValue}>
+                {word || '—'}
               </ThemedText>
-              <TouchableOpacity
-                style={[styles.aiButton, styles.autoFillButton]}
-                onPress={handleAutoFill}
-                disabled={autoFilling || !word.trim()}
-              >
-                {autoFilling ? (
-                  <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
-                ) : (
-                  <>
-                    <FontAwesome6 name="wand-magic-sparkles" size={14} color={theme.buttonPrimaryText} />
-                    <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.aiButtonText}>
-                      一键 AI 填充
-                    </ThemedText>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.input}
-              value={word}
-              onChangeText={handleWordChange}
-              onBlur={handleWordBlur}
-              placeholder="请输入单词"
-              placeholderTextColor={theme.textMuted}
-            />
-            <ThemedText variant="caption" color={theme.textMuted} style={styles.helpText}>
-              输入单词后点击「一键 AI 填充」可自动生成音标、释义、拆分和助记句
-            </ThemedText>
-          </View>
+            </ThemedView>
 
-          {/* 音标输入 */}
-          <View style={styles.inputContainer}>
-            <View style={styles.labelRow}>
-              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-                音标
+            {/* 音标卡片 */}
+            <ThemedView level="default" style={styles.infoCard}>
+              <View style={styles.infoCardHeader}>
+                <View style={styles.infoCardTitleRow}>
+                  <FontAwesome6 name="music" size={16} color={theme.primary} />
+                  <ThemedText variant="body" color={theme.textSecondary}>音标</ThemedText>
+                </View>
+              </View>
+              <ThemedText variant="h4" color={theme.textPrimary} style={styles.infoCardValue}>
+                {phonetic || '—'}
               </ThemedText>
-              <TouchableOpacity
-                style={styles.aiButton}
-                onPress={handleGeneratePhonetic}
-                disabled={generatingPhonetic || !word.trim()}
-              >
-                {generatingPhonetic ? (
-                  <ActivityIndicator size="small" color={theme.primary} />
-                ) : (
-                  <>
-                    <FontAwesome6 name="wand-magic-sparkles" size={14} color={theme.primary} />
-                    <ThemedText variant="caption" color={theme.primary} style={styles.aiButtonText}>
-                      AI 生成
-                    </ThemedText>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.input}
-              value={phonetic}
-              onChangeText={setPhonetic}
-              onFocus={() => setShowPhoneticKeyboard(true)}
-              placeholder="请输入音标"
-              placeholderTextColor={theme.textMuted}
-            />
-          </View>
+            </ThemedView>
 
-          {/* 释义输入 */}
-          <View style={styles.inputContainer}>
-            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-              释义 *
-            </ThemedText>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={definition}
-              onChangeText={setDefinition}
-              placeholder="请输入释义"
-              placeholderTextColor={theme.textMuted}
-              multiline
-            />
-          </View>
-
-          {/* 词性选择 */}
-          <View style={styles.inputContainer}>
-            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-              词性 *
-            </ThemedText>
-            <View style={styles.posScroll}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {PART_OF_SPEECH_LIST.map(pos => (
-                  <TouchableOpacity
-                    key={pos}
-                    style={[
-                      styles.posButton,
-                      partOfSpeech === pos && styles.posButtonActive
-                    ]}
-                    onPress={() => setPartOfSpeech(pos)}
-                  >
-                    <ThemedText
-                      variant="caption"
-                      color={partOfSpeech === pos ? theme.buttonPrimaryText : theme.textPrimary}
-                    >
-                      {pos}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
+            {/* 释义卡片 */}
+            <ThemedView level="default" style={styles.infoCard}>
+              <View style={styles.infoCardHeader}>
+                <View style={styles.infoCardTitleRow}>
+                  <FontAwesome6 name="book" size={16} color={theme.primary} />
+                  <ThemedText variant="body" color={theme.textSecondary}>释义</ThemedText>
+                </View>
+              </View>
+              <ThemedText variant="body" color={theme.textPrimary} style={styles.infoCardValue}>
+                {definition || '—'}
+              </ThemedText>
+              {partOfSpeech && (
+                <View style={styles.partOfSpeechTag}>
+                  <ThemedText variant="caption" color={theme.buttonPrimaryText}>
+                    {partOfSpeech}
+                  </ThemedText>
+                </View>
+              )}
+            </ThemedView>
           </View>
 
           {/* 拆分 */}
@@ -908,40 +810,6 @@ export default function WordDetailScreen() {
             </ThemedText>
           </TouchableOpacity>
         </ScrollView>
-
-        {/* 音标键盘 */}
-        <Modal
-          visible={showPhoneticKeyboard}
-          transparent
-          animationType="slide"
-        >
-          <View style={styles.keyboardModalOverlay}>
-            <TouchableOpacity
-              style={styles.keyboardCloseArea}
-              activeOpacity={1}
-              onPress={() => setShowPhoneticKeyboard(false)}
-            >
-              <View style={styles.keyboardDragHandle} />
-            </TouchableOpacity>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-              keyboardVerticalOffset={0}
-            >
-              <View style={styles.keyboardContainer}>
-                <PhoneticKeyboard
-                  onKeyPress={(symbol) => setPhonetic(phonetic + symbol)}
-                  onDelete={() => setPhonetic(phonetic.slice(0, -1))}
-                />
-                <TouchableOpacity
-                  style={styles.keyboardHideButton}
-                  onPress={() => setShowPhoneticKeyboard(false)}
-                >
-                  <ThemedText variant="body" color={theme.buttonPrimaryText}>完成</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </KeyboardAvoidingView>
-          </View>
-        </Modal>
       </Screen>
     );
   }

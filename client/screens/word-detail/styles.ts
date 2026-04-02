@@ -201,39 +201,6 @@ export const createStyles = (theme: Theme) => {
     autoCompleteLabel: {
       fontSize: 12,
     },
-    // 音标键盘 Modal 样式
-    keyboardModalOverlay: {
-      flex: 1,
-      justifyContent: 'flex-end',
-      backgroundColor: 'transparent',
-    },
-    keyboardCloseArea: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    keyboardDragHandle: {
-      width: 40,
-      height: 4,
-      backgroundColor: theme.border,
-      borderRadius: 2,
-      marginBottom: Spacing.md,
-    },
-    keyboardContainer: {
-      backgroundColor: theme.backgroundRoot,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      paddingHorizontal: Spacing.xl,
-      paddingBottom: Spacing['2xl'],
-      paddingTop: Spacing.md,
-    },
-    keyboardHideButton: {
-      backgroundColor: theme.primary,
-      paddingVertical: Spacing.md,
-      borderRadius: BorderRadius.md,
-      alignItems: 'center',
-      marginTop: Spacing.sm,
-    },
     // 查看模式样式
     headerActions: {
       flexDirection: 'row',
@@ -302,6 +269,38 @@ export const createStyles = (theme: Theme) => {
     helpText: {
       marginTop: Spacing.xs,
       fontStyle: 'italic',
+    },
+    // 信息卡片样式（编辑模式下的不可编辑展示）
+    infoCardSection: {
+      marginBottom: Spacing.md,
+    },
+    infoCard: {
+      padding: Spacing.md,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.sm,
+    },
+    infoCardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+    },
+    infoCardTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    infoCardValue: {
+      lineHeight: 28,
+    },
+    aiCardButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: BorderRadius.sm,
+      backgroundColor: theme.primary,
     },
   });
 };
