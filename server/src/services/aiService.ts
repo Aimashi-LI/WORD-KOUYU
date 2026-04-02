@@ -966,6 +966,99 @@ ${JSON.stringify(wordsData, null, 2)}
   }
 
   /**
+   * 流式对话（支持自定义参数）
+   * 用于复习分析等需要更详细输出的场景
+   */
+  async streamChatWithParams(
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+    onChunk: (chunk: string) => void,
+    options?: {
+      temperature?: number;
+      maxTokens?: number;
+    }
+  ): Promise<void> {
+    const baseUrl = this.settings.apiBaseUrl || API_BASE_URLS[this.settings.provider];
+    const url = `${baseUrl}/chat/completions`;
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${this.settings.apiKey}`,
+    };
+
+    const body = {
+      model: this.settings.model,
+      messages: messages,
+      temperature: options?.temperature ?? 0.5,
+      max_tokens: options?.maxTokens ?? 3000,
+      stream: true,
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Stream chat error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        
+        if (response.status === 401) {
+          throw new Error('API 密钥无效或已过期，请检查您的 API 密钥');
+        } else if (response.status === 429) {
+          throw new Error('API 调用频率超限，请稍后再试');
+        } else if (response.status === 402) {
+          throw new Error('Token 余额不足，请充值后继续使用');
+        }
+        throw new Error(`AI 服务错误: ${response.statusText}`);
+      }
+
+      if (!response.body) {
+        throw new Error('响应体为空');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine || trimmedLine === 'data: [DONE]') continue;
+          
+          if (trimmedLine.startsWith('data: ')) {
+            try {
+              const jsonStr = trimmedLine.slice(6);
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                onChunk(content);
+              }
+            } catch (e) {
+              // 忽略解析错误
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Stream chat error:', error.message);
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * 错误处理
    */
   private handleError(error: any): Error {

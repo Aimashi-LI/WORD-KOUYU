@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Dimensions, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
@@ -15,6 +15,7 @@ import { calculateNextInterval } from '@/algorithm/fsrs';
 import { Word } from '@/database/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAI, ReviewAnalysisResponse } from '@/hooks/useAI';
+import RNSSE from 'react-native-sse';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -68,6 +69,8 @@ export default function ReviewPlanScreen() {
   const [aiCalendarItems, setAiCalendarItems] = useState<Map<string, AICalendarItem[]>>(new Map()); // 按日期分组的AI建议
   const [aiAnalysisResult, setAiAnalysisResult] = useState<ReviewAnalysisResponse | null>(null);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false); // 是否显示AI分析结果
+  const [aiStreamText, setAiStreamText] = useState(''); // 流式输出的文本
+  const sseRef = useRef<any>(null);
 
   // 加载复习数据
   const loadData = useCallback(async () => {
@@ -372,7 +375,7 @@ export default function ReviewPlanScreen() {
     }
   };
 
-  // AI分析复习计划
+  // AI分析复习计划（流式版本）
   const handleAIAnalysis = useCallback(async () => {
     if (!isConfigured) {
       Alert.alert(
@@ -387,6 +390,9 @@ export default function ReviewPlanScreen() {
     }
 
     setAiAnalyzing(true);
+    setAiStreamText('');
+    setAiAnalysisResult(null);
+    
     try {
       // 获取所有单词
       await initDatabase();
@@ -399,6 +405,7 @@ export default function ReviewPlanScreen() {
 
       if (allWords.length === 0) {
         Alert.alert('提示', '没有单词可以分析');
+        setAiAnalyzing(false);
         return;
       }
 
@@ -439,53 +446,105 @@ export default function ReviewPlanScreen() {
         };
       });
 
-      // 调用 AI 分析
-      const result = await generateReviewAnalysis(wordsWithAnalysis, {
-        currentTime: now.toLocaleString('zh-CN'),
-        studyGoal: '高效复习',
+      // 使用流式API
+      const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+      const url = `${API_BASE_URL}/api/v1/ai/generate/review-analysis-stream`;
+      
+      let fullContent = '';
+      
+      const sse = new RNSSE(url, {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          words: wordsWithAnalysis,
+          context: {
+            currentTime: now.toLocaleString('zh-CN'),
+            studyGoal: '高效复习',
+          },
+        }),
+        method: 'POST',
       });
-
-      if (result) {
-        setAiAnalysisResult(result);
-        
-        // 解析AI建议的复习时间，按日期分组
-        const calendarItemsMap = new Map<string, AICalendarItem[]>();
-        
-        result.reviewPlan.forEach(item => {
-          // 解析建议的复习时间
-          const suggestedDate = parseSuggestedTime(item.suggestedTime);
-          const dateStr = suggestedDate.toISOString().split('T')[0];
+      
+      sseRef.current = sse;
+      
+      sse.addEventListener('message', (event: any) => {
+        if (event.data === '[DONE]') {
+          sse.close();
+          setAiAnalyzing(false);
           
-          if (!calendarItemsMap.has(dateStr)) {
-            calendarItemsMap.set(dateStr, []);
+          // 尝试从完整内容中解析JSON
+          try {
+            // 查找JSON代码块
+            const jsonMatch = fullContent.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[1]);
+              const result: ReviewAnalysisResponse = {
+                analysis: parsed.analysis || { summary: '暂无分析', urgentCount: 0, suggestedCount: 0 },
+                reviewPlan: parsed.reviewPlan || [],
+                recommendations: parsed.recommendations || [],
+              };
+              
+              setAiAnalysisResult(result);
+              
+              // 解析AI建议的复习时间，按日期分组
+              const calendarItemsMap = new Map<string, AICalendarItem[]>();
+              
+              result.reviewPlan.forEach(item => {
+                const suggestedDate = parseSuggestedTime(item.suggestedTime);
+                const dateStr = suggestedDate.toISOString().split('T')[0];
+                
+                if (!calendarItemsMap.has(dateStr)) {
+                  calendarItemsMap.set(dateStr, []);
+                }
+                
+                calendarItemsMap.get(dateStr)!.push({
+                  wordId: item.wordId,
+                  word: item.word,
+                  definition: wordsWithAnalysis.find(w => w.id === item.wordId)?.definition,
+                  priority: item.priority,
+                  reason: item.reason,
+                  suggestedTime: item.suggestedTime,
+                  expectedRetention: item.expectedRetention,
+                  reviewStrategy: item.reviewStrategy,
+                  suggestedDate: dateStr,
+                });
+              });
+              
+              setAiCalendarItems(calendarItemsMap);
+              setShowAIAnalysis(true);
+              updateStatsWithAIPlan(calendarItemsMap);
+            }
+          } catch (e) {
+            console.error('解析AI响应失败:', e);
+            // 即使解析失败，也显示文本内容
           }
           
-          calendarItemsMap.get(dateStr)!.push({
-            wordId: item.wordId,
-            word: item.word,
-            definition: wordsWithAnalysis.find(w => w.id === item.wordId)?.definition,
-            priority: item.priority,
-            reason: item.reason,
-            suggestedTime: item.suggestedTime,
-            expectedRetention: item.expectedRetention,
-            reviewStrategy: item.reviewStrategy,
-            suggestedDate: dateStr,
-          });
-        });
+          return;
+        }
         
-        setAiCalendarItems(calendarItemsMap);
-        setShowAIAnalysis(true);
-        
-        // 更新统计数据以显示AI建议
-        updateStatsWithAIPlan(calendarItemsMap);
-      }
+        try {
+          const data = JSON.parse(event.data);
+          if (data.content) {
+            fullContent += data.content;
+            setAiStreamText(prev => prev + data.content);
+          }
+        } catch (e) {
+          // 忽略解析错误
+        }
+      });
+      
+      sse.addEventListener('error', (error: any) => {
+        console.error('SSE error:', error);
+        sse.close();
+        setAiAnalyzing(false);
+        Alert.alert('错误', 'AI 分析失败，请重试');
+      });
+      
     } catch (error) {
       console.error('AI 分析失败:', error);
       Alert.alert('错误', 'AI 分析失败，请重试');
-    } finally {
       setAiAnalyzing(false);
     }
-  }, [isConfigured, generateReviewAnalysis, router]);
+  }, [isConfigured, router]);
 
   // 解析AI建议的时间字符串为Date对象
   const parseSuggestedTime = (timeStr: string): Date => {
@@ -837,6 +896,19 @@ export default function ReviewPlanScreen() {
             </View>
           )}
         </TouchableOpacity>
+
+        {/* AI 流式输出显示 */}
+        {aiAnalyzing && aiStreamText && (
+          <ThemedView level="default" style={styles.aiStreamCard}>
+            <View style={styles.aiResultHeader}>
+              <ActivityIndicator size="small" color={theme.primary} />
+              <ThemedText variant="body" color={theme.textPrimary} style={{ marginLeft: 8 }}>AI 分析中</ThemedText>
+            </View>
+            <ThemedText variant="body" color={theme.textSecondary} style={styles.aiStreamText}>
+              {aiStreamText}
+            </ThemedText>
+          </ThemedView>
+        )}
 
         {/* AI 分析结果摘要 */}
         {showAIAnalysis && aiAnalysisResult && (

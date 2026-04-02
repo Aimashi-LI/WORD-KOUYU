@@ -401,6 +401,18 @@ export const createStyles = (theme: any) => StyleSheet.create({
   aiAnalysisText: {
     fontWeight: '600',
   },
+  // AI 流式输出卡片
+  aiStreamCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    maxHeight: 300,
+  },
+  aiStreamText: {
+    lineHeight: 22,
+    marginTop: 8,
+  },
   // AI 分析结果卡片
   aiResultCard: {
     marginHorizontal: 16,

@@ -716,6 +716,166 @@ router.post('/generate/review-analysis', async (req: Request, res: Response) => 
 });
 
 /**
+ * AI 复习分析（流式版本）
+ * POST /api/v1/ai/generate/review-analysis-stream
+ * 流式输出分析结果，提升用户体验
+ */
+router.post('/generate/review-analysis-stream', async (req: Request, res: Response) => {
+  try {
+    // 获取 AI 配置
+    const aiSettings = storageService.getAISettings();
+    
+    if (!aiSettings) {
+      res.status(400).json({
+        success: false,
+        error: '尚未配置 AI，请先在设置中配置 AI API 密钥',
+      });
+      return;
+    }
+
+    const { words, context } = req.body;
+
+    if (!words || !Array.isArray(words)) {
+      res.status(400).json({
+        success: false,
+        error: '缺少必填字段：words（数组）',
+      });
+      return;
+    }
+
+    // 设置流式响应头
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, no-transform, must-revalidate');
+    res.setHeader('Connection', 'keep-alive');
+
+    // 创建 AI 服务实例
+    const aiService = createAIService(aiSettings);
+
+    // 构建消息
+    const systemPrompt = `你是一个专业的英语学习顾问和记忆专家，精通艾宾浩斯遗忘曲线和FSRS记忆算法。你的任务是根据用户所有单词的学习状态，制定科学、高效的个性化复习计划。
+
+## 分析原则：
+1. **遗忘临界点优先**：优先复习接近遗忘临界点的单词（可提取性<0.8）
+2. **难度加权**：难度高的单词需要更多关注
+3. **复习历史考量**：参考历史表现调整计划
+4. **时间合理性**：建议的复习时间应符合实际可执行性
+
+## 优先级定义：
+- **urgent（紧急）**：必须今天复习，可提取性<0.6 或 已过期的单词
+- **high（高）**：建议今天复习，可提取性<0.8 或 稳定性<3天的单词
+- **medium（中）**：可以明天复习，正常学习进度的单词
+- **low（低）**：可以稍后复习，已掌握且稳定性高的单词
+
+## 输出格式要求：
+请按以下格式输出，先输出分析文本，最后输出JSON结果：
+
+【学习状况分析】
+（用2-3句话总结整体学习状况）
+
+【紧急复习单词】
+（列出紧急需要复习的单词，每个一行，格式：单词 - 原因 - 建议）
+
+【建议复习计划】
+（列出今日建议复习的单词）
+
+【学习建议】
+（给出2-3条具体的学习建议）
+
+最后输出JSON格式的完整结果：
+\`\`\`json
+{
+  "analysis": {
+    "summary": "整体学习状况总结",
+    "urgentCount": 紧急需要复习的单词数,
+    "suggestedCount": 建议今日复习的单词数
+  },
+  "reviewPlan": [
+    {
+      "wordId": 单词ID,
+      "word": "单词",
+      "priority": "urgent/high/medium/low",
+      "reason": "复习原因",
+      "suggestedTime": "建议复习时间",
+      "expectedRetention": 0.8,
+      "reviewStrategy": "复习策略建议"
+    }
+  ],
+  "recommendations": [
+    {
+      "type": "timing/method/frequency/break",
+      "message": "具体建议内容"
+    }
+  ]
+}
+\`\`\``;
+
+    const wordsData = words.map((w: any) => ({
+      id: w.id,
+      word: w.word,
+      definition: w.definition,
+      stability: w.stability?.toFixed(1),
+      difficulty: w.difficulty ? (w.difficulty * 100).toFixed(0) + '%' : '50%',
+      reviewCount: w.reviewCount,
+      lastScore: w.lastScore,
+      retrievability: w.retrievability ? (w.retrievability * 100).toFixed(0) + '%' : '100%',
+      daysSinceLastReview: w.daysSinceLastReview?.toFixed(1),
+      nextReviewDate: w.nextReviewDate,
+      isMastered: w.isMastered
+    }));
+
+    const userPrompt = `请分析以下单词数据并生成复习计划：
+
+**当前时间**：${context?.currentTime || new Date().toLocaleString('zh-CN')}
+**学习目标**：${context?.studyGoal || '高效复习'}
+**偏好复习时间**：${context?.preferredTime || '随时'}
+
+**单词列表（共${words.length}个）**：
+${JSON.stringify(wordsData.slice(0, 30), null, 2)}${wordsData.length > 30 ? '\n...（更多单词已省略）' : ''}
+
+请先输出分析文本，最后输出JSON结果：`;
+
+    let fullContent = '';
+    
+    // 流式生成回复（使用更大的max_tokens支持详细分析）
+    await aiService.streamChatWithParams(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      (chunk: string) => {
+        fullContent += chunk;
+        res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+      },
+      { maxTokens: 4000 }
+    );
+
+    // 发送结束标记
+    res.write('data: [DONE]\n\n');
+    res.end();
+
+    // 记录使用情况（异步，不阻塞响应）
+    const modelConfig = AI_MODELS.find(m => m.id === aiSettings.model) as AIModelConfig;
+    const estimatedTokens = Math.ceil((systemPrompt.length + userPrompt.length + fullContent.length) / 4);
+    const cost = (estimatedTokens / 1000) * (modelConfig?.costPer1kTokens || 0);
+    
+    storageService.recordAIUsage({
+      settingId: aiSettings.id!,
+      feature: 'review_advice',
+      word: `analysis-${words.length}words`,
+      tokensUsed: estimatedTokens,
+      cost,
+    });
+
+  } catch (error: any) {
+    console.error('Generate review analysis stream error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
  * AI 复习结果处理
  * POST /api/v1/ai/generate/review-result
  * 根据用户复习表现，AI计算新的学习参数
