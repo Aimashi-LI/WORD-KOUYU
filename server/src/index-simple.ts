@@ -84,7 +84,7 @@ app.post('/api/v1/user/register', async (req: any, res: any) => {
     }
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    res.status(500).json({ success: false, error: '服务器内部错误' });
   }
 });
 
@@ -92,7 +92,7 @@ app.get('/api/v1/user/info', async (req: any, res: any) => {
   try {
     const deviceId = req.headers['x-device-id'];
     if (!deviceId) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(401).json({ success: false, error: '未授权访问' });
     }
 
     let user: any = null;
@@ -104,13 +104,13 @@ app.get('/api/v1/user/info', async (req: any, res: any) => {
     }
 
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({ success: false, error: '用户不存在' });
     }
 
     res.status(200).json({ user });
   } catch (error) {
     console.error('Get user error:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    res.status(500).json({ success: false, error: '服务器内部错误' });
   }
 });
 
@@ -119,7 +119,7 @@ app.get('/api/v1/user/attempts', async (req: any, res: any) => {
   try {
     const deviceId = req.headers['x-device-id'];
     if (!deviceId) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(401).json({ success: false, error: '未授权访问' });
     }
 
     let user: any = null;
@@ -131,7 +131,7 @@ app.get('/api/v1/user/attempts', async (req: any, res: any) => {
     }
 
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({ success: false, error: '用户不存在' });
     }
 
     res.status(200).json({
@@ -141,7 +141,7 @@ app.get('/api/v1/user/attempts', async (req: any, res: any) => {
     });
   } catch (error) {
     console.error('Get attempts error:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    res.status(500).json({ success: false, error: '服务器内部错误' });
   }
 });
 
@@ -150,7 +150,7 @@ app.post('/api/v1/user/orders', async (req: any, res: any) => {
   try {
     const deviceId = req.headers['x-device-id'];
     if (!deviceId) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(401).json({ success: false, error: '未授权访问' });
     }
 
     const { packageId } = req.body;
@@ -166,7 +166,7 @@ app.post('/api/v1/user/orders', async (req: any, res: any) => {
     }
 
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({ success: false, error: '用户不存在' });
     }
 
     const packages: any = {
@@ -177,7 +177,7 @@ app.post('/api/v1/user/orders', async (req: any, res: any) => {
 
     const packageInfo = packages[packageId];
     if (!packageInfo) {
-      return res.status(400).json({ success: false, error: 'Invalid package' });
+      return res.status(400).json({ success: false, error: '无效的套餐' });
     }
 
     const orderId = orderIdCounter++;
@@ -198,7 +198,7 @@ app.post('/api/v1/user/orders', async (req: any, res: any) => {
     res.status(200).json({ order });
   } catch (error) {
     console.error('Create order error:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    res.status(500).json({ success: false, error: '服务器内部错误' });
   }
 });
 
@@ -207,7 +207,7 @@ app.get('/api/v1/user/orders', async (req: any, res: any) => {
   try {
     const deviceId = req.headers['x-device-id'];
     if (!deviceId) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(401).json({ success: false, error: '未授权访问' });
     }
 
     let userId: number = 0;
@@ -219,14 +219,14 @@ app.get('/api/v1/user/orders', async (req: any, res: any) => {
     }
 
     if (userId === 0) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({ success: false, error: '用户不存在' });
     }
 
     const userOrders = orders.get(userId) || [];
     res.status(200).json({ orders: userOrders });
   } catch (error) {
     console.error('Get orders error:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    res.status(500).json({ success: false, error: '服务器内部错误' });
   }
 });
 

@@ -10,7 +10,7 @@ router.post('/github', async (req, res) => {
     try {
         const { query, count = 10 } = req.body;
         if (!query) {
-            return res.status(400).json({ error: 'Query parameter is required' });
+            return res.status(400).json({ error: '缺少搜索关键词' });
         }
         const config = new Config();
         const client = new SearchClient(config);
@@ -35,7 +35,7 @@ router.post('/github', async (req, res) => {
     }
     catch (error) {
         console.error('Search error:', error);
-        res.status(500).json({ error: 'Search failed', message: error instanceof Error ? error.message : 'Unknown error' });
+        res.status(500).json({ error: '搜索失败', message: error instanceof Error ? error.message : '未知错误' });
     }
 });
 export default router;
