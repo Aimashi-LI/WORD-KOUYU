@@ -9,6 +9,7 @@ import {
   Platform,
   StyleSheet,
   Animated,
+  Modal,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
@@ -71,6 +72,9 @@ export default function SpeakingScreen() {
   const [conversationState, setConversationState] = useState<ConversationState>('idle');
   const [isRecording, setIsRecording] = useState(false);
   const [currentResponse, setCurrentResponse] = useState('');
+  
+  // 权限告知弹窗
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
   
   // 音频相关
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -383,8 +387,42 @@ export default function SpeakingScreen() {
     }
   };
 
-  // 开始监听（录音）
-  const startListening = async () => {
+  // 请求麦克风权限（先弹出自定义告知弹窗）
+  const requestMicrophonePermission = async () => {
+    // 先弹出自定义告知弹窗
+    setShowPermissionModal(true);
+  };
+
+  // 用户确认授权后，请求系统权限
+  const handlePermissionConfirm = async () => {
+    setShowPermissionModal(false);
+    
+    try {
+      // 请求系统麦克风权限
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('提示', '您拒绝了麦克风权限，口语训练功能将无法使用。您可以稍后在系统设置中开启权限。');
+        setConversationState('idle');
+        return;
+      }
+
+      // 权限已获取，开始录音
+      await doStartRecording();
+    } catch (error: any) {
+      console.error('Request permission error:', error);
+      Alert.alert('错误', '权限请求失败');
+      setConversationState('idle');
+    }
+  };
+
+  // 用户取消授权
+  const handlePermissionCancel = () => {
+    setShowPermissionModal(false);
+    setConversationState('idle');
+  };
+
+  // 实际开始录音
+  const doStartRecording = async () => {
     try {
       // 确保之前的录音已清理
       if (recordingRef.current) {
@@ -396,19 +434,11 @@ export default function SpeakingScreen() {
         recordingRef.current = null;
       }
 
-      // 请求麦克风权限
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('提示', '需要麦克风权限才能录音');
-        setConversationState('idle');
-        return;
-      }
-
-      // 设置音频模式
+      // 设置音频模式（禁止后台录音）
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
+        staysActiveInBackground: false, // 禁止后台录音
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
       });
@@ -433,28 +463,51 @@ export default function SpeakingScreen() {
     }
   };
 
+  // 开始监听（录音）- 先检查权限
+  const startListening = async () => {
+    // 先检查是否已有权限
+    const { status } = await Audio.getPermissionsAsync();
+    if (status === 'granted') {
+      // 已有权限，直接开始录音
+      await doStartRecording();
+    } else {
+      // 没有权限，弹出自定义告知弹窗
+      requestMicrophonePermission();
+    }
+  };
+
   // 停止监听并处理
   const stopListening = async () => {
     if (!recordingRef.current) return;
 
+    let audioUri: string | null = null;
+    
     try {
       setIsRecording(false);
       setConversationState('processing');
       
       const recording = recordingRef.current;
       await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
+      audioUri = recording.getURI();
       recordingRef.current = null;
 
-      if (!uri) {
+      if (!audioUri) {
         setConversationState('idle');
         return;
       }
 
-      // 读取音频并转base64
-      const audioBase64 = await (FileSystem as any).readAsStringAsync(uri, {
+      // 读取音频并转base64（实时流式处理，不保存录音文件）
+      const audioBase64 = await (FileSystem as any).readAsStringAsync(audioUri, {
         encoding: 'base64',
       });
+
+      // 立即删除临时录音文件（合规要求：不保存录音文件）
+      try {
+        await (FileSystem as any).deleteAsync(audioUri, { idempotent: true });
+        console.log('[Speaking] 临时录音文件已删除');
+      } catch (deleteError) {
+        console.warn('[Speaking] 删除录音文件失败:', deleteError);
+      }
 
       // 语音识别
       const asrResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/audio/asr`, {
@@ -487,6 +540,14 @@ export default function SpeakingScreen() {
       }
     } catch (error: any) {
       console.error('Stop listening error:', error);
+      // 确保删除录音文件
+      if (audioUri) {
+        try {
+          await (FileSystem as any).deleteAsync(audioUri, { idempotent: true });
+        } catch (e) {
+          // 忽略删除错误
+        }
+      }
       setConversationState('idle');
     }
   };
@@ -747,9 +808,9 @@ export default function SpeakingScreen() {
   const getButtonConfig = () => {
     switch (conversationState) {
       case 'idle':
-        return { icon: 'microphone', color: theme.primary, label: '点击开始说话' };
+        return { icon: 'microphone', color: theme.primary, label: '语音对话（需录音权限）' };
       case 'listening':
-        return { icon: 'stop', color: theme.error, label: '点击停止' };
+        return { icon: 'stop', color: theme.error, label: '点击停止录音' };
       case 'speaking':
         return { icon: 'hand', color: theme.warning, label: '点击打断' };
       case 'processing':
@@ -1013,6 +1074,65 @@ export default function SpeakingScreen() {
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       {mode === 'select' && renderSelectMode()}
       {mode === 'chat' && renderChatMode()}
+      
+      {/* 权限告知弹窗 - 系统权限弹窗前显示 */}
+      <Modal
+        visible={showPermissionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handlePermissionCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.permissionModal, { backgroundColor: theme.backgroundDefault }]}>
+            <View style={styles.permissionHeader}>
+              <FontAwesome6 name="microphone" size={32} color={theme.primary} />
+              <ThemedText variant="h3" color={theme.textPrimary} style={styles.permissionTitle}>
+                麦克风权限申请
+              </ThemedText>
+            </View>
+            
+            <View style={styles.permissionContent}>
+              <ThemedText variant="body" color={theme.textSecondary} style={styles.permissionText}>
+                本功能将使用麦克风进行语音输入，录音仅用于发送给 AI 大模型生成回答。
+              </ThemedText>
+              
+              <View style={[styles.permissionFeatures, { backgroundColor: theme.backgroundRoot }]}>
+                <View style={styles.featureItem}>
+                  <FontAwesome6 name="check-circle" size={16} color={theme.success} />
+                  <ThemedText variant="body" color={theme.textSecondary}>录音实时流式传输，不留本地缓存</ThemedText>
+                </View>
+                <View style={styles.featureItem}>
+                  <FontAwesome6 name="check-circle" size={16} color={theme.success} />
+                  <ThemedText variant="body" color={theme.textSecondary}>全程 HTTPS 加密传输</ThemedText>
+                </View>
+                <View style={styles.featureItem}>
+                  <FontAwesome6 name="check-circle" size={16} color={theme.success} />
+                  <ThemedText variant="body" color={theme.textSecondary}>不上传第三方服务器</ThemedText>
+                </View>
+                <View style={styles.featureItem}>
+                  <FontAwesome6 name="check-circle" size={16} color={theme.success} />
+                  <ThemedText variant="body" color={theme.textSecondary}>不存储录音文件</ThemedText>
+                </View>
+              </View>
+            </View>
+            
+            <View style={styles.permissionButtons}>
+              <TouchableOpacity
+                style={[styles.permissionButton, styles.permissionCancelButton, { backgroundColor: theme.backgroundRoot }]}
+                onPress={handlePermissionCancel}
+              >
+                <ThemedText variant="body" color={theme.textSecondary}>拒绝</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.permissionButton, styles.permissionConfirmButton, { backgroundColor: theme.primary }]}
+                onPress={handlePermissionConfirm}
+              >
+                <ThemedText variant="body" color={theme.buttonPrimaryText}>允许使用麦克风</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }

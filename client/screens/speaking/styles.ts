@@ -310,4 +310,70 @@ export const createStyles = (theme: any) => StyleSheet.create({
   pronunciationHint: {
     marginTop: 4,
   },
+  // 权限告知弹窗样式
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  permissionModal: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  permissionHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  permissionTitle: {
+    fontWeight: '600',
+  },
+  permissionContent: {
+    marginBottom: 24,
+  },
+  permissionText: {
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  permissionFeatures: {
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  permissionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  permissionButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  permissionCancelButton: {
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  permissionConfirmButton: {
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
 });
