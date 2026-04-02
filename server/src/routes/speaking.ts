@@ -5,6 +5,31 @@ import { AISettings, AIProvider } from '../types/ai';
 
 const router = Router();
 
+// 发音识别和纠正的通用指令（追加到所有场景）
+const PRONUNCIATION_CORRECTION_INSTRUCTION = `
+## Pronunciation Detection (IMPORTANT):
+You should detect potential pronunciation errors during conversation. This happens when:
+- A word in the user's sentence doesn't fit the context
+- The user might have mispronounced a word, causing ASR to transcribe it incorrectly
+
+When you suspect a pronunciation error:
+1. First, naturally ask for confirmation using this EXACT format:
+   🤔 Did you mean "**[CORRECT_WORD]**" instead of "**[WRONG_WORD]**"?
+   
+   Example: If user said "I went to the bitch yesterday" but context suggests beach:
+   🤔 Did you mean "**beach**" instead of "**bitch**"?
+
+2. If the user confirms NO (they didn't mean the correct word), then provide pronunciation guidance:
+   📢 The word "**[CORRECT_WORD]**" is pronounced as /phonetic/. Let me say it: "[CORRECT_WORD]"
+
+3. Be natural and friendly - treat it like a real conversation, not a test.
+
+Common pronunciation confusions to watch for:
+- beach/bitch, sheet/shit, peace/piss, fork/fuck, duck/dick
+- ship/sheep, bit/beat, live/leave, fill/feel
+- their/there/they're, your/you're, its/it's
+- words that sound similar but have different meanings in context`;
+
 // 口语训练场景预设
 const SPEAKING_SCENES = {
   // ===== 生活角色场景 =====
@@ -18,6 +43,8 @@ IMPORTANT RULES:
 3. Keep responses SHORT (1-2 sentences max)
 4. Be natural and conversational
 5. If user makes mistakes, casually correct them
+
+${PRONUNCIATION_CORRECTION_INSTRUCTION}
 
 Example response:
 "That's so cool! Where did you get it? (太酷了！你在哪里买的？)"
@@ -37,6 +64,8 @@ IMPORTANT RULES:
 4. Be encouraging and patient
 5. Briefly note any corrections if needed
 
+${PRONUNCIATION_CORRECTION_INSTRUCTION}
+
 Example response:
 "Great start! You could also say 'I went there yesterday'. What did you do next? (很好的开始！你也可以说'I went there yesterday'。接下来你做了什么？)"
 
@@ -54,6 +83,8 @@ IMPORTANT RULES:
 3. Keep responses SHORT (1-2 sentences max)
 4. Be warm and supportive
 
+${PRONUNCIATION_CORRECTION_INSTRUCTION}
+
 Example response:
 "That's wonderful, dear! How was your day? (太棒了亲爱的！你今天过得怎么样？)"
 
@@ -70,6 +101,8 @@ IMPORTANT RULES:
 2. ALWAYS respond in BOTH English and Chinese: "English sentence (中文翻译)"
 3. Keep responses SHORT (1-2 sentences max)
 4. Be professional but relaxed
+
+${PRONUNCIATION_CORRECTION_INSTRUCTION}
 
 Example response:
 "Yeah, that project is going well. Have you tried the new coffee? (是的，那个项目进展不错。你试过新咖啡了吗？)"
@@ -90,6 +123,8 @@ IMPORTANT RULES:
 3. Keep responses SHORT (1-2 sentences max)
 4. Use natural American expressions
 
+${PRONUNCIATION_CORRECTION_INSTRUCTION}
+
 Example response:
 "Yo, that's sick! I'm totally down for that! (哇太酷了！我完全同意！)"
 
@@ -106,6 +141,8 @@ IMPORTANT RULES:
 2. ALWAYS respond in BOTH English and Chinese: "English sentence (中文翻译)"
 3. Keep responses SHORT (1-2 sentences max)
 4. Use British expressions naturally
+
+${PRONUNCIATION_CORRECTION_INSTRUCTION}
 
 Example response:
 "Oh brilliant! That's lovely to hear! (太棒了！听到这个真好！)"
@@ -126,6 +163,8 @@ IMPORTANT RULES:
 3. Keep responses SHORT (1-2 sentences max)
 4. Help with travel situations
 
+${PRONUNCIATION_CORRECTION_INSTRUCTION}
+
 Example response:
 "Sure! I can help with that. Where would you like to go? (当然！我可以帮忙。您想去哪里？)"
 
@@ -143,6 +182,8 @@ IMPORTANT RULES:
 3. Keep responses SHORT (1-2 sentences max)
 4. Ask common interview questions
 
+${PRONUNCIATION_CORRECTION_INSTRUCTION}
+
 Example response:
 "Thank you for sharing. Could you tell me about a challenge you overcame? (谢谢分享。能讲讲你克服过的挑战吗？)"
 
@@ -159,6 +200,8 @@ IMPORTANT RULES:
 2. ALWAYS respond in BOTH English and Chinese: "English sentence (中文翻译)"
 3. Keep responses SHORT (1-2 sentences max)
 4. Use professional business language
+
+${PRONUNCIATION_CORRECTION_INSTRUCTION}
 
 Example response:
 "Good point! We should schedule a follow-up meeting. (好观点！我们应该安排一个后续会议。)"

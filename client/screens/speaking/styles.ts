@@ -221,4 +221,93 @@ export const createStyles = (theme: any) => StyleSheet.create({
   processingText: {
     marginTop: 8,
   },
+  // 实时语音控制
+  voiceControlContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    backgroundColor: theme.backgroundRoot,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  mainButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  listeningButton: {
+    shadowColor: theme.error,
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  buttonLabel: {
+    textAlign: 'center',
+  },
+  // 发音确认样式
+  pronunciationCheckContainer: {
+    marginTop: 8,
+    paddingVertical: 8,
+  },
+  pronunciationCheckButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  confirmYes: {
+    backgroundColor: theme.primary,
+  },
+  confirmNo: {
+    backgroundColor: theme.backgroundTertiary,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  // 发音纠正样式
+  pronunciationCorrectionContainer: {
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: theme.backgroundTertiary,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  pronunciationWordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  pronunciationWord: {
+    fontWeight: '700',
+  },
+  playPronunciationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.backgroundDefault,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.primary,
+  },
+  phoneticText: {
+    marginTop: 8,
+    fontSize: 16,
+    fontStyle: 'italic',
+  },
+  pronunciationHint: {
+    marginTop: 4,
+  },
 });

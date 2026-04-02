@@ -19,6 +19,7 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import RNSSE from 'react-native-sse';
 import { useAI } from '@/hooks/useAI';
+import { createStyles } from './styles';
 
 interface Message {
   id: string;
@@ -31,6 +32,16 @@ interface Message {
     pronunciation?: string;
     expression?: string;
     feedback?: string;
+  };
+  // 发音确认请求
+  pronunciationCheck?: {
+    correctWord: string;
+    wrongWord: string;
+  };
+  // 发音纠正信息
+  pronunciationCorrection?: {
+    word: string;
+    phonetic: string;
   };
 }
 
@@ -175,13 +186,48 @@ export default function SpeakingScreen() {
   };
 
   // 解析纠正信息
-  const parseCorrections = (content: string): { mainContent: string; corrections?: Message['corrections'] } => {
+  const parseCorrections = (content: string): { 
+    mainContent: string; 
+    corrections?: Message['corrections'];
+    pronunciationCheck?: Message['pronunciationCheck'];
+    pronunciationCorrection?: Message['pronunciationCorrection'];
+  } => {
+    // 检测发音确认请求：🤔 Did you mean "**beach**" instead of "**bitch**"?
+    const pronunciationCheckMatch = content.match(/🤔\s*Did you mean\s*\*\*"([^"]+)"\*\*\s*instead of\s*\*\*"([^"]+)"\*\*/i);
+    
+    // 检测发音纠正：📢 The word "**beach**" is pronounced as /biːtʃ/. Let me say it: "beach"
+    const pronunciationCorrectionMatch = content.match(/📢\s*The word\s*\*\*"([^"]+)"\*\*\s*is pronounced as\s*\/([^\/]+)\/.*Let me say it:\s*"([^"]+)"/i);
+
+    let mainContent = content;
+    let pronunciationCheck: Message['pronunciationCheck'] | undefined;
+    let pronunciationCorrection: Message['pronunciationCorrection'] | undefined;
+
+    // 处理发音纠正
+    if (pronunciationCorrectionMatch) {
+      pronunciationCorrection = {
+        word: pronunciationCorrectionMatch[1],
+        phonetic: pronunciationCorrectionMatch[2],
+      };
+      // 移除发音纠正标记，保留主要内容
+      mainContent = mainContent.replace(pronunciationCorrectionMatch[0], '').trim();
+    }
+
+    // 处理发音确认请求
+    if (pronunciationCheckMatch) {
+      pronunciationCheck = {
+        correctWord: pronunciationCheckMatch[1],
+        wrongWord: pronunciationCheckMatch[2],
+      };
+      // 不移除内容，让用户看到AI的询问
+    }
+
+    // 继续原有的纠正解析逻辑
     const hasCorrectionMarker = content.includes('📝 **Corrections**') || 
                                  content.includes('📝**Corrections**') ||
                                  content.includes('**Corrections**:') ||
                                  content.includes('🎯 **Interview Feedback**');
 
-    if (!hasCorrectionMarker) {
+    if (!hasCorrectionMarker && !pronunciationCheck && !pronunciationCorrection) {
       const inlineCorrectionPatterns = [
         /By the way, we (?:usually |often |)say ['"]([^'"]+)['"] instead of ['"]([^'"]+)['"]/i,
         /we'd say ['"]([^'"]+)['"] instead of ['"]([^'"]+)['"]/i,
@@ -207,13 +253,13 @@ export default function SpeakingScreen() {
       });
 
       if (hasInlineCorrection) {
-        return { mainContent: content, corrections };
+        return { mainContent, corrections, pronunciationCheck, pronunciationCorrection };
       }
-      return { mainContent: content };
+      return { mainContent, pronunciationCheck, pronunciationCorrection };
     }
 
-    const parts = content.split(/📝\s*\*?\*?Corrections\*?\*?:?|🎯\s*\*?\*?Interview Feedback\*?\*?:?/i);
-    const mainContent = parts[0].trim();
+    const parts = mainContent.split(/📝\s*\*?\*?Corrections\*?\*?:?|🎯\s*\*?\*?Interview Feedback\*?\*?:?/i);
+    mainContent = parts[0].trim();
     const corrections: Message['corrections'] = {};
     
     if (parts[1]) {
@@ -236,7 +282,7 @@ export default function SpeakingScreen() {
       if (feedbackMatch) corrections.feedback = feedbackMatch[1].trim();
     }
 
-    return { mainContent, corrections };
+    return { mainContent, corrections, pronunciationCheck, pronunciationCorrection };
   };
 
   // 开始对话
@@ -517,13 +563,15 @@ export default function SpeakingScreen() {
           
           console.log('[Speaking] AI回复完成，长度:', fullResponse.length);
           
-          const { mainContent, corrections } = parseCorrections(fullResponse);
+          const { mainContent, corrections, pronunciationCheck, pronunciationCorrection } = parseCorrections(fullResponse);
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
             content: mainContent,
             timestamp: new Date(),
             corrections,
+            pronunciationCheck,
+            pronunciationCorrection,
           };
           
           setMessages(prev => [...prev, assistantMessage]);
@@ -583,6 +631,77 @@ export default function SpeakingScreen() {
       case 'processing':
         // 处理中，不做任何操作
         break;
+    }
+  };
+
+  // 处理发音确认回复（用户点击"是"或"不是"）
+  const handlePronunciationConfirm = async (confirmed: boolean, correctWord: string, wrongWord: string) => {
+    if (confirmed) {
+      // 用户确认是这个意思，继续对话
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: `Yes, I meant "${correctWord}".`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+      await sendToAI(`Yes, I meant "${correctWord}".`);
+    } else {
+      // 用户说不是，告诉AI用户实际想说别的词，请求发音纠正
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: `No, I didn't mean "${correctWord}". Please tell me the correct pronunciation.`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+      await sendToAI(`No, I didn't mean "${correctWord}". I might have mispronounced it. What is the correct pronunciation of "${correctWord}"?`);
+    }
+  };
+
+  // 播放单词发音
+  const playWordPronunciation = async (word: string) => {
+    try {
+      setConversationState('speaking');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/audio/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: word,
+          voice: 'en-US-Neural2-F',
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.data?.audioUri) {
+        if (soundRef.current) {
+          try {
+            await soundRef.current.unloadAsync();
+          } catch (e) {
+            // 忽略
+          }
+        }
+        
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: data.data.audioUri },
+          { shouldPlay: true }
+        );
+        
+        soundRef.current = sound;
+        
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            isPlayingRef.current = false;
+            setConversationState('idle');
+          }
+        });
+      } else {
+        setConversationState('idle');
+      }
+    } catch (error) {
+      console.error('Play word pronunciation error:', error);
+      setConversationState('idle');
     }
   };
 
@@ -794,6 +913,57 @@ export default function SpeakingScreen() {
                 )}
               </View>
             )}
+            
+            {/* 发音确认请求 */}
+            {message.role === 'assistant' && message.pronunciationCheck && (
+              <View style={styles.pronunciationCheckContainer}>
+                <View style={styles.pronunciationCheckButtons}>
+                  <TouchableOpacity
+                    style={[styles.confirmButton, styles.confirmYes]}
+                    onPress={() => handlePronunciationConfirm(
+                      true, 
+                      message.pronunciationCheck!.correctWord,
+                      message.pronunciationCheck!.wrongWord
+                    )}
+                  >
+                    <ThemedText variant="body" color={theme.buttonPrimaryText}>是，就是这个意思</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.confirmButton, styles.confirmNo]}
+                    onPress={() => handlePronunciationConfirm(
+                      false, 
+                      message.pronunciationCheck!.correctWord,
+                      message.pronunciationCheck!.wrongWord
+                    )}
+                  >
+                    <ThemedText variant="body" color={theme.textPrimary}>不是</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
+            {/* 发音纠正信息 */}
+            {message.role === 'assistant' && message.pronunciationCorrection && (
+              <View style={styles.pronunciationCorrectionContainer}>
+                <View style={styles.pronunciationWordRow}>
+                  <ThemedText variant="h3" color={theme.primary} style={styles.pronunciationWord}>
+                    {message.pronunciationCorrection.word}
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={styles.playPronunciationButton}
+                    onPress={() => playWordPronunciation(message.pronunciationCorrection!.word)}
+                  >
+                    <FontAwesome6 name="volume-high" size={20} color={theme.primary} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.phoneticText, { color: theme.textSecondary }]}>
+                  /{message.pronunciationCorrection.phonetic}/
+                </Text>
+                <ThemedText variant="caption" color={theme.textMuted} style={styles.pronunciationHint}>
+                  点击播放正确发音
+                </ThemedText>
+              </View>
+            )}
           </View>
         ))}
 
@@ -846,183 +1016,3 @@ export default function SpeakingScreen() {
     </Screen>
   );
 }
-
-const createStyles = (theme: any) => StyleSheet.create({
-  // ===== 选择模式样式 =====
-  selectContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  headerSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    gap: 8,
-  },
-  title: {
-    marginTop: 8,
-  },
-  subtitle: {
-    textAlign: 'center',
-  },
-  scenesList: {
-    flex: 1,
-  },
-  categorySection: {
-    marginBottom: 24,
-  },
-  categoryTitle: {
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  sceneGrid: {
-    gap: 12,
-  },
-  sceneCard: {
-    backgroundColor: theme.backgroundDefault,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  sceneName: {
-    marginBottom: 8,
-  },
-  sceneGreeting: {
-    fontStyle: 'italic',
-    lineHeight: 20,
-  },
-  configButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: theme.primary,
-    borderRadius: 12,
-    marginBottom: 24,
-  },
-
-  // ===== 聊天模式样式 =====
-  chatContainer: {
-    flex: 1,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-    backgroundColor: theme.backgroundRoot,
-  },
-  backButton: {
-    padding: 8,
-  },
-  chatTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  messagesContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  messageWrapper: {
-    marginBottom: 12,
-  },
-  messageBubble: {
-    maxWidth: '85%',
-    padding: 14,
-    borderRadius: 18,
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: theme.primary,
-    borderBottomRightRadius: 4,
-  },
-  assistantBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: theme.backgroundDefault,
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  messageText: {
-    lineHeight: 22,
-  },
-  correctionsContainer: {
-    marginTop: 8,
-    marginLeft: 4,
-    padding: 12,
-    backgroundColor: '#FFF9E6',
-    borderRadius: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: theme.warning,
-  },
-  correctionsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 6,
-  },
-  correctionsTitle: {
-    fontWeight: '600',
-  },
-  correctionItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-    gap: 8,
-  },
-  correctionText: {
-    flex: 1,
-    lineHeight: 20,
-    fontSize: 13,
-  },
-  feedbackItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-    gap: 8,
-  },
-  feedbackText: {
-    flex: 1,
-    fontWeight: '500',
-    fontSize: 13,
-  },
-
-  // ===== 实时语音控制 =====
-  voiceControlContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: theme.backgroundRoot,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-  },
-  mainButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  listeningButton: {
-    shadowColor: theme.error,
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  buttonLabel: {
-    textAlign: 'center',
-  },
-});
