@@ -32,36 +32,28 @@ jobs:
         run: npm install
         working-directory: ./client
 
-      - name: Generate Android project
+      - name: Setup symlink for node_modules
         run: |
-          echo "=== Running expo prebuild ==="
-          npx expo prebuild --platform android --clean --no-install
+          ln -sf client/node_modules node_modules
+        working-directory: .
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --clean --no-install
         working-directory: ./client
 
-      - name: Install Android dependencies
-        run: ./gradlew dependencies
-        working-directory: ./client/android
-
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug
         working-directory: ./client/android
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace
+        run: ./gradlew assembleRelease
         working-directory: ./client/android
 
       - name: Find and copy APK
         run: |
-          echo "=== Finding APK files ==="
-          find ./client -name "*.apk" -type f
           APK=$(find ./client/android -name "*.apk" -not -path "*/build/*" -not -path "*/.gradle/*" | head -1)
           if [ -n "$APK" ]; then
-            echo "Found APK: $APK"
             cp "$APK" ./app-release.apk
-            ls -la ./app-release.apk
-          else
-            echo "No APK found!"
-            find ./client -name "*.apk" 2>/dev/null
           fi
 
       - name: Upload APK
