@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK (Local)
 
 on:
   push:
@@ -14,13 +14,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 24
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-
-      - name: Clear npm cache
-        run: npm cache clean --force
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -28,33 +25,38 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install dependencies
         run: npm install
         working-directory: ./client
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
+      - name: Generate Android native project
+        run: npx expo prebuild --platform android --clean
         working-directory: ./client
 
-      - name: Check pnpm
-        run: which pnpm || echo "pnpm not installed"
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+        working-directory: ./client/android
+        env:
+          ANDROID_HOME: /opt/android-sdk
 
-      - name: Setup EAS
-        working-directory: ./client
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+        working-directory: ./client/android
+        env:
+          ANDROID_HOME: /opt/android-sdk
+
+      - name: Find APK files
         run: |
-          echo '{"cli":{"version":">= 7.0.0"},"build":{"preview":{"distribution":"internal","android":{"buildType":"apk"}}}}' > eas.json
-          cat eas.json
-
-      - name: Build APK
-        working-directory: ./client
-        timeout-minutes: 60
-        run: |
-          npx eas build:configure --non-interactive || true
-          npx eas build --platform android --profile preview --non-interactive --local --output ./app-release.apk
+          find ./client -name "*.apk" -type f
+          cp $(find ./client -name "*.apk" -type f | grep -v "generated" | head -1) ./app-release.apk 2>/dev/null || \
+          cp $(find ./client/android -name "*.apk" | head -1) ./app-release.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: ./client/app-release.apk
+          path: ./app-release.apk
           retention-days: 30
