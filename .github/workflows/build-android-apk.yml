@@ -9,19 +9,18 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    
-    # 禁用缓存，确保干净构建
-    env:
-      cache: 'false'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Clear npm cache
+        run: npm cache clean --force
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -29,27 +28,29 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install npm dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: npm install
         working-directory: ./client
 
       - name: Install EAS CLI
         run: npm install -g eas-cli
         working-directory: ./client
 
+      - name: Check pnpm
+        run: which pnpm || echo "pnpm not installed"
+
       - name: Setup EAS
         working-directory: ./client
         run: |
-          if [ ! -f eas.json ]; then
-            echo '{"cli":{"version":">= 7.0.0"},"build":{"preview":{"distribution":"internal","android":{"buildType":"apk"}}}}' > eas.json
-          fi
+          echo '{"cli":{"version":">= 7.0.0"},"build":{"preview":{"distribution":"internal","android":{"buildType":"apk"}}}}' > eas.json
+          cat eas.json
 
       - name: Build APK
         working-directory: ./client
         timeout-minutes: 60
         run: |
-          eas build:configure --non-interactive || true
-          eas build --platform android --profile preview --non-interactive --local --output ./app-release.apk
+          npx eas build:configure --non-interactive || true
+          npx eas build --platform android --profile preview --non-interactive --local --output ./app-release.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
