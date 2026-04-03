@@ -19,19 +19,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'pnpm'
-          cache-dependency-path: 'client/pnpm-lock.yaml'
+
+      - name: 🔧 Install pnpm
+        run: npm install -g pnpm
 
       - name: 🔧 Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-
-      - name: 🔧 Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: 🔧 Install dependencies
         working-directory: ./client
