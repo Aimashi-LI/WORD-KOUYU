@@ -51,10 +51,24 @@ jobs:
 
       - name: Find and copy APK
         run: |
-          APK=$(find ./client/android -name "*.apk" -not -path "*/build/*" -not -path "*/.gradle/*" | head -1)
+          echo "=== Finding APK files ==="
+          find ./client -name "*.apk" -type f 2>/dev/null
+          # 查找 release APK
+          APK=$(find ./client/android -path "*/app/build/outputs/apk/release/*.apk" -type f 2>/dev/null | head -1)
           if [ -n "$APK" ]; then
+            echo "Found release APK: $APK"
             cp "$APK" ./app-release.apk
+          else
+            # 尝试 debug APK
+            APK=$(find ./client/android -path "*/app/build/outputs/apk/debug/*.apk" -type f 2>/dev/null | head -1)
+            if [ -n "$APK" ]; then
+              echo "Found debug APK: $APK"
+              cp "$APK" ./app-release.apk
+            else
+              echo "No APK found!"
+            fi
           fi
+          ls -la ./app-release.apk 2>/dev/null || echo "app-release.apk not created"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
