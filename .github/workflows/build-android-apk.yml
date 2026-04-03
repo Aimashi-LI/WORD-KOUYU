@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
     steps:
       - name: Checkout
@@ -25,36 +28,44 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install dependencies
         run: npm install
         working-directory: ./client
 
-      - name: Generate Android native project
-        run: npx expo prebuild --platform android --clean
+      - name: Generate Android project
+        run: |
+          echo "=== Running expo prebuild ==="
+          npx expo prebuild --platform android --clean --no-install
         working-directory: ./client
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
+      - name: Install Android dependencies
+        run: ./gradlew dependencies
         working-directory: ./client/android
-        env:
-          ANDROID_HOME: /opt/android-sdk
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+        working-directory: ./client/android
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --stacktrace
         working-directory: ./client/android
-        env:
-          ANDROID_HOME: /opt/android-sdk
 
-      - name: Find APK files
+      - name: Find and copy APK
         run: |
+          echo "=== Finding APK files ==="
           find ./client -name "*.apk" -type f
-          cp $(find ./client -name "*.apk" -type f | grep -v "generated" | head -1) ./app-release.apk 2>/dev/null || \
-          cp $(find ./client/android -name "*.apk" | head -1) ./app-release.apk
+          APK=$(find ./client/android -name "*.apk" -not -path "*/build/*" -not -path "*/.gradle/*" | head -1)
+          if [ -n "$APK" ]; then
+            echo "Found APK: $APK"
+            cp "$APK" ./app-release.apk
+            ls -la ./app-release.apk
+          else
+            echo "No APK found!"
+            find ./client -name "*.apk" 2>/dev/null
+          fi
 
       - name: Upload APK
+        if: fileExists('./app-release.apk')
         uses: actions/upload-artifact@v4
         with:
           name: app-release
