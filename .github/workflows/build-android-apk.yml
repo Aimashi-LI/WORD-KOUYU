@@ -57,7 +57,6 @@ jobs:
           fi
 
       - name: Upload APK
-        if: fileExists('./app-release.apk')
         uses: actions/upload-artifact@v4
         with:
           name: app-release
