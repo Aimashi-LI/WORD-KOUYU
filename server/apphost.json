@@ -1,0 +1,21 @@
+# 火山引擎 AppHost 部署配置
+# 用于创建应用部署
+
+{
+  "version": "v1",
+  "app_name": "word-review-backend",
+  "app_type": "NodeJS",
+  "build_command": "npm install && npm run build",
+  "start_command": "PORT=${PORT:-8080} node dist/index.js",
+  "port": 8080,
+  "env_vars": [
+    {
+      "key": "PORT",
+      "value": "8080"
+    },
+    {
+      "key": "NODE_ENV",
+      "value": "production"
+    }
+  ]
+}
