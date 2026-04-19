@@ -614,28 +614,56 @@ export default function WordbookScreen() {
         </View>
         </View>
 
-        {/* AI 搜索添加按钮 */}
-        <TouchableOpacity
-          style={styles.aiSearchButton}
-          onPress={() => {
-            if (wordbooks.length === 0) {
-              // 没有词库，先创建词库
-              setPendingNavigateTo('/ai-word-search');
-              setShowWordbookModal(true);
-            } else {
-              router.push(currentWordbookId ? `/ai-word-search?wordbookId=${currentWordbookId}` : '/ai-word-search');
-            }
-          }}
-        >
-          <View style={styles.aiSearchButtonContent}>
-            <FontAwesome6 name="wand-magic-sparkles" size={28} color={theme.buttonPrimaryText} />
-            <View style={styles.aiSearchButtonTextContainer}>
-              <ThemedText variant="h3" color={theme.buttonPrimaryText}>添加单词</ThemedText>
-              <ThemedText variant="caption" color={theme.buttonPrimaryText}>AI 智能搜索</ThemedText>
-            </View>
-          </View>
-          <FontAwesome6 name="chevron-right" size={20} color={theme.buttonPrimaryText} style={styles.aiSearchButtonArrow} />
-        </TouchableOpacity>
+        {/* 添加按钮组 */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (wordbooks.length === 0) {
+                // 没有词库，先创建词库
+                setPendingNavigateTo('/add-word');
+                setShowWordbookModal(true);
+              } else {
+                router.push(currentWordbookId ? `/add-word?wordbookId=${currentWordbookId}` : '/add-word');
+              }
+            }}
+          >
+            <FontAwesome6 name="plus" size={24} color={theme.buttonPrimaryText} />
+            <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>手动添加</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (wordbooks.length === 0) {
+                // 没有词库，先创建词库
+                setPendingNavigateTo('/paste-import');
+                setShowWordbookModal(true);
+              } else {
+                router.push(currentWordbookId ? `/paste-import?wordbookId=${currentWordbookId}` : '/paste-import');
+              }
+            }}
+          >
+            <FontAwesome6 name="clipboard" size={24} color={theme.buttonPrimaryText} />
+            <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>文本粘贴</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (wordbooks.length === 0) {
+                // 没有词库，先创建词库
+                setPendingNavigateTo('/import-words');
+                setShowWordbookModal(true);
+              } else {
+                router.push(currentWordbookId ? `/import-words?wordbookId=${currentWordbookId}` : '/import-words');
+              }
+            }}
+          >
+            <FontAwesome6 name="file-import" size={24} color={theme.buttonPrimaryText} />
+            <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>批量导入</ThemedText>
+          </TouchableOpacity>
+        </View>
 
         {/* 刷单词按钮 */}
         <TouchableOpacity 

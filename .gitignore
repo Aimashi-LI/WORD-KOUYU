@@ -9,6 +9,3 @@ expo-env.d.ts
 .DS_Store
 logs/
 *.tsbuildinfo
-
-# Symlink for CI
-node_modules

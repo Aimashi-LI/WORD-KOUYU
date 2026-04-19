@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Dimensions } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -14,8 +14,6 @@ import { updateWord } from '@/database/wordDao';
 import { calculateNextInterval } from '@/algorithm/fsrs';
 import { Word } from '@/database/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAI, ReviewAnalysisResponse } from '@/hooks/useAI';
-import RNSSE from 'react-native-sse';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -27,24 +25,10 @@ interface DailyStats {
   pendingReview: number;
 }
 
-// AI复习计划项（日历显示用）
-interface AICalendarItem {
-  wordId: number;
-  word: string;
-  definition?: string;
-  priority: string;
-  reason: string;
-  suggestedTime: string;
-  expectedRetention: number;
-  reviewStrategy: string;
-  suggestedDate: string; // 解析后的日期字符串 YYYY-MM-DD
-}
-
 export default function ReviewPlanScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  const { isConfigured, generateReviewAnalysis } = useAI();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -63,15 +47,6 @@ export default function ReviewPlanScreen() {
   
   // 新增：控制单词详情展开的状态
   const [expandedWordId, setExpandedWordId] = useState<number | null>(null);
-
-  // AI分析相关状态
-  const [aiAnalyzing, setAiAnalyzing] = useState(false);
-  const [aiCalendarItems, setAiCalendarItems] = useState<Map<string, AICalendarItem[]>>(new Map()); // 按日期分组的AI建议
-  const [aiAnalysisResult, setAiAnalysisResult] = useState<ReviewAnalysisResponse | null>(null);
-  const [showAIAnalysis, setShowAIAnalysis] = useState(false); // 是否显示AI分析结果
-  const [aiStreamText, setAiStreamText] = useState(''); // 流式输出的文本
-  const [aiStatusText, setAiStatusText] = useState(''); // AI状态提示文字
-  const sseRef = useRef<any>(null);
 
   // 加载复习数据
   const loadData = useCallback(async () => {
@@ -376,275 +351,6 @@ export default function ReviewPlanScreen() {
     }
   };
 
-  // AI分析复习计划（流式版本）
-  const handleAIAnalysis = useCallback(async () => {
-    if (!isConfigured) {
-      Alert.alert(
-        '提示',
-        '尚未配置 AI，请先配置 AI API 密钥',
-        [
-          { text: '取消', style: 'cancel' },
-          { text: '去配置', onPress: () => router.push('/ai-settings') },
-        ]
-      );
-      return;
-    }
-
-    setAiAnalyzing(true);
-    setAiStreamText('');
-    setAiAnalysisResult(null);
-    setAiStatusText('正在获取单词数据...');
-    
-    try {
-      // 获取所有单词
-      await initDatabase();
-      const wordbooks = await getAllWordbooks();
-      const allWords: Word[] = [];
-      for (const wb of wordbooks) {
-        const words = await getWordsInWordbook(wb.id);
-        allWords.push(...words);
-      }
-
-      if (allWords.length === 0) {
-        Alert.alert('提示', '没有单词可以分析');
-        setAiAnalyzing(false);
-        setAiStatusText('');
-        return;
-      }
-
-      // 去重
-      const uniqueWordsMap = new Map<number, Word>();
-      allWords.forEach((word) => {
-        uniqueWordsMap.set(word.id, word);
-      });
-      const uniqueWords = Array.from(uniqueWordsMap.values());
-
-      // 计算每个单词的可提取性
-      setAiStatusText('正在计算单词记忆状态...');
-      const now = new Date();
-      const wordsWithAnalysis = uniqueWords.map(w => {
-        const lastReview = w.last_review ? new Date(w.last_review) : null;
-        
-        let retrievability = 1.0;
-        let daysSinceLastReview = 0;
-        
-        if (w.stability > 0 && lastReview) {
-          const elapsedDays = (now.getTime() - lastReview.getTime()) / (1000 * 60 * 60 * 24);
-          retrievability = Math.exp(-elapsedDays / w.stability);
-          daysSinceLastReview = elapsedDays;
-        }
-
-        return {
-          id: w.id,
-          word: w.word,
-          definition: w.definition,
-          stability: w.stability,
-          difficulty: w.difficulty,
-          reviewCount: w.review_count,
-          lastScore: undefined,
-          retrievability,
-          daysSinceLastReview,
-          nextReviewDate: w.next_review || undefined,
-          isMastered: w.is_mastered === 1,
-          lastReviewDate: w.last_review || undefined,
-        };
-      });
-
-      // 使用流式API
-      setAiStatusText('正在连接AI服务...');
-      const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-      const url = `${API_BASE_URL}/api/v1/ai/generate/review-analysis-stream`;
-      
-      let fullContent = '';
-      
-      const sse = new RNSSE(url, {
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          words: wordsWithAnalysis,
-          context: {
-            currentTime: now.toLocaleString('zh-CN'),
-            studyGoal: '高效复习',
-          },
-        }),
-        method: 'POST',
-      });
-      
-      sseRef.current = sse;
-      let firstChunk = true;
-      
-      sse.addEventListener('message', (event: any) => {
-        if (event.data === '[DONE]') {
-          sse.close();
-          setAiAnalyzing(false);
-          setAiStatusText('');
-          
-          // 尝试从完整内容中解析JSON
-          try {
-            // 查找JSON代码块
-            const jsonMatch = fullContent.match(/```json\s*([\s\S]*?)\s*```/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[1]);
-              const result: ReviewAnalysisResponse = {
-                analysis: parsed.analysis || { summary: '暂无分析', urgentCount: 0, suggestedCount: 0 },
-                reviewPlan: parsed.reviewPlan || [],
-                recommendations: parsed.recommendations || [],
-              };
-              
-              setAiAnalysisResult(result);
-              
-              // 解析AI建议的复习时间，按日期分组
-              const calendarItemsMap = new Map<string, AICalendarItem[]>();
-              
-              result.reviewPlan.forEach(item => {
-                const suggestedDate = parseSuggestedTime(item.suggestedTime);
-                const dateStr = suggestedDate.toISOString().split('T')[0];
-                
-                if (!calendarItemsMap.has(dateStr)) {
-                  calendarItemsMap.set(dateStr, []);
-                }
-                
-                calendarItemsMap.get(dateStr)!.push({
-                  wordId: item.wordId,
-                  word: item.word,
-                  definition: wordsWithAnalysis.find(w => w.id === item.wordId)?.definition,
-                  priority: item.priority,
-                  reason: item.reason,
-                  suggestedTime: item.suggestedTime,
-                  expectedRetention: item.expectedRetention,
-                  reviewStrategy: item.reviewStrategy,
-                  suggestedDate: dateStr,
-                });
-              });
-              
-              setAiCalendarItems(calendarItemsMap);
-              setShowAIAnalysis(true);
-              updateStatsWithAIPlan(calendarItemsMap);
-            }
-          } catch (e) {
-            console.error('解析AI响应失败:', e);
-            // 即使解析失败，也显示文本内容
-          }
-          
-          return;
-        }
-        
-        try {
-          const data = JSON.parse(event.data);
-          if (data.content) {
-            if (firstChunk) {
-              setAiStatusText('AI正在分析...');
-              firstChunk = false;
-            }
-            fullContent += data.content;
-            setAiStreamText(prev => prev + data.content);
-          }
-        } catch (e) {
-          // 忽略解析错误
-        }
-      });
-      
-      sse.addEventListener('error', (error: any) => {
-        console.error('SSE error:', error);
-        sse.close();
-        setAiAnalyzing(false);
-        setAiStatusText('');
-        Alert.alert('错误', 'AI 分析失败，请重试');
-      });
-      
-    } catch (error) {
-      console.error('AI 分析失败:', error);
-      Alert.alert('错误', 'AI 分析失败，请重试');
-      setAiAnalyzing(false);
-      setAiStatusText('');
-    }
-  }, [isConfigured, router]);
-
-  // 解析AI建议的时间字符串为Date对象
-  const parseSuggestedTime = (timeStr: string): Date => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    // 常见格式解析
-    if (timeStr.includes('今天')) {
-      // 今天14:00 -> 今天
-      return today;
-    } else if (timeStr.includes('明天')) {
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return tomorrow;
-    } else if (timeStr.includes('后天')) {
-      const dayAfter = new Date(today);
-      dayAfter.setDate(dayAfter.getDate() + 2);
-      return dayAfter;
-    } else if (timeStr.match(/\d+天后/)) {
-      // "3天后" 格式
-      const days = parseInt(timeStr.match(/(\d+)天后/)?.[1] || '1');
-      const date = new Date(today);
-      date.setDate(date.getDate() + days);
-      return date;
-    } else if (timeStr.match(/\d{4}-\d{2}-\d{2}/)) {
-      // "2024-01-15" 格式
-      return new Date(timeStr);
-    } else if (timeStr.match(/\d+月\d+日/)) {
-      // "1月15日" 格式
-      const match = timeStr.match(/(\d+)月(\d+)日/);
-      if (match) {
-        const month = parseInt(match[1]) - 1;
-        const day = parseInt(match[2]);
-        const date = new Date(now.getFullYear(), month, day);
-        // 如果日期已过，则认为是明年
-        if (date < today) {
-          date.setFullYear(date.getFullYear() + 1);
-        }
-        return date;
-      }
-    } else if (timeStr.match(/下周[一二三四五六日]/)) {
-      // "下周一" 格式
-      const weekDays: { [key: string]: number } = { '日': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6 };
-      const day = timeStr.match(/下周([一二三四五六日])/)?.[1] || '一';
-      const targetDay = weekDays[day];
-      const date = new Date(today);
-      const currentDay = date.getDay();
-      const daysUntilNext = (7 - currentDay + targetDay) % 7 || 7;
-      date.setDate(date.getDate() + daysUntilNext);
-      return date;
-    }
-    
-    // 默认返回今天
-    return today;
-  };
-
-  // 使用AI计划更新统计数据
-  const updateStatsWithAIPlan = (calendarItemsMap: Map<string, AICalendarItem[]>) => {
-    const newStats = new Map<string, DailyStats>();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // 初始化未来60天
-    for (let i = 0; i < 60; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
-      newStats.set(dateStr, {
-        date: dateStr,
-        totalReview: 0,
-        completedReview: 0,
-        pendingReview: 0,
-      });
-    }
-
-    // 根据AI建议填充统计数据
-    calendarItemsMap.forEach((items, dateStr) => {
-      if (newStats.has(dateStr)) {
-        const stats = newStats.get(dateStr)!;
-        stats.totalReview = items.length;
-        stats.pendingReview = items.length;
-      }
-    });
-
-    setDailyStats(newStats);
-  };
-
   // 保存提醒设置
   const saveReminderSettings = async () => {
     try {
@@ -670,36 +376,8 @@ export default function ReviewPlanScreen() {
     return dailyStats.get(dateStr);
   };
 
-  // 获取指定日期的AI建议复习项
-  const getAIItemsForDate = (date: Date): AICalendarItem[] => {
-    const dateStr = date.toISOString().split('T')[0];
-    return aiCalendarItems.get(dateStr) || [];
-  };
-
-  // 获取指定日期的待复习单词列表（优先返回AI建议）
+  // 获取指定日期的待复习单词列表
   const getPendingWordsForDate = (date: Date) => {
-    // 如果显示AI分析结果，返回AI建议的单词
-    if (showAIAnalysis) {
-      const aiItems = getAIItemsForDate(date);
-      // 将AI建议项转换为Word格式（简化版，只包含必要字段）
-      // 使用 unknown 中转避免类型检查错误
-      return aiItems.map(item => ({
-        id: item.wordId,
-        word: item.word,
-        definition: item.definition || '',
-        phonetic: '',
-        partOfSpeech: '',
-        meaning: item.definition || '',
-        difficulty: 0.5,
-        stability: 1,
-        avg_response_time: 0,
-        is_mastered: 0,
-        review_count: 0,
-        created_at: new Date().toISOString(),
-      })) as unknown as Word[];
-    }
-
-    // 否则返回原来的待复习单词
     const dateStr = date.toISOString().split('T')[0];
     const words = dailyPendingWords.get(dateStr) || [];
 
@@ -886,84 +564,6 @@ export default function ReviewPlanScreen() {
             </ThemedText>
           </View>
         </ThemedView>
-
-        {/* AI 分析按钮 */}
-        <TouchableOpacity
-          style={[styles.aiAnalysisButton, { backgroundColor: theme.primary }]}
-          onPress={handleAIAnalysis}
-          disabled={aiAnalyzing}
-        >
-          {aiAnalyzing ? (
-            <View style={styles.aiAnalysisLoading}>
-              <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
-              <ThemedText variant="body" color={theme.buttonPrimaryText} style={styles.aiAnalysisText}>
-                {aiStatusText || 'AI 正在分析...'}
-              </ThemedText>
-            </View>
-          ) : (
-            <View style={styles.aiAnalysisContent}>
-              <FontAwesome6 name="brain" size={20} color={theme.buttonPrimaryText} />
-              <ThemedText variant="body" color={theme.buttonPrimaryText} style={styles.aiAnalysisText}>
-                {showAIAnalysis ? '重新分析复习计划' : 'AI 智能分析复习计划'}
-              </ThemedText>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* AI 分析状态提示（流式输出前） */}
-        {aiAnalyzing && !aiStreamText && (
-          <ThemedView level="default" style={styles.aiStatusCard}>
-            <View style={styles.aiStatusContent}>
-              <ActivityIndicator size="small" color={theme.primary} />
-              <ThemedText variant="body" color={theme.textPrimary} style={styles.aiStatusText}>
-                {aiStatusText || '准备中...'}
-              </ThemedText>
-            </View>
-            <ThemedText variant="caption" color={theme.textMuted}>
-              请稍候，AI正在处理您的学习数据
-            </ThemedText>
-          </ThemedView>
-        )}
-
-        {/* AI 流式输出显示 */}
-        {aiAnalyzing && aiStreamText && (
-          <ThemedView level="default" style={styles.aiStreamCard}>
-            <View style={styles.aiResultHeader}>
-              <ActivityIndicator size="small" color={theme.primary} />
-              <ThemedText variant="body" color={theme.textPrimary} style={{ marginLeft: 8 }}>AI 分析中</ThemedText>
-            </View>
-            <ThemedText variant="body" color={theme.textSecondary} style={styles.aiStreamText}>
-              {aiStreamText}
-            </ThemedText>
-          </ThemedView>
-        )}
-
-        {/* AI 分析结果摘要 */}
-        {showAIAnalysis && aiAnalysisResult && (
-          <ThemedView level="default" style={styles.aiResultCard}>
-            <View style={styles.aiResultHeader}>
-              <FontAwesome6 name="chart-pie" size={20} color={theme.primary} />
-              <ThemedText variant="h4" color={theme.textPrimary}>AI 分析结果</ThemedText>
-            </View>
-            <ThemedText variant="body" color={theme.textSecondary} style={styles.aiResultSummary}>
-              {aiAnalysisResult.analysis.summary}
-            </ThemedText>
-            <View style={styles.aiResultStats}>
-              <View style={styles.aiResultStatItem}>
-                <ThemedText variant="h3" color={theme.error}>{aiAnalysisResult.analysis.urgentCount}</ThemedText>
-                <ThemedText variant="caption" color={theme.textMuted}>紧急复习</ThemedText>
-              </View>
-              <View style={styles.aiResultStatItem}>
-                <ThemedText variant="h3" color={theme.warning}>{aiAnalysisResult.analysis.suggestedCount}</ThemedText>
-                <ThemedText variant="caption" color={theme.textMuted}>建议今日复习</ThemedText>
-              </View>
-              <View style={styles.aiResultStatItem}>
-                <ThemedText variant="h3" color={theme.primary}>{aiAnalysisResult.reviewPlan.length}</ThemedText>
-                <ThemedText variant="caption" color={theme.textMuted}>总计划数</ThemedText>
-              </View>
-            </View>
-          </ThemedView>
-        )}
 
         {/* 视图切换 */}
         <View style={styles.viewToggleContainer}>
@@ -1210,81 +810,22 @@ export default function ReviewPlanScreen() {
                                   </ThemedText>
                                 </View>
                               )}
-                              
-                              {/* 显示AI建议信息（如果启用了AI分析） */}
-                              {showAIAnalysis ? (
-                                <>
-                                  {(() => {
-                                    const aiItem = getAIItemsForDate(selectedDate).find(item => item.wordId === word.id);
-                                    if (!aiItem) return null;
-                                    return (
-                                      <>
-                                        <View style={styles.wordDetailRow}>
-                                          <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
-                                            AI建议时间：
-                                          </ThemedText>
-                                          <ThemedText variant="body" color={theme.primary}>
-                                            {aiItem.suggestedTime}
-                                          </ThemedText>
-                                        </View>
-                                        <View style={styles.wordDetailRow}>
-                                          <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
-                                            优先级：
-                                          </ThemedText>
-                                          <ThemedText 
-                                            variant="body" 
-                                            color={
-                                              aiItem.priority === 'urgent' ? theme.error :
-                                              aiItem.priority === 'high' ? theme.warning :
-                                              aiItem.priority === 'medium' ? theme.primary : theme.textMuted
-                                            }
-                                          >
-                                            {aiItem.priority === 'urgent' ? '紧急' :
-                                             aiItem.priority === 'high' ? '高' :
-                                             aiItem.priority === 'medium' ? '中' : '低'}
-                                          </ThemedText>
-                                        </View>
-                                        <View style={styles.wordDetailRow}>
-                                          <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
-                                            复习原因：
-                                          </ThemedText>
-                                          <ThemedText variant="body" color={theme.textPrimary}>
-                                            {aiItem.reason}
-                                          </ThemedText>
-                                        </View>
-                                        <View style={styles.wordDetailRow}>
-                                          <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
-                                            复习策略：
-                                          </ThemedText>
-                                          <ThemedText variant="body" color={theme.textPrimary}>
-                                            {aiItem.reviewStrategy}
-                                          </ThemedText>
-                                        </View>
-                                      </>
-                                    );
-                                  })()}
-                                </>
-                              ) : (
-                                <>
-                                  {/* 原来的显示逻辑（未启用AI分析时） */}
-                                  <View style={styles.wordDetailRow}>
-                                    <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
-                                      稳定性：
-                                    </ThemedText>
-                                    <ThemedText variant="body" color={theme.textPrimary}>
-                                      {word.stability?.toFixed(2) || '0.00'} 天
-                                    </ThemedText>
-                                  </View>
-                                  <View style={styles.wordDetailRow}>
-                                    <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
-                                      计划复习时间：
-                                    </ThemedText>
-                                    <ThemedText variant="body" color={theme.textPrimary}>
-                                      {word.next_review ? new Date(word.next_review).toLocaleString('zh-CN') : '未设置'}
-                                    </ThemedText>
-                                  </View>
-                                </>
-                              )}
+                              <View style={styles.wordDetailRow}>
+                                <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                                  稳定性：
+                                </ThemedText>
+                                <ThemedText variant="body" color={theme.textPrimary}>
+                                  {word.stability.toFixed(2)} 天
+                                </ThemedText>
+                              </View>
+                              <View style={styles.wordDetailRow}>
+                                <ThemedText variant="caption" color={theme.textMuted} style={styles.wordDetailLabel}>
+                                  计划复习时间：
+                                </ThemedText>
+                                <ThemedText variant="body" color={theme.textPrimary}>
+                                  {word.next_review ? new Date(word.next_review).toLocaleString('zh-CN') : '未设置'}
+                                </ThemedText>
+                              </View>
                             </View>
                           )}
                         </TouchableOpacity>

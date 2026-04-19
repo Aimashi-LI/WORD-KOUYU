@@ -7,8 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator
+  Platform
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -37,8 +36,6 @@ import {
 } from '@/utils/splitHelper';
 import { fetchPhoneticByWord } from '@/utils';
 import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
-import { useAI } from '@/hooks/useAI';
-import { useNetwork } from '@/hooks/useNetwork';
 
   // 词性列表
 const PART_OF_SPEECH_LIST = [
@@ -101,8 +98,6 @@ export default function AddWordScreen() {
     partOfSpeech?: string;
     definition?: string;
   }>();
-  const { settings: aiSettings, generateAutoFill } = useAI();
-  const { checkNetwork, showNetworkError } = useNetwork();
   
   // 基础字段
   const [word, setWord] = useState('');
@@ -111,11 +106,6 @@ export default function AddWordScreen() {
   const [partOfSpeech, setPartOfSpeech] = useState('');
   const [sentence, setSentence] = useState('');
   const [example, setExample] = useState('');
-  const [inspirationalSentence, setInspirationalSentence] = useState('');  // 励志例句
-  const [funnySentence, setFunnySentence] = useState('');  // 搞笑例句
-  
-  // AI 相关状态
-  const [autoFilling, setAutoFilling] = useState(false);
   
   // 音标键盘
   const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
@@ -512,80 +502,7 @@ export default function AddWordScreen() {
     setActiveCodeIndex(-1);
   };
 
-  // 一键 AI 填充所有字段
-  const handleAutoFill = async () => {
-    if (!word.trim()) {
-      Alert.alert('提示', '请先输入单词');
-      return;
-    }
-    
-    // 检查网络状态
-    const hasNetwork = await checkNetwork();
-    if (!hasNetwork) {
-      showNetworkError();
-      return;
-    }
-    
-    if (!aiSettings) {
-      Alert.alert(
-        'AI 未配置',
-        '请先配置 AI 设置',
-        [
-          { text: '取消', style: 'cancel' },
-          { text: '去设置', onPress: () => router.push('/ai-settings') }
-        ]
-      );
-      return;
-    }
-    
-    setAutoFilling(true);
-    try {
-      const result = await generateAutoFill(word.trim(), {
-        phonetic: phonetic.trim() || undefined,
-        definition: definition.trim() || undefined,
-        split: convertSplitItemsToString(splitItems) || undefined,
-        mnemonic: sentence.trim() || undefined,
-      });
-      
-      if (result) {
-        // 填充所有字段
-        if (result.phonetic) setPhonetic(result.phonetic);
-        if (result.definition) {
-          // 尝试从释义中提取词性
-          const posMatch = result.definition.match(/^([a-z]+\.)\s*/i);
-          if (posMatch) {
-            const posInput = posMatch[1].toLowerCase();
-            const matchedPos = PART_OF_SPEECH_MAP[posInput] || PART_OF_SPEECH_MAP[posInput.replace('.', '')];
-            if (matchedPos) {
-              setPartOfSpeech(matchedPos);
-              setDefinition(result.definition.replace(posMatch[0], ''));
-            } else {
-              setDefinition(result.definition);
-            }
-          } else {
-            setDefinition(result.definition);
-          }
-        }
-        if (result.split) {
-          const parsedSplits = parseSplitString(result.split);
-          if (parsedSplits && parsedSplits.length > 0) {
-            setSplitItems(parsedSplits);
-          }
-        }
-        if (result.mnemonic) setSentence(result.mnemonic);
-        if (result.inspirationalSentence) setInspirationalSentence(result.inspirationalSentence);
-        if (result.funnySentence) setFunnySentence(result.funnySentence);
-        
-        Alert.alert('成功', 'AI 已填充所有字段，请检查并保存');
-      }
-    } catch (error) {
-      console.error('一键填充失败:', error);
-      Alert.alert('错误', '一键填充失败，请检查网络连接和 API 配置');
-    } finally {
-      setAutoFilling(false);
-    }
-  };
-
+  // 删除拆分项
   // 表单验证
   const validateForm = (): boolean => {
     if (!word.trim()) {
@@ -637,8 +554,6 @@ export default function AddWordScreen() {
         split: splitText || undefined,
         mnemonic: sentence.trim() || undefined, // 助记句子
         sentence: example.trim() || undefined, // 例句
-        inspirational_sentence: inspirationalSentence.trim() || undefined, // 励志例句
-        funny_sentence: funnySentence.trim() || undefined, // 搞笑例句
       };
 
       console.log('[AddWord] 准备保存的单词数据:', JSON.stringify(newWord, null, 2));
@@ -647,8 +562,6 @@ export default function AddWordScreen() {
       console.log('[AddWord] partOfSpeech 是否为空:', partOfSpeech === '' || partOfSpeech === null || partOfSpeech === undefined);
       console.log('[AddWord] 助记句子 (mnemonic):', newWord.mnemonic);
       console.log('[AddWord] 例句 (sentence):', newWord.sentence);
-      console.log('[AddWord] 励志例句 (inspirational_sentence):', newWord.inspirational_sentence);
-      console.log('[AddWord] 搞笑例句 (funny_sentence):', newWord.funny_sentence);
 
       const wordId = await createWord(newWord);
       console.log('[AddWord] 单词保存成功，ID:', wordId);
@@ -718,27 +631,9 @@ export default function AddWordScreen() {
 
         {/* 单词输入 */}
         <ThemedView level="tertiary" style={styles.inputContainer}>
-          <View style={styles.labelRow}>
-            <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
-              单词 *
-            </ThemedText>
-            <TouchableOpacity
-              style={[styles.aiButton, styles.autoFillButton]}
-              onPress={handleAutoFill}
-              disabled={autoFilling || !word.trim()}
-            >
-              {autoFilling ? (
-                <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
-              ) : (
-                <>
-                  <FontAwesome6 name="wand-magic-sparkles" size={14} color={theme.buttonPrimaryText} />
-                  <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.aiButtonText}>
-                    一键 AI 填充
-                  </ThemedText>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
+            单词 *
+          </ThemedText>
           <TextInput
             style={styles.input}
             placeholder="输入单词"
@@ -748,9 +643,6 @@ export default function AddWordScreen() {
             onBlur={handleWordBlur}
             autoCapitalize="none"
           />
-          <ThemedText variant="caption" color={theme.textMuted} style={styles.helpText}>
-            输入单词后点击「一键 AI 填充」可自动生成音标、释义、拆分、助记句、励志例句和搞笑例句
-          </ThemedText>
         </ThemedView>
 
         {/* 音标输入 */}
@@ -939,38 +831,6 @@ export default function AddWordScreen() {
             placeholderTextColor={theme.textMuted}
             value={example}
             onChangeText={setExample}
-            multiline
-            numberOfLines={2}
-          />
-        </ThemedView>
-
-        {/* 励志例句输入 */}
-        <ThemedView level="tertiary" style={styles.inputContainer}>
-          <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
-            💪 励志例句
-          </ThemedText>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="AI 生成的励志英语句子，激励学习者"
-            placeholderTextColor={theme.textMuted}
-            value={inspirationalSentence}
-            onChangeText={setInspirationalSentence}
-            multiline
-            numberOfLines={2}
-          />
-        </ThemedView>
-
-        {/* 搞笑例句输入 */}
-        <ThemedView level="tertiary" style={styles.inputContainer}>
-          <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
-            😄 搞笑例句
-          </ThemedText>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="AI 生成的幽默英语句子，让学习更有趣"
-            placeholderTextColor={theme.textMuted}
-            value={funnySentence}
-            onChangeText={setFunnySentence}
             multiline
             numberOfLines={2}
           />

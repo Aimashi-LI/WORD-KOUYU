@@ -5,7 +5,9 @@ import {
   TextInput,
   Alert,
   TouchableOpacity,
-  ActivityIndicator
+  Modal,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -29,9 +31,8 @@ import {
   getCodeSuggestion,
   CodeSuggestion
 } from '@/utils/splitHelper';
+import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
 import { fetchPhoneticByWord } from '@/utils';
-import { useAI } from '@/hooks/useAI';
-import { useNetwork } from '@/hooks/useNetwork';
 
 // 词性列表
 const PART_OF_SPEECH_LIST = [
@@ -46,8 +47,6 @@ export default function WordDetailScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   const { id } = useSafeSearchParams<{ id: string }>();
-  const { settings: aiSettings, generateMnemonic } = useAI();
-  const { isConnected, checkNetwork, showNetworkError } = useNetwork();
 
   // 基础字段
   const [word, setWord] = useState('');
@@ -56,6 +55,9 @@ export default function WordDetailScreen() {
   const [partOfSpeech, setPartOfSpeech] = useState('');
   const [sentence, setSentence] = useState('');
   const [example, setExample] = useState('');
+  
+  // 音标键盘
+  const [showPhoneticKeyboard, setShowPhoneticKeyboard] = useState(false);
   
   // 拆分相关
   const [splitItems, setSplitItems] = useState<SplitItem[]>([{ code: '', content: '' }]);
@@ -72,9 +74,6 @@ export default function WordDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [originalWord, setOriginalWord] = useState<Word | null>(null);
   const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true);
-  
-  // AI 生成状态
-  const [generatingMnemonic, setGeneratingMnemonic] = useState(false);
 
   // 追踪已补全的编码（同一编码只补全最先填写的含义）
   const completedCodesRef = React.useRef<Set<string>>(new Set());
@@ -201,20 +200,18 @@ export default function WordDetailScreen() {
       
       // 如果拆分不完整或者没有拆分数据，则自动拆分
       if (!splitValidation.valid || splitItems.length === 0 || (splitItems.length === 1 && splitItems[0].code === '')) {
-        // 准备"完整单词本体"状态作为撤销的最后一步
-        const wholeWordState: SplitItem[] = [{ code: word, content: autoFillMeaning(word, codes) }];
-        
         // 尝试自动拆分
         const autoSplitResult = autoSplitByCodeLib(word, codes);
         if (autoSplitResult && autoSplitResult.length > 0) {
-          // 拆分成功，保存"完整单词"状态到历史记录，便于撤销后手动拆分
-          setSplitHistory([wholeWordState]);
+          // 拆分成功，使用拆分结果
           setSplitItems(autoSplitResult);
         } else {
-          // 拆分失败，直接使用完整单词状态，无需保存历史
-          setSplitHistory([]);
-          setSplitItems(wholeWordState);
+          // 拆分失败，使用单个项（编码框显示单词）
+          const meaning = autoFillMeaning(word, codes);
+          setSplitItems([{ code: word, content: meaning }]);
         }
+        // 清空历史记录
+        setSplitHistory([]);
       }
     }
     setEditMode('edit');
@@ -266,9 +263,8 @@ export default function WordDetailScreen() {
     
     const autoSplitResult = autoSplitByCodeLib(word, codes);
     if (autoSplitResult && autoSplitResult.length > 0) {
-      // 保存"完整单词本体"状态到历史记录
-      const wholeWordState: SplitItem[] = [{ code: word, content: autoFillMeaning(word, codes) }];
-      setSplitHistory([wholeWordState]);
+      // 保存历史记录
+      setSplitHistory(prev => [...prev, [...splitItems]]);
       setSplitItems(autoSplitResult);
     }
   };
@@ -326,16 +322,15 @@ export default function WordDetailScreen() {
   };
 
   // 执行拆分
-  const handlePerformSplit = (splitItemIndex: number, splitPoint: number) => {
-    const splitItem = splitItems[splitItemIndex];
+  const handlePerformSplit = (splitIndex: number, charIndex: number) => {
+    const splitItem = splitItems[splitIndex];
     if (!splitItem || !splitItem.code) {
       Alert.alert('提示', '请先输入单词');
       return;
     }
 
     const code = splitItem.code;
-    // splitPoint 是分割点位置，必须在 1 到 code.length-1 之间
-    if (splitPoint < 1 || splitPoint >= code.length) {
+    if (charIndex <= 0 || charIndex >= code.length) {
       Alert.alert('提示', '请在单词中间位置拆分');
       return;
     }
@@ -343,11 +338,11 @@ export default function WordDetailScreen() {
     // 保存历史记录
     setSplitHistory(prev => [...prev, [...splitItems]]);
 
-    const result = performSplit(code, splitPoint, codes);
+    const result = performSplit(code, charIndex, codes);
     if (result) {
       const [left, right] = result;
       const newSplitItems = [...splitItems];
-      newSplitItems.splice(splitItemIndex, 1, left, right);
+      newSplitItems.splice(splitIndex, 1, left, right);
       setSplitItems(newSplitItems);
       setActiveCodeIndex(-1);
     }
@@ -366,55 +361,7 @@ export default function WordDetailScreen() {
     setActiveCodeIndex(-1);
   };
 
-  // AI 生成助记句
-  const handleGenerateMnemonic = async () => {
-    if (!word.trim()) {
-      Alert.alert('提示', '请先输入单词');
-      return;
-    }
-    
-    // 检查网络状态
-    const hasNetwork = await checkNetwork();
-    if (!hasNetwork) {
-      showNetworkError();
-      return;
-    }
-    
-    if (!aiSettings) {
-      Alert.alert(
-        'AI 未配置',
-        '请先配置 AI 设置',
-        [
-          { text: '取消', style: 'cancel' },
-          { text: '去设置', onPress: () => router.push('/ai-settings') }
-        ]
-      );
-      return;
-    }
-    
-    setGeneratingMnemonic(true);
-    try {
-      // 将 splitItems 转换为字符串格式
-      const splitText = convertSplitItemsToString(splitItems);
-      
-      const result = await generateMnemonic(
-        word.trim(),
-        definition.trim() || undefined,
-        splitText || undefined,
-        phonetic.trim() || undefined
-      );
-      if (result) {
-        setSentence(result);
-        Alert.alert('成功', '助记句已生成');
-      }
-    } catch (error) {
-      console.error('生成助记句失败:', error);
-      Alert.alert('错误', '生成助记句失败，请检查网络连接和 API 配置');
-    } finally {
-      setGeneratingMnemonic(false);
-    }
-  };
-  
+  // 删除拆分项
   // 表单验证
   const validateForm = (): boolean => {
     if (!word.trim()) {
@@ -513,7 +460,7 @@ export default function WordDetailScreen() {
   }
 
   if (editMode === 'edit') {
-    // 编辑模式 - 单词基本信息使用信息卡片展示（不可编辑）
+    // 编辑模式 - 使用 add-word 页面的样式
     return (
       <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -528,53 +475,77 @@ export default function WordDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 单词信息卡片区域 - 不可编辑 */}
-          <View style={styles.infoCardSection}>
-            {/* 单词卡片 */}
-            <ThemedView level="default" style={styles.infoCard}>
-              <View style={styles.infoCardHeader}>
-                <View style={styles.infoCardTitleRow}>
-                  <FontAwesome6 name="spell-check" size={16} color={theme.primary} />
-                  <ThemedText variant="body" color={theme.textSecondary}>单词</ThemedText>
-                </View>
-              </View>
-              <ThemedText variant="h2" color={theme.textPrimary} style={styles.infoCardValue}>
-                {word || '—'}
-              </ThemedText>
-            </ThemedView>
+          {/* 单词输入 */}
+          <View style={styles.inputContainer}>
+            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+              单词 *
+            </ThemedText>
+            <TextInput
+              style={styles.input}
+              value={word}
+              onChangeText={handleWordChange}
+              onBlur={handleWordBlur}
+              placeholder="请输入单词"
+              placeholderTextColor={theme.textMuted}
+            />
+          </View>
 
-            {/* 音标卡片 */}
-            <ThemedView level="default" style={styles.infoCard}>
-              <View style={styles.infoCardHeader}>
-                <View style={styles.infoCardTitleRow}>
-                  <FontAwesome6 name="music" size={16} color={theme.primary} />
-                  <ThemedText variant="body" color={theme.textSecondary}>音标</ThemedText>
-                </View>
-              </View>
-              <ThemedText variant="h4" color={theme.textPrimary} style={styles.infoCardValue}>
-                {phonetic || '—'}
-              </ThemedText>
-            </ThemedView>
+          {/* 音标输入 */}
+          <View style={styles.inputContainer}>
+            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+              音标
+            </ThemedText>
+            <TextInput
+              style={styles.input}
+              value={phonetic}
+              onChangeText={setPhonetic}
+              onFocus={() => setShowPhoneticKeyboard(true)}
+              placeholder="请输入音标"
+              placeholderTextColor={theme.textMuted}
+            />
+          </View>
 
-            {/* 释义卡片 */}
-            <ThemedView level="default" style={styles.infoCard}>
-              <View style={styles.infoCardHeader}>
-                <View style={styles.infoCardTitleRow}>
-                  <FontAwesome6 name="book" size={16} color={theme.primary} />
-                  <ThemedText variant="body" color={theme.textSecondary}>释义</ThemedText>
-                </View>
-              </View>
-              <ThemedText variant="body" color={theme.textPrimary} style={styles.infoCardValue}>
-                {definition || '—'}
-              </ThemedText>
-              {partOfSpeech && (
-                <View style={styles.partOfSpeechTag}>
-                  <ThemedText variant="caption" color={theme.buttonPrimaryText}>
-                    {partOfSpeech}
-                  </ThemedText>
-                </View>
-              )}
-            </ThemedView>
+          {/* 释义输入 */}
+          <View style={styles.inputContainer}>
+            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+              释义 *
+            </ThemedText>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={definition}
+              onChangeText={setDefinition}
+              placeholder="请输入释义"
+              placeholderTextColor={theme.textMuted}
+              multiline
+            />
+          </View>
+
+          {/* 词性选择 */}
+          <View style={styles.inputContainer}>
+            <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+              词性 *
+            </ThemedText>
+            <View style={styles.posScroll}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {PART_OF_SPEECH_LIST.map(pos => (
+                  <TouchableOpacity
+                    key={pos}
+                    style={[
+                      styles.posButton,
+                      partOfSpeech === pos && styles.posButtonActive
+                    ]}
+                    onPress={() => setPartOfSpeech(pos)}
+                  >
+                    <ThemedText
+                      variant="caption"
+                      color={partOfSpeech === pos ? theme.buttonPrimaryText : theme.textPrimary}
+                    >
+                      {pos}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           </View>
 
           {/* 拆分 */}
@@ -597,100 +568,69 @@ export default function WordDetailScreen() {
                 </TouchableOpacity>
               )}
             </View>
-            {splitItems.map((item, index) => {
-              // 空格分隔符特殊处理
-              if (item.code === ' ') {
-                return (
-                  <View key={index} style={styles.spaceDivider}>
-                    <View style={styles.spaceDividerLine} />
-                    <ThemedText variant="caption" color={theme.textMuted}>空格</ThemedText>
-                    <View style={styles.spaceDividerLine} />
-                  </View>
-                );
-              }
-              
-              return (
-                <View key={index} style={styles.splitItemContainer}>
-                  <View style={styles.splitCodeRow}>
-                    <TextInput
-                      style={styles.splitCodeInput}
-                      value={item.code}
-                      onChangeText={text => handleCodeChange(index, text)}
-                      onFocus={() => setActiveCodeIndex(index)}
-                      onBlur={() => setActiveCodeIndex(-1)}
-                      placeholder="编码"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                    <ThemedText variant="body" color={theme.textMuted}>-</ThemedText>
-                    <TextInput
-                      style={styles.splitContentInput}
-                      value={item.content}
-                      onChangeText={text => handleContentChange(index, text)}
-                      placeholder="含义"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-
-                  {/* 编码建议 */}
-                  {codeSuggestions[`code_${index}`] && activeCodeIndex === index && (
-                    <TouchableOpacity
-                      onPress={() => handleSelectSuggestion(index)}
-                      style={styles.codeSuggestion}
-                    >
-                      <ThemedText variant="body" color={theme.textPrimary}>
-                        {codeSuggestions[`code_${index}`].userInput}
-                      </ThemedText>
-                      <ThemedText variant="body" color={theme.primary}>
-                        {codeSuggestions[`code_${index}`].completedText}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  )}
-
-                  {/* 字符拆分按钮 */}
-                  {item.code && (
-                    <View style={styles.splitCharsContainer}>
-                      {item.code.split('').map((char, charIndex) => (
-                        <TouchableOpacity
-                          key={charIndex}
-                          onPress={() => handlePerformSplit(index, charIndex + 1)}
-                          style={styles.splitCharButton}
-                        >
-                          <ThemedText variant="h3" color={theme.textPrimary}>
-                            {char}
-                          </ThemedText>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
+            {splitItems.map((item, index) => (
+              <View key={index} style={styles.splitItemContainer}>
+                <View style={styles.splitCodeRow}>
+                  <TextInput
+                    style={styles.splitCodeInput}
+                    value={item.code}
+                    onChangeText={text => handleCodeChange(index, text)}
+                    onFocus={() => setActiveCodeIndex(index)}
+                    onBlur={() => setActiveCodeIndex(-1)}
+                    placeholder="编码"
+                    placeholderTextColor={theme.textMuted}
+                  />
+                  <ThemedText variant="body" color={theme.textMuted}>-</ThemedText>
+                  <TextInput
+                    style={styles.splitContentInput}
+                    value={item.content}
+                    onChangeText={text => handleContentChange(index, text)}
+                    placeholder="含义"
+                    placeholderTextColor={theme.textMuted}
+                  />
                 </View>
-              );
-            })}
+
+                {/* 编码建议 */}
+                {codeSuggestions[`code_${index}`] && activeCodeIndex === index && (
+                  <TouchableOpacity
+                    onPress={() => handleSelectSuggestion(index)}
+                    style={styles.codeSuggestion}
+                  >
+                    <ThemedText variant="body" color={theme.textPrimary}>
+                      {codeSuggestions[`code_${index}`].userInput}
+                    </ThemedText>
+                    <ThemedText variant="body" color={theme.primary}>
+                      {codeSuggestions[`code_${index}`].completedText}
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+
+                {/* 字符拆分按钮 */}
+                {item.code && (
+                  <View style={styles.splitCharsContainer}>
+                    {item.code.split('').map((char, charIndex) => (
+                      <TouchableOpacity
+                        key={charIndex}
+                        onPress={() => handlePerformSplit(index, charIndex)}
+                        style={styles.splitCharButton}
+                      >
+                        <ThemedText variant="h3" color={theme.textPrimary}>
+                          {char}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
           </View>
 
           {/* 助记句子 */}
           <View style={styles.inputContainer}>
             <View style={styles.labelRow}>
-              <View style={styles.labelRowLeft}>
-                <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
-                  助记句子
-                </ThemedText>
-                <TouchableOpacity
-                  style={styles.aiButton}
-                  onPress={handleGenerateMnemonic}
-                  disabled={generatingMnemonic || !word.trim()}
-                >
-                  {generatingMnemonic ? (
-                    <ActivityIndicator size="small" color={theme.primary} />
-                  ) : (
-                    <>
-                      <FontAwesome6 name="wand-magic-sparkles" size={14} color={theme.primary} />
-                      <ThemedText variant="caption" color={theme.primary} style={styles.aiButtonText}>
-                        AI 生成
-                      </ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
+              <ThemedText variant="body" color={theme.textPrimary} style={styles.label}>
+                助记句子
+              </ThemedText>
               <TouchableOpacity
                 onPress={() => setAutoCompleteEnabled(!autoCompleteEnabled)}
                 style={styles.autoCompleteToggle}
@@ -741,6 +681,40 @@ export default function WordDetailScreen() {
             </ThemedText>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* 音标键盘 */}
+        <Modal
+          visible={showPhoneticKeyboard}
+          transparent
+          animationType="slide"
+        >
+          <View style={styles.keyboardModalOverlay}>
+            <TouchableOpacity
+              style={styles.keyboardCloseArea}
+              activeOpacity={1}
+              onPress={() => setShowPhoneticKeyboard(false)}
+            >
+              <View style={styles.keyboardDragHandle} />
+            </TouchableOpacity>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              keyboardVerticalOffset={0}
+            >
+              <View style={styles.keyboardContainer}>
+                <PhoneticKeyboard
+                  onKeyPress={(symbol) => setPhonetic(phonetic + symbol)}
+                  onDelete={() => setPhonetic(phonetic.slice(0, -1))}
+                />
+                <TouchableOpacity
+                  style={styles.keyboardHideButton}
+                  onPress={() => setShowPhoneticKeyboard(false)}
+                >
+                  <ThemedText variant="body" color={theme.buttonPrimaryText}>完成</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </Modal>
       </Screen>
     );
   }

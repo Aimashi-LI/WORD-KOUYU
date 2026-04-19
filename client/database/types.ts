@@ -8,8 +8,6 @@ export interface Word {
   split?: string;
   mnemonic?: string;
   sentence?: string;
-  inspirational_sentence?: string;  // 励志例句
-  funny_sentence?: string;          // 搞笑例句
   difficulty: number;
   stability: number;
   last_review?: string;
@@ -29,8 +27,6 @@ export interface NewWord {
   split?: string;
   mnemonic?: string;
   sentence?: string;
-  inspirational_sentence?: string;  // 励志例句
-  funny_sentence?: string;          // 搞笑例句
   difficulty?: number;
   stability?: number;
   avg_response_time?: number;

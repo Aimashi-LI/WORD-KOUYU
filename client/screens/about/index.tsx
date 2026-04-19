@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -141,7 +140,7 @@ const LEGAL_DOCS = {
 **最后更新日期：2026年2月**
 
 ## 引言
-本应用是一款单词学习工具，支持AI辅助学习和口语训练功能。我们遵循"最小权限原则"，仅在必要时才请求系统权限。
+本应用是一款完全离线的单词学习工具。我们遵循"最小权限原则"，仅在必要时才请求系统权限。
 
 ## Android 权限说明
 ### 存储权限（可选）
@@ -153,17 +152,10 @@ const LEGAL_DOCS = {
 
 **是否必需**：❌ 否（可选权限）
 
-### 麦克风权限（可选）
-**用途说明**：
-- 口语训练功能中录制您的发音
-
-**请求时机**：仅在您使用口语训练功能时请求
-
-**是否必需**：❌ 否（可选权限）
-
 ### 其他权限
-- ❌ 网络权限：使用（AI功能需要网络连接）
+- ❌ 网络权限：不使用（应用完全离线运行）
 - ❌ 相机权限：不使用
+- ❌ 麦克风权限：不使用
 - ❌ 位置权限：不使用
 - ❌ 通讯录权限：不使用
 
@@ -175,16 +167,9 @@ const LEGAL_DOCS = {
 
 **是否必需**：❌ 否（可选权限）
 
-### 麦克风权限（可选）
-**用途说明**：
-- 口语训练功能中录制您的发音
-
-**请求时机**：仅在您使用口语训练功能时请求
-
-**是否必需**：❌ 否（可选权限）
-
 ### 其他权限
 - ❌ 相机权限：不使用
+- ❌ 麦克风权限：不使用
 - ❌ 位置权限：不使用
 
 ## 权限请求原则
@@ -201,7 +186,6 @@ const LEGAL_DOCS = {
 export default function AboutScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const router = useSafeRouter();
   const [selectedDoc, setSelectedDoc] = useState<{ title: string; content: string } | null>(null);
   const [showLearningTruth, setShowLearningTruth] = useState(false);
 
@@ -265,27 +249,6 @@ export default function AboutScreen() {
           </ThemedText>
           <ThemedText variant="body" color={theme.textSecondary} style={styles.description}>
             基于编码记忆法的单词学习工具\n助你高效记忆英语单词
-          </ThemedText>
-        </View>
-
-        {/* AI 设置 */}
-        <View style={styles.section}>
-          <ThemedText variant="h3" color={theme.textPrimary} style={styles.sectionTitle}>
-            AI 功能
-          </ThemedText>
-
-          <TouchableOpacity
-            style={styles.linkItem}
-            onPress={() => router.push('/ai-settings')}
-          >
-            <View style={styles.linkContent}>
-              <FontAwesome6 name="wand-magic-sparkles" size={20} color={theme.primary} style={styles.linkIcon} />
-              <ThemedText variant="body" color={theme.textPrimary}>AI 设置</ThemedText>
-            </View>
-            <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} style={styles.linkArrow} />
-          </TouchableOpacity>
-          <ThemedText variant="caption" color={theme.textMuted} style={styles.developerHint}>
-            配置 AI API 密钥后可使用智能填充、复习建议等功能
           </ThemedText>
         </View>
 

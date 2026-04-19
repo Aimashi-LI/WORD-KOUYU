@@ -1,78 +1,116 @@
-name: Build Android APK (Local)
+name: Build Android APK (Local Build)
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+      - master
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   build:
-    runs-on: macos-latest
-    
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    runs-on: macos-latest  # 使用 macOS，支持更好的 Android 构建
 
     steps:
-      - name: Checkout
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: 'client/pnpm-lock.yaml'
 
-      - name: Setup Java
+      - name: 🔧 Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install dependencies
-        run: npm install
+      - name: 🔧 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 🔧 Install dependencies
         working-directory: ./client
+        run: pnpm install
 
-      - name: Setup symlink for node_modules
-        run: |
-          ln -sf client/node_modules node_modules
-        working-directory: .
-
-      - name: Generate Android project
-        run: npx expo prebuild --platform android --clean --no-install
+      - name: 📦 Install EAS CLI
         working-directory: ./client
+        run: pnpm add -g eas-cli
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
-        working-directory: ./client/android
-
-      - name: Build Release APK
-        run: ./gradlew assembleRelease
-        working-directory: ./client/android
-
-      - name: Find and copy APK
+      - name: 🔧 Setup EAS configuration
+        working-directory: ./client
         run: |
-          echo "=== Finding APK files ==="
-          find ./client -name "*.apk" -type f 2>/dev/null
-          # 查找 release APK
-          APK=$(find ./client/android -path "*/app/build/outputs/apk/release/*.apk" -type f 2>/dev/null | head -1)
-          if [ -n "$APK" ]; then
-            echo "Found release APK: $APK"
-            cp "$APK" ./app-release.apk
+          # 确保 eas.json 存在
+          cat eas.json || cat > eas.json << 'EOF'
+          {
+            "cli": {
+              "version": ">= 7.0.0"
+            },
+            "build": {
+              "development": {
+                "developmentClient": true,
+                "distribution": "internal"
+              },
+              "preview": {
+                "distribution": "internal",
+                "android": {
+                  "buildType": "apk"
+                }
+              },
+              "production": {
+                "android": {
+                  "buildType": "apk"
+                }
+              }
+            },
+            "submit": {
+              "production": {}
+            }
+          }
+          EOF
+
+      - name: 🏗️ Build Android APK (Local)
+        working-directory: ./client
+        timeout-minutes: 60
+        run: |
+          # 初始化 EAS 项目
+          eas build:configure || true
+
+          # 本地构建 APK
+          eas build --platform android --profile preview --non-interactive --local --output ./app-release.apk
+
+      - name: 📤 Find and Upload APK
+        run: |
+          find . -name "*.apk" -type f
+          APK_FILE=$(find . -name "*.apk" -type f | head -n 1)
+          if [ -n "$APK_FILE" ]; then
+            echo "Found APK: $APK_FILE"
+            cp "$APK_FILE" ./app-release.apk
+            echo "APK file copied successfully"
           else
-            # 尝试 debug APK
-            APK=$(find ./client/android -path "*/app/build/outputs/apk/debug/*.apk" -type f 2>/dev/null | head -1)
-            if [ -n "$APK" ]; then
-              echo "Found debug APK: $APK"
-              cp "$APK" ./app-release.apk
-            else
-              echo "No APK found!"
-            fi
+            echo "No APK file found"
+            find . -type f -name "*.apk" 2>/dev/null || true
+            ls -la ./client/ 2>/dev/null || true
           fi
-          ls -la ./app-release.apk 2>/dev/null || echo "app-release.apk not created"
 
-      - name: Upload APK
+      - name: 📤 Upload APK artifact
+        if: hashFiles('app-release.apk') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: app-apk
           path: ./app-release.apk
           retention-days: 30
+
+      - name: 📝 Create Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/') && hashFiles('app-release.apk') != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./app-release.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

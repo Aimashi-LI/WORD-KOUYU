@@ -3,9 +3,6 @@ import cors from "cors";
 import ocrRouter from "./routes/ocr";
 import searchRouter from "./routes/search";
 import userRouter from "./routes/user";
-import aiRouter from "./routes/ai";
-import audioRouter from "./routes/audio";
-import speakingRouter from "./routes/speaking";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -28,15 +25,6 @@ app.use('/api/v1/search', searchRouter);
 
 // 用户路由
 app.use('/api/v1/user', userRouter);
-
-// AI 路由
-app.use('/api/v1/ai', aiRouter);
-
-// 音频路由
-app.use('/api/v1/audio', audioRouter);
-
-// 口语训练路由
-app.use('/api/v1/speaking', speakingRouter);
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}/`);

@@ -193,18 +193,6 @@ export const createStyles = (theme: Theme) => {
       borderWidth: 1,
       borderColor: theme.borderLight,
     },
-    spaceDivider: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: Spacing.md,
-      gap: Spacing.sm,
-    },
-    spaceDividerLine: {
-      flex: 1,
-      height: 1,
-      backgroundColor: theme.border,
-    },
     autoCompleteToggle: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -212,6 +200,39 @@ export const createStyles = (theme: Theme) => {
     },
     autoCompleteLabel: {
       fontSize: 12,
+    },
+    // 音标键盘 Modal 样式
+    keyboardModalOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'transparent',
+    },
+    keyboardCloseArea: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    keyboardDragHandle: {
+      width: 40,
+      height: 4,
+      backgroundColor: theme.border,
+      borderRadius: 2,
+      marginBottom: Spacing.md,
+    },
+    keyboardContainer: {
+      backgroundColor: theme.backgroundRoot,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: Spacing.xl,
+      paddingBottom: Spacing['2xl'],
+      paddingTop: Spacing.md,
+    },
+    keyboardHideButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+      marginTop: Spacing.sm,
     },
     // 查看模式样式
     headerActions: {
@@ -252,58 +273,6 @@ export const createStyles = (theme: Theme) => {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    // AI 按钮样式
-    aiButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: 4,
-      borderRadius: BorderRadius.sm,
-      backgroundColor: theme.backgroundDefault,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    aiButtonText: {
-      fontSize: 12,
-    },
-    labelRowLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.sm,
-    },
-    autoFillButton: {
-      backgroundColor: theme.primary,
-      paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.xs,
-    },
-    helpText: {
-      marginTop: Spacing.xs,
-      fontStyle: 'italic',
-    },
-    // 信息卡片样式（编辑模式下的不可编辑展示）
-    infoCardSection: {
-      marginBottom: Spacing.md,
-    },
-    infoCard: {
-      padding: Spacing.md,
-      borderRadius: BorderRadius.lg,
-      marginBottom: Spacing.sm,
-    },
-    infoCardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: Spacing.sm,
-    },
-    infoCardTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.xs,
-    },
-    infoCardValue: {
-      lineHeight: 28,
     },
   });
 };

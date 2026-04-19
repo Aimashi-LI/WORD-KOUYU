@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -8,10 +8,10 @@ import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { createStyles } from './styles';
-import { getAllWordbooks, getWordsInWordbook } from '@/database/wordbookDao';
-import { initDatabase, getDatabase } from '@/database';
-import { Wordbook, Word } from '@/database/types';
-import { useAI, ReviewAnalysisResponse } from '@/hooks/useAI';
+import { getAllWordbooks, deleteWordbook, getWordsInWordbook } from '@/database/wordbookDao';
+import { initDatabase } from '@/database';
+import { Wordbook } from '@/database/types';
+import { useCallback } from 'react';
 
 type ReviewProject = Wordbook & {
   pendingReview: number;
@@ -22,12 +22,9 @@ export default function ReviewHomeScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  const { isConfigured, generateReviewAnalysis } = useAI();
   
   const [projects, setProjects] = useState<ReviewProject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aiAnalysis, setAiAnalysis] = useState<ReviewAnalysisResponse | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -70,82 +67,6 @@ export default function ReviewHomeScreen() {
     }
   };
 
-  // AI 分析所有单词，生成复习计划
-  const handleAIAnalysis = async () => {
-    if (!isConfigured) {
-      Alert.alert(
-        '提示',
-        '尚未配置 AI，请先配置 AI API 密钥',
-        [
-          { text: '取消', style: 'cancel' },
-          { text: '去配置', onPress: () => router.push('/ai-settings') },
-        ]
-      );
-      return;
-    }
-
-    setAnalyzing(true);
-    try {
-      // 获取所有单词
-      const allWords: Word[] = [];
-      for (const project of projects) {
-        const words = await getWordsInWordbook(project.id);
-        allWords.push(...words);
-      }
-
-      if (allWords.length === 0) {
-        Alert.alert('提示', '没有单词可以分析');
-        return;
-      }
-
-      // 计算每个单词的可提取性和距上次复习天数
-      const now = new Date();
-      const wordsWithAnalysis = allWords.map(w => {
-        const lastReview = w.last_review ? new Date(w.last_review) : null;
-        const nextReview = w.next_review ? new Date(w.next_review) : null;
-        
-        let retrievability = 1.0;
-        let daysSinceLastReview = 0;
-        
-        if (w.stability > 0 && lastReview) {
-          const elapsedDays = (now.getTime() - lastReview.getTime()) / (1000 * 60 * 60 * 24);
-          retrievability = Math.exp(-elapsedDays / w.stability);
-          daysSinceLastReview = elapsedDays;
-        }
-
-        return {
-          id: w.id,
-          word: w.word,
-          definition: w.definition,
-          stability: w.stability,
-          difficulty: w.difficulty,
-          reviewCount: w.review_count,
-          lastScore: undefined, // 可以从复习日志获取
-          retrievability,
-          daysSinceLastReview,
-          nextReviewDate: w.next_review || undefined,
-          isMastered: w.is_mastered === 1,
-          lastReviewDate: w.last_review || undefined,
-        };
-      });
-
-      // 调用 AI 分析
-      const result = await generateReviewAnalysis(wordsWithAnalysis, {
-        currentTime: now.toLocaleString('zh-CN'),
-        studyGoal: '高效复习',
-      });
-
-      if (result) {
-        setAiAnalysis(result);
-      }
-    } catch (error) {
-      console.error('AI 分析失败:', error);
-      Alert.alert('错误', 'AI 分析失败，请重试');
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
   const handleDeleteProject = (project: ReviewProject) => {
     Alert.alert(
       '确认删除',
@@ -157,8 +78,7 @@ export default function ReviewHomeScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const db = getDatabase();
-              await db.runAsync('DELETE FROM wordbooks WHERE id = ?', [project.id]);
+              await deleteWordbook(project.id);
               await loadProjects();
               Alert.alert('成功', '项目已删除');
             } catch (error) {
@@ -172,26 +92,22 @@ export default function ReviewHomeScreen() {
   };
 
   const handleStartReview = (projectId: number) => {
-    console.log('[ReviewHome] 开始复习，projectId:', projectId);
-    router.push('/review-detail', { projectId: projectId.toString() });
-  };
+    console.log('[ReviewHome] ========== 点击开始复习 ==========');
+    console.log('[ReviewHome] projectId:', projectId);
+    console.log('[ReviewHome] 路由路径:', '/review-detail');
+    console.log('[ReviewHome] 路由参数:', { projectId: projectId.toString() });
 
-  // 根据 AI 分析结果开始复习
-  const handleStartAIReview = () => {
-    if (!aiAnalysis || aiAnalysis.reviewPlan.length === 0) {
-      Alert.alert('提示', '暂无需要复习的单词');
-      return;
+    try {
+      router.push('/review-detail', { projectId: projectId.toString() });
+      console.log('[ReviewHome] router.push 调用成功');
+    } catch (error) {
+      console.error('[ReviewHome] router.push 调用失败:', error);
     }
-
-    // 获取需要复习的单词ID列表
-    const wordIds = aiAnalysis.reviewPlan.map(p => p.wordId);
-    router.push('/review-detail', { 
-      aiReviewWords: wordIds.join(','),
-      aiPlan: JSON.stringify(aiAnalysis.reviewPlan),
-    });
   };
 
   const renderProjectCard = (project: ReviewProject) => {
+    console.log('[ReviewHome] 渲染项目卡片:', project.name, 'ID:', project.id);
+    
     return (
       <ThemedView key={project.id} level="default" style={styles.projectCard}>
         <TouchableOpacity
@@ -280,84 +196,6 @@ export default function ReviewHomeScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* AI 复习分析卡片 */}
-          <TouchableOpacity
-            style={styles.aiCard}
-            onPress={handleAIAnalysis}
-            disabled={analyzing}
-          >
-            <View style={styles.aiCardContent}>
-              {analyzing ? (
-                <ActivityIndicator size="large" color={theme.primary} />
-              ) : (
-                <>
-                  <FontAwesome6 name="brain" size={40} color={theme.primary} />
-                  <View style={styles.aiCardTextContainer}>
-                    <ThemedText variant="h3" color={theme.textPrimary}>
-                      AI 智能复习分析
-                    </ThemedText>
-                    <ThemedText variant="caption" color={theme.textMuted}>
-                      让 AI 分析您的学习状态，生成个性化复习计划
-                    </ThemedText>
-                  </View>
-                  <FontAwesome6 name="chevron-right" size={20} color={theme.textMuted} />
-                </>
-              )}
-            </View>
-          </TouchableOpacity>
-
-          {/* AI 分析结果 */}
-          {aiAnalysis && (
-            <ThemedView level="default" style={styles.analysisCard}>
-              <View style={styles.analysisHeader}>
-                <FontAwesome6 name="chart-line" size={24} color={theme.primary} />
-                <ThemedText variant="h3" color={theme.textPrimary}>AI 分析结果</ThemedText>
-              </View>
-              
-              <ThemedText variant="body" color={theme.textSecondary} style={styles.analysisSummary}>
-                {aiAnalysis.analysis.summary}
-              </ThemedText>
-
-              <View style={styles.analysisStats}>
-                <View style={styles.analysisStatItem}>
-                  <ThemedText variant="h2" color={theme.error}>{aiAnalysis.analysis.urgentCount}</ThemedText>
-                  <ThemedText variant="caption" color={theme.textMuted}>紧急复习</ThemedText>
-                </View>
-                <View style={styles.analysisStatItem}>
-                  <ThemedText variant="h2" color={theme.warning}>{aiAnalysis.analysis.suggestedCount}</ThemedText>
-                  <ThemedText variant="caption" color={theme.textMuted}>建议今日复习</ThemedText>
-                </View>
-              </View>
-
-              {/* 复习建议 */}
-              {aiAnalysis.recommendations.length > 0 && (
-                <View style={styles.recommendationsSection}>
-                  <ThemedText variant="body" color={theme.textPrimary}>学习建议</ThemedText>
-                  {aiAnalysis.recommendations.map((rec, index) => (
-                    <View key={index} style={styles.recommendationItem}>
-                      <FontAwesome6 
-                        name={rec.type === 'timing' ? 'clock' : rec.type === 'method' ? 'lightbulb' : 'bell'} 
-                        size={16} 
-                        color={theme.primary} 
-                      />
-                      <ThemedText variant="caption" color={theme.textSecondary}>{rec.message}</ThemedText>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {/* 开始 AI 推荐复习 */}
-              {aiAnalysis.reviewPlan.length > 0 && (
-                <TouchableOpacity style={styles.aiReviewButton} onPress={handleStartAIReview}>
-                  <FontAwesome6 name="play" size={20} color={theme.buttonPrimaryText} />
-                  <ThemedText variant="body" color={theme.buttonPrimaryText}>
-                    开始 AI 推荐复习 ({aiAnalysis.reviewPlan.length} 个单词)
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
-            </ThemedView>
-          )}
-
           {/* 复习计划入口 */}
           <TouchableOpacity
             style={styles.planCard}

@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DB_NAME = 'word_review.db';
-const DB_VERSION = 8; // 数据库版本号 - 升级到 8，添加励志例句和搞笑例句字段
+const DB_VERSION = 7; // 数据库版本号 - 升级到 7，添加复习日志表
 const DB_INITIALIZED_KEY = '@app:database_initialized'; // 用于记录数据库是否已经初始化过
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -475,30 +475,6 @@ async function migrateDatabase(): Promise<void> {
 
         console.log('Migration to version 7 completed');
       }
-
-      // 升级到版本 8：添加励志例句和搞笑例句字段
-      if (currentVersion < 8) {
-        console.log('Migrating database to version 8: adding inspirational_sentence and funny_sentence fields...');
-
-        // 检查励志例句字段是否存在
-        const tableInfoV8 = await db.getAllAsync<{ name: string, type: string, notnull: number }>(
-          'PRAGMA table_info(words)'
-        );
-        const hasInspirationalSentence = tableInfoV8.some(col => col.name === 'inspirational_sentence');
-        const hasFunnySentence = tableInfoV8.some(col => col.name === 'funny_sentence');
-
-        if (!hasInspirationalSentence) {
-          await db.execAsync('ALTER TABLE words ADD COLUMN inspirational_sentence TEXT');
-          console.log('Added inspirational_sentence column to words table');
-        }
-
-        if (!hasFunnySentence) {
-          await db.execAsync('ALTER TABLE words ADD COLUMN funny_sentence TEXT');
-          console.log('Added funny_sentence column to words table');
-        }
-
-        console.log('Migration to version 8 completed');
-      }
     }
 
     // 更新版本号
@@ -527,8 +503,6 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         split TEXT,
         mnemonic TEXT,
         sentence TEXT,
-        inspirational_sentence TEXT,
-        funny_sentence TEXT,
         difficulty REAL DEFAULT 0,
         stability REAL DEFAULT 0,
         last_review TEXT,
