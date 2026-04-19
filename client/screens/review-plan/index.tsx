@@ -39,7 +39,7 @@ export default function ReviewPlanScreen() {
   const [listDays, setListDays] = useState<'7' | '30'>('7');
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderHour, setReminderHour] = useState(9); // 小时（8-20）
+  const [reminderHour, setReminderHour] = useState(9); // 小时（00-23）
   const [reminderMinute, setReminderMinute] = useState(0); // 分钟（0-59）
   const [bestReviewTime, setBestReviewTime] = useState('09:00');
   const [loading, setLoading] = useState(true);
@@ -318,10 +318,8 @@ export default function ReviewPlanScreen() {
         if (word.last_review) {
           const reviewDate = new Date(word.last_review);
           const hour = reviewDate.getHours();
-          // 只统计 8:00-20:00 之间的复习记录
-          if (hour >= 8 && hour <= 20) {
-            hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
-          }
+          // 统计所有复习记录
+          hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
         }
       });
 
@@ -335,10 +333,6 @@ export default function ReviewPlanScreen() {
           bestHour = hour;
         }
       });
-
-      // 确保最佳复习时间在 8:00-20:00 之间
-      if (bestHour < 8) bestHour = 8;
-      if (bestHour > 20) bestHour = 20;
 
       // 转换为 HH:mm 格式
       const timeString = `${bestHour.toString().padStart(2, '0')}:00`;
@@ -373,13 +367,13 @@ export default function ReviewPlanScreen() {
   // 保存提醒设置
   const saveReminderSettings = async () => {
     try {
-      // 验证提醒时间范围（8:00-20:00）
+      // 验证提醒时间
       const totalMinutes = reminderHour * 60 + reminderMinute;
-      const startTime = 8 * 60; // 8:00 = 480 分钟
-      const endTime = 20 * 60;  // 20:00 = 1200 分钟
+      const startTime = 0 * 60; // 00:00 = 0 分钟
+      const endTime = 23 * 60 + 59;  // 23:59 = 1439 分钟
 
       if (totalMinutes < startTime || totalMinutes > endTime) {
-        Alert.alert('错误', '提醒时间必须在 8:00-20:00 之间');
+        Alert.alert('错误', '提醒时间必须在 00:00-23:59 之间');
         return;
       }
 
@@ -586,7 +580,7 @@ export default function ReviewPlanScreen() {
                 最佳复习时间：{bestReviewTime}
               </ThemedText>
               <ThemedText variant="caption" color={theme.textMuted}>
-                基于您的学习历史推荐（8:00-20:00）
+                基于您的学习历史推荐（00:00-23:59）
               </ThemedText>
             </View>
           </View>
@@ -1025,7 +1019,7 @@ export default function ReviewPlanScreen() {
                     </ThemedText>
                   </View>
                   <ThemedText variant="caption" color={theme.textMuted}>
-                    请设置 8:00-20:00 之间的时间
+                    请设置 00:00-23:59 之间的时间
                   </ThemedText>
                 </View>
               )}

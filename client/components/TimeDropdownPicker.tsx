@@ -1,5 +1,5 @@
 import React, { memo, useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Modal, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native';
 
 interface TimeDropdownPickerProps {
   selectedHour: number;
@@ -16,7 +16,7 @@ interface TimeDropdownPickerProps {
   };
 }
 
-const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
 const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, onMinuteChange, colors }: TimeDropdownPickerProps) => {
@@ -33,135 +33,123 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
     setShowMinuteDropdown(false);
   };
 
-  const closeDropdowns = () => {
-    setShowHourDropdown(false);
-    setShowMinuteDropdown(false);
+  const handlePressOutside = () => {
+    if (showHourDropdown || showMinuteDropdown) {
+      setShowHourDropdown(false);
+      setShowMinuteDropdown(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* 小时选择器 */}
-      <View style={styles.selectWrapper}>
-        <TouchableOpacity
-          style={[
-            styles.selectItem,
-            { borderColor: colors.border, backgroundColor: colors.level3 },
-          ]}
-          onPress={() => setShowHourDropdown(!showHourDropdown)}
-          activeOpacity={0.6}
-        >
-          <Text style={[styles.label, { color: colors.textPrimary }]}>
-            {selectedHour ? selectedHour.toString().padStart(2, '0') : '小时'}
-          </Text>
-          <Text style={[styles.arrow, { color: colors.textSecondary }]}>{showHourDropdown ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
+      <TouchableOpacity
+        activeOpacity={1}
+        style={styles.pressArea}
+        onPress={handlePressOutside}
+      >
+        <View style={styles.content}>
+          {/* 小时选择器 */}
+          <View style={styles.selectWrapper}>
+            <TouchableOpacity
+              style={[
+                styles.selectItem,
+                { borderColor: colors.border, backgroundColor: colors.level3 },
+              ]}
+              onPress={() => setShowHourDropdown(!showHourDropdown)}
+              activeOpacity={0.6}
+            >
+              <Text style={[styles.label, { color: colors.textPrimary }]}>
+                {selectedHour !== null ? selectedHour.toString().padStart(2, '0') : '小时'}
+              </Text>
+              <Text style={[styles.arrow, { color: colors.textSecondary }]}>{showHourDropdown ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
 
-        <Modal
-          visible={showHourDropdown}
-          transparent
-          animationType="fade"
-          onRequestClose={closeDropdowns}
-        >
-          <TouchableWithoutFeedback onPress={closeDropdowns}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback onPress={() => {}}>
-                <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
-                  <ScrollView
-                    style={styles.dropdownScroll}
-                    bounces={false}
-                    overScrollMode="never"
-                  >
-                    {HOURS.map(hour => (
-                      <TouchableOpacity
-                        key={hour}
+            {showHourDropdown && (
+              <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
+                <ScrollView
+                  style={styles.dropdownScroll}
+                  bounces={false}
+                  overScrollMode="never"
+                >
+                  {HOURS.map(hour => (
+                    <TouchableOpacity
+                      key={hour}
+                      style={[
+                        styles.dropdownItem,
+                        selectedHour === hour && styles.dropdownItemActive,
+                        selectedHour === hour && { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() => handleSelectHour(hour)}
+                      activeOpacity={0.6}
+                    >
+                      <Text
                         style={[
-                          styles.dropdownItem,
-                          selectedHour === hour && styles.dropdownItemActive,
-                          selectedHour === hour && { backgroundColor: colors.primary },
+                          styles.dropdownItemText,
+                          { color: selectedHour === hour ? colors.buttonPrimaryText : '#000000' },
                         ]}
-                        onPress={() => handleSelectHour(hour)}
-                        activeOpacity={0.6}
                       >
-                        <Text
-                          style={[
-                            styles.dropdownItemText,
-                            { color: selectedHour === hour ? colors.buttonPrimaryText : '#000000' },
-                          ]}
-                        >
-                          {hour.toString().padStart(2, '0')}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-      </View>
+                        {hour.toString().padStart(2, '0')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
 
-      {/* 冒号 */}
-      <Text style={[styles.colon, { color: colors.textPrimary }]}>:</Text>
+          {/* 冒号 */}
+          <Text style={[styles.colon, { color: colors.textPrimary }]}>:</Text>
 
-      {/* 分钟选择器 */}
-      <View style={styles.selectWrapper}>
-        <TouchableOpacity
-          style={[
-            styles.selectItem,
-            { borderColor: colors.border, backgroundColor: colors.level3 },
-          ]}
-          onPress={() => setShowMinuteDropdown(!showMinuteDropdown)}
-          activeOpacity={0.6}
-        >
-          <Text style={[styles.label, { color: colors.textPrimary }]}>
-            {selectedMinute !== null ? selectedMinute.toString().padStart(2, '0') : '分钟'}
-          </Text>
-          <Text style={[styles.arrow, { color: colors.textSecondary }]}>{showMinuteDropdown ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
+          {/* 分钟选择器 */}
+          <View style={styles.selectWrapper}>
+            <TouchableOpacity
+              style={[
+                styles.selectItem,
+                { borderColor: colors.border, backgroundColor: colors.level3 },
+              ]}
+              onPress={() => setShowMinuteDropdown(!showMinuteDropdown)}
+              activeOpacity={0.6}
+            >
+              <Text style={[styles.label, { color: colors.textPrimary }]}>
+                {selectedMinute !== null ? selectedMinute.toString().padStart(2, '0') : '分钟'}
+              </Text>
+              <Text style={[styles.arrow, { color: colors.textSecondary }]}>{showMinuteDropdown ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
 
-        <Modal
-          visible={showMinuteDropdown}
-          transparent
-          animationType="fade"
-          onRequestClose={closeDropdowns}
-        >
-          <TouchableWithoutFeedback onPress={closeDropdowns}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback onPress={() => {}}>
-                <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
-                  <ScrollView
-                    style={styles.dropdownScroll}
-                    bounces={false}
-                    overScrollMode="never"
-                  >
-                    {MINUTES.map(minute => (
-                      <TouchableOpacity
-                        key={minute}
+            {showMinuteDropdown && (
+              <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
+                <ScrollView
+                  style={styles.dropdownScroll}
+                  bounces={false}
+                  overScrollMode="never"
+                >
+                  {MINUTES.map(minute => (
+                    <TouchableOpacity
+                      key={minute}
+                      style={[
+                        styles.dropdownItem,
+                        selectedMinute === minute && styles.dropdownItemActive,
+                        selectedMinute === minute && { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() => handleSelectMinute(minute)}
+                      activeOpacity={0.6}
+                    >
+                      <Text
                         style={[
-                          styles.dropdownItem,
-                          selectedMinute === minute && styles.dropdownItemActive,
-                          selectedMinute === minute && { backgroundColor: colors.primary },
+                          styles.dropdownItemText,
+                          { color: selectedMinute === minute ? colors.buttonPrimaryText : '#000000' },
                         ]}
-                        onPress={() => handleSelectMinute(minute)}
-                        activeOpacity={0.6}
                       >
-                        <Text
-                          style={[
-                            styles.dropdownItemText,
-                            { color: selectedMinute === minute ? colors.buttonPrimaryText : '#000000' },
-                          ]}
-                        >
-                          {minute.toString().padStart(2, '0')}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-      </View>
+                        {minute.toString().padStart(2, '0')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
     </View>
   );
 });
@@ -176,8 +164,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  pressArea: {
+    padding: 0,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   selectWrapper: {
     position: 'relative',
+    zIndex: 10,
   },
   selectItem: {
     width: 100,
@@ -189,6 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     gap: 8,
+    zIndex: 10,
   },
   label: {
     fontSize: 16,
@@ -201,18 +199,24 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   dropdown: {
-    width: 120,
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    width: 100,
     maxHeight: 400,
     borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
+    zIndex: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   dropdownScroll: {
     maxHeight: 400,
