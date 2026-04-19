@@ -385,13 +385,14 @@ export default function ReviewPlanScreen() {
       const timeString = `${reminderHour.toString().padStart(2, '0')}:${reminderMinute.toString().padStart(2, '0')}`;
       console.log('[调试] 时间字符串:', timeString);
 
+      // 先保存到 AsyncStorage
       await AsyncStorage.setItem('reminder_enabled', String(reminderEnabled));
       await AsyncStorage.setItem('reminder_time', timeString);
       console.log('[调试] 已保存到 AsyncStorage');
 
       // 处理通知设置
       if (reminderEnabled) {
-        // Web 平台直接保存，不要求通知权限
+        // Web 平台：直接提示成功
         if (Platform.OS === 'web') {
           console.log('[调试] Web 平台：直接保存设置');
           Alert.alert('成功', `复习提醒已设置为每天 ${timeString}（Web 平台暂不支持实际通知）`);
@@ -399,32 +400,29 @@ export default function ReviewPlanScreen() {
           return;
         }
 
-        // 移动端：请求通知权限
-        console.log('[调试] 请求通知权限...');
-        const hasPermission = await requestNotificationPermissions();
-        console.log('[调试] 通知权限:', hasPermission);
-        if (!hasPermission) {
+        // 移动端：尝试设置通知（不阻塞保存）
+        console.log('[调试] 尝试设置通知...');
+        try {
+          await scheduleReviewReminder(reminderHour, reminderMinute);
+          console.log('[调试] 通知已设置');
+          Alert.alert('成功', `复习提醒已设置为每天 ${timeString}`);
+        } catch (notifyError: any) {
+          console.warn('[调试] 通知设置失败:', notifyError);
+          // 即使通知设置失败，也不影响本地保存
           Alert.alert(
-            '权限受限',
-            '需要通知权限才能发送复习提醒。请在设置中开启通知权限。',
-            [
-              { text: '取消', style: 'cancel', onPress: () => setShowReminderModal(false) },
-              { text: '好的', onPress: () => setShowReminderModal(false) }
-            ]
+            '部分成功',
+            `提醒时间已保存为每天 ${timeString}\n\n注：实际通知功能可能不可用（Expo Go 环境限制），需要使用开发构建版本`
           );
-          return;
         }
-
-        // 设置通知
-        console.log('[调试] 设置通知...');
-        await scheduleReviewReminder(reminderHour, reminderMinute);
-        console.log('[调试] 通知已设置');
-        Alert.alert('成功', `复习提醒已设置为每天 ${timeString}`);
       } else {
         // 取消通知
         console.log('[调试] 取消通知...');
-        await cancelReminderNotification();
-        console.log('[调试] 通知已取消');
+        try {
+          await cancelReminderNotification();
+          console.log('[调试] 通知已取消');
+        } catch (cancelError) {
+          console.warn('[调试] 取消通知失败:', cancelError);
+        }
         Alert.alert('成功', '复习提醒已关闭');
       }
 

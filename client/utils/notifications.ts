@@ -57,26 +57,38 @@ export async function scheduleReviewReminder(hour: number, minute: number) {
     return;
   }
 
-  // 先取消旧通知
-  await cancelReminderNotification();
+  try {
+    // 先取消旧通知
+    await cancelReminderNotification();
 
-  // 设置新通知（每天重复）
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: '复习提醒',
-      body: '今天有单词需要复习哦！',
-      data: {
-        type: 'word-review',
+    // 设置新通知（每天重复）
+    // 添加超时保护，防止在 Expo Go 环境中卡住
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Notification scheduling timeout')), 5000);
+    });
+
+    const schedulePromise = Notifications.scheduleNotificationAsync({
+      content: {
+        title: '复习提醒',
+        body: '今天有单词需要复习哦！',
+        data: {
+          type: 'word-review',
+        },
       },
-    },
-    trigger: {
-      hour,
-      minute,
-      repeats: true, // 每天重复
-    },
-  });
+      trigger: {
+        hour,
+        minute,
+        repeats: true, // 每天重复
+      },
+    });
 
-  console.log(`[通知] 已设置复习提醒：${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+    await Promise.race([schedulePromise, timeoutPromise]);
+    console.log(`[通知] 已设置复习提醒：${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+  } catch (error: any) {
+    // 如果是 Expo Go 环境，不支持本地通知，只记录日志不报错
+    console.warn(`[通知] 设置复习提醒失败（可能是 Expo Go 环境限制）：${error.message}`);
+    console.log(`[通知] 提醒设置已保存到本地：${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}，实际通知功能需要使用开发构建版本`);
+  }
 }
 
 // 取消复习提醒通知
