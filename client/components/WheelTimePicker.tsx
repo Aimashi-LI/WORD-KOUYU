@@ -1,5 +1,5 @@
-import React, { memo, useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated } from 'react-native';
+import React, { memo, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 
 interface WheelTimePickerProps {
   selectedHour: number;
@@ -24,8 +24,6 @@ const VISIBLE_ITEMS = 5;
 const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMinuteChange, colors }: WheelTimePickerProps) => {
   const hourRef = useRef<ScrollView>(null);
   const minuteRef = useRef<ScrollView>(null);
-  const [hourScrollY] = useState(new Animated.Value(0));
-  const [minuteScrollY] = useState(new Animated.Value(0));
 
   // 初始化滚动位置
   useEffect(() => {
@@ -34,7 +32,6 @@ const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMi
         y: selectedHour * ITEM_HEIGHT,
         animated: false,
       });
-      hourScrollY.setValue(selectedHour * ITEM_HEIGHT);
     }
   }, []);
 
@@ -44,7 +41,6 @@ const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMi
         y: selectedMinute * ITEM_HEIGHT,
         animated: false,
       });
-      minuteScrollY.setValue(selectedMinute * ITEM_HEIGHT);
     }
   }, []);
 
@@ -55,39 +51,17 @@ const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMi
     onChange(values[clampedIndex]);
   };
 
-  const renderItems = (values: number[], scrollY: Animated.Value, selected: number | null) => {
-    return values.map((value) => {
-      const opacity = scrollY.interpolate({
-        inputRange: [(value - 2) * ITEM_HEIGHT, (value - 1) * ITEM_HEIGHT, value * ITEM_HEIGHT, (value + 1) * ITEM_HEIGHT, (value + 2) * ITEM_HEIGHT],
-        outputRange: [0.3, 0.6, 1, 0.6, 0.3],
-      });
-
-      const scale = scrollY.interpolate({
-        inputRange: [(value - 1) * ITEM_HEIGHT, value * ITEM_HEIGHT, (value + 1) * ITEM_HEIGHT],
-        outputRange: [0.8, 1.1, 0.8],
-      });
-
-      const isSelected = value === selected;
-
-      return (
-        <Animated.View key={value} style={[
-          styles.item,
-          { opacity, transform: [{ scale }] },
-          isSelected && styles.itemActive,
-          isSelected && { backgroundColor: colors.primary },
-        ]}>
-          <Animated.Text
-            style={[
-              styles.itemText,
-              { color: isSelected ? colors.buttonPrimaryText : colors.textPrimary },
-              isSelected && { fontWeight: '600' },
-            ]}
-          >
-            {value.toString().padStart(2, '0')}
-          </Animated.Text>
-        </Animated.View>
-      );
-    });
+  const renderItems = (values: number[], selected: number | null) => {
+    return values.map((value) => (
+      <View
+        key={value}
+        style={styles.item}
+      >
+        <Text style={{ color: colors.textPrimary, fontSize: 16 }}>
+          {value.toString().padStart(2, '0')}
+        </Text>
+      </View>
+    ));
   };
 
   return (
@@ -106,18 +80,14 @@ const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMi
               snapToInterval={ITEM_HEIGHT}
               snapToAlignment="start"
               onMomentumScrollEnd={(event) => handleScroll(event, HOURS, onHourChange)}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { y: hourScrollY } } }],
-                { useNativeDriver: false }
-              )}
               scrollEventThrottle={16}
             >
               <View style={{ paddingTop: ITEM_HEIGHT * 2, paddingBottom: ITEM_HEIGHT * 2 }}>
-                {renderItems(HOURS, hourScrollY, selectedHour)}
+                {renderItems(HOURS, selectedHour)}
               </View>
             </ScrollView>
-            {/* 中心选中区域背景 */}
-            <View style={[styles.selectedZone, { backgroundColor: colors.level3, opacity: 0.3 }]} />
+            {/* 选中框 */}
+            <View style={[styles.selectedFrame, { borderColor: colors.primary }]} />
           </View>
         </View>
 
@@ -137,18 +107,14 @@ const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMi
               snapToInterval={ITEM_HEIGHT}
               snapToAlignment="start"
               onMomentumScrollEnd={(event) => handleScroll(event, MINUTES, onMinuteChange)}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { y: minuteScrollY } } }],
-                { useNativeDriver: false }
-              )}
               scrollEventThrottle={16}
             >
               <View style={{ paddingTop: ITEM_HEIGHT * 2, paddingBottom: ITEM_HEIGHT * 2 }}>
-                {renderItems(MINUTES, minuteScrollY, selectedMinute)}
+                {renderItems(MINUTES, selectedMinute)}
               </View>
             </ScrollView>
-            {/* 中心选中区域背景 */}
-            <View style={[styles.selectedZone, { backgroundColor: colors.level3, opacity: 0.3 }]} />
+            {/* 选中框 */}
+            <View style={[styles.selectedFrame, { borderColor: colors.primary }]} />
           </View>
         </View>
       </View>
@@ -206,18 +172,14 @@ const styles = StyleSheet.create({
     height: ITEM_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
   },
-  itemActive: {},
-  itemText: {
-    fontSize: 16,
-  },
-  selectedZone: {
+  selectedFrame: {
     position: 'absolute',
     top: ITEM_HEIGHT * 2,
-    left: 0,
-    right: 0,
+    left: 8,
+    right: 8,
     height: ITEM_HEIGHT,
+    borderWidth: 2,
     borderRadius: 8,
     pointerEvents: 'none',
   },
