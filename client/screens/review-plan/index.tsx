@@ -15,7 +15,7 @@ import { calculateNextInterval } from '@/algorithm/fsrs';
 import { Word } from '@/database/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WheelPicker from '@/components/WheelPicker';
-import TimeDropdownPicker from '@/components/TimeDropdownPicker';
+import WheelTimePicker from '@/components/WheelTimePicker';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -996,7 +996,7 @@ export default function ReviewPlanScreen() {
               {reminderEnabled && (
                 <View style={styles.timeInputContainer}>
                   <ThemedText variant="body" color={theme.textPrimary}>提醒时间</ThemedText>
-                  <TimeDropdownPicker
+                  <WheelTimePicker
                     selectedHour={reminderHour}
                     selectedMinute={reminderMinute}
                     onHourChange={setReminderHour}
@@ -1010,14 +1010,6 @@ export default function ReviewPlanScreen() {
                       textPrimary: theme.textPrimary,
                     }}
                   />
-                  <View style={styles.selectedTimeDisplay}>
-                    <ThemedText variant="body" color={theme.textPrimary}>
-                      已选择时间：
-                    </ThemedText>
-                    <ThemedText variant="body" color={theme.primary} style={styles.selectedTimeText}>
-                      {reminderHour.toString().padStart(2, '0')}:{reminderMinute.toString().padStart(2, '0')}
-                    </ThemedText>
-                  </View>
                   <ThemedText variant="caption" color={theme.textMuted}>
                     请设置 00:00-23:59 之间的时间
                   </ThemedText>
