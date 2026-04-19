@@ -3,6 +3,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack, useGlobalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LogBox, Alert, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ColorSchemeProvider } from '@/hooks/useColorScheme';
@@ -71,10 +72,15 @@ export default function RootLayout() {
     initNotificationSystem();
   }, []);
 
-  // 恢复通知设置（应用启动时）
+  // 恢复通知设置（应用启动时，仅移动端）
   useEffect(() => {
     const restoreNotifications = async () => {
       try {
+        // 只在移动端恢复通知设置
+        if (Platform.OS === 'web') {
+          return;
+        }
+
         const reminderEnabled = await AsyncStorage.getItem('reminder_enabled');
         const reminderTime = await AsyncStorage.getItem('reminder_time');
 
