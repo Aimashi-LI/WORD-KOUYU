@@ -348,16 +348,17 @@ export const createStyles = (theme: any) => StyleSheet.create({
   timeInputContainer: {
     marginBottom: 16,
   },
-  timePickerWrapper: {
+  wheelPickerContainer: {
     marginTop: 8,
-    height: 150,
+    flexDirection: 'row',
+    gap: 16,
     backgroundColor: theme.backgroundDefault,
-    borderRadius: 8,
-    overflow: 'hidden',
+    borderRadius: 12,
+    padding: 16,
   },
-  timePicker: {
+  wheelPickerWrapper: {
+    flex: 1,
     height: 150,
-    width: '100%',
   },
   selectedTimeDisplay: {
     marginTop: 12,
