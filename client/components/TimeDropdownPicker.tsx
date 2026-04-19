@@ -65,36 +65,34 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
             </TouchableOpacity>
 
             {showHourDropdown && (
-              <View style={[styles.dropdownWrapper, { left: -35 }]}>
-                <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
-                  <ScrollView
-                    style={styles.dropdownScroll}
-                    bounces={false}
-                    overScrollMode="never"
-                  >
-                    {HOURS.map(hour => (
-                      <TouchableOpacity
-                        key={hour}
+              <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
+                <ScrollView
+                  style={styles.dropdownScroll}
+                  bounces={false}
+                  overScrollMode="never"
+                >
+                  {HOURS.map(hour => (
+                    <TouchableOpacity
+                      key={hour}
+                      style={[
+                        styles.dropdownItem,
+                        selectedHour === hour && styles.dropdownItemActive,
+                        selectedHour === hour && { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() => handleSelectHour(hour)}
+                      activeOpacity={0.6}
+                    >
+                      <Text
                         style={[
-                          styles.dropdownItem,
-                          selectedHour === hour && styles.dropdownItemActive,
-                          selectedHour === hour && { backgroundColor: colors.primary },
+                          styles.dropdownItemText,
+                          { color: selectedHour === hour ? colors.buttonPrimaryText : '#000000' },
                         ]}
-                        onPress={() => handleSelectHour(hour)}
-                        activeOpacity={0.6}
                       >
-                        <Text
-                          style={[
-                            styles.dropdownItemText,
-                            { color: selectedHour === hour ? colors.buttonPrimaryText : '#000000' },
-                          ]}
-                        >
-                          {hour.toString().padStart(2, '0')}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
+                        {hour.toString().padStart(2, '0')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             )}
           </View>
@@ -119,36 +117,34 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
             </TouchableOpacity>
 
             {showMinuteDropdown && (
-              <View style={[styles.dropdownWrapper, { left: -35 }]}>
-                <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
-                  <ScrollView
-                    style={styles.dropdownScroll}
-                    bounces={false}
-                    overScrollMode="never"
-                  >
-                    {MINUTES.map(minute => (
-                      <TouchableOpacity
-                        key={minute}
+              <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
+                <ScrollView
+                  style={styles.dropdownScroll}
+                  bounces={false}
+                  overScrollMode="never"
+                >
+                  {MINUTES.map(minute => (
+                    <TouchableOpacity
+                      key={minute}
+                      style={[
+                        styles.dropdownItem,
+                        selectedMinute === minute && styles.dropdownItemActive,
+                        selectedMinute === minute && { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() => handleSelectMinute(minute)}
+                      activeOpacity={0.6}
+                    >
+                      <Text
                         style={[
-                          styles.dropdownItem,
-                          selectedMinute === minute && styles.dropdownItemActive,
-                          selectedMinute === minute && { backgroundColor: colors.primary },
+                          styles.dropdownItemText,
+                          { color: selectedMinute === minute ? colors.buttonPrimaryText : '#000000' },
                         ]}
-                        onPress={() => handleSelectMinute(minute)}
-                        activeOpacity={0.6}
                       >
-                        <Text
-                          style={[
-                            styles.dropdownItemText,
-                            { color: selectedMinute === minute ? colors.buttonPrimaryText : '#000000' },
-                          ]}
-                        >
-                          {minute.toString().padStart(2, '0')}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
+                        {minute.toString().padStart(2, '0')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             )}
           </View>
@@ -178,7 +174,7 @@ const styles = StyleSheet.create({
   },
   selectWrapper: {
     position: 'relative',
-    zIndex: 50,
+    zIndex: 10,
   },
   selectItem: {
     width: 100,
@@ -190,15 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     gap: 8,
-    zIndex: 50,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    zIndex: 10,
   },
   label: {
     fontSize: 16,
@@ -211,43 +199,36 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  dropdownWrapper: {
+  dropdown: {
     position: 'absolute',
     top: 50,
     left: 0,
-    zIndex: 1000,
-    elevation: 10,
-  },
-  dropdown: {
-    width: 170,
+    width: 100,
     maxHeight: 300,
     borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
+    zIndex: 20,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 10,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   dropdownScroll: {
     maxHeight: 300,
   },
   dropdownItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 48,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    minHeight: 44,
   },
-  dropdownItemActive: {
-    backgroundColor: '#3B82F6',
-  },
+  dropdownItemActive: {},
   dropdownItemText: {
     fontSize: 16,
   },
