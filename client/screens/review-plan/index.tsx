@@ -40,8 +40,8 @@ export default function ReviewPlanScreen() {
   const [listDays, setListDays] = useState<'7' | '30'>('7');
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderHour, setReminderHour] = useState(9); // 小时（00-23）
-  const [reminderMinute, setReminderMinute] = useState(0); // 分钟（0-59）
+  const [reminderHour, setReminderHour] = useState(new Date().getHours()); // 小时（00-23，默认为当前设备时间）
+  const [reminderMinute, setReminderMinute] = useState(new Date().getMinutes()); // 分钟（0-59，默认为当前设备时间）
   const [bestReviewTime, setBestReviewTime] = useState('09:00');
   const [loading, setLoading] = useState(true);
   const [showEarlyReviewModal, setShowEarlyReviewModal] = useState(false);
@@ -367,6 +367,9 @@ export default function ReviewPlanScreen() {
 
   // 保存提醒设置
   const saveReminderSettings = async () => {
+    console.log('[调试] 保存按钮被点击');
+    console.log('[调试] reminderHour:', reminderHour, 'reminderMinute:', reminderMinute, 'reminderEnabled:', reminderEnabled);
+
     try {
       // 验证提醒时间
       const totalMinutes = reminderHour * 60 + reminderMinute;
@@ -380,14 +383,18 @@ export default function ReviewPlanScreen() {
 
       // 将时间转换为 HH:mm 格式
       const timeString = `${reminderHour.toString().padStart(2, '0')}:${reminderMinute.toString().padStart(2, '0')}`;
+      console.log('[调试] 时间字符串:', timeString);
 
       await AsyncStorage.setItem('reminder_enabled', String(reminderEnabled));
       await AsyncStorage.setItem('reminder_time', timeString);
+      console.log('[调试] 已保存到 AsyncStorage');
 
       // 处理通知设置
       if (reminderEnabled) {
         // 请求通知权限
+        console.log('[调试] 请求通知权限...');
         const hasPermission = await requestNotificationPermissions();
+        console.log('[调试] 通知权限:', hasPermission);
         if (!hasPermission) {
           Alert.alert(
             '权限受限',
@@ -401,17 +408,22 @@ export default function ReviewPlanScreen() {
         }
 
         // 设置通知
+        console.log('[调试] 设置通知...');
         await scheduleReviewReminder(reminderHour, reminderMinute);
+        console.log('[调试] 通知已设置');
         Alert.alert('成功', `复习提醒已设置为每天 ${timeString}`);
       } else {
         // 取消通知
+        console.log('[调试] 取消通知...');
         await cancelReminderNotification();
+        console.log('[调试] 通知已取消');
         Alert.alert('成功', '复习提醒已关闭');
       }
 
       setShowReminderModal(false);
+      console.log('[调试] Modal 已关闭');
     } catch (error) {
-      console.error('保存提醒设置失败:', error);
+      console.error('[调试] 保存出错:', error);
       Alert.alert('错误', '保存失败，请重试');
     }
   };
