@@ -17,7 +17,7 @@ interface TimeDropdownPickerProps {
 }
 
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-const MINUTES = [0, 15, 30, 45];
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
 const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, onMinuteChange, colors }: TimeDropdownPickerProps) => {
   const [showHourDropdown, setShowHourDropdown] = useState(false);
@@ -65,7 +65,7 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
           <TouchableWithoutFeedback onPress={closeDropdowns}>
             <View style={styles.modalOverlay}>
               <TouchableWithoutFeedback onPress={() => {}}>
-                <View style={[styles.dropdown, { backgroundColor: colors.level3, borderColor: colors.border }]}>
+                <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
                   <ScrollView
                     style={styles.dropdownScroll}
                     bounces={false}
@@ -85,7 +85,7 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
                         <Text
                           style={[
                             styles.dropdownItemText,
-                            { color: selectedHour === hour ? colors.buttonPrimaryText : colors.textPrimary },
+                            { color: selectedHour === hour ? colors.buttonPrimaryText : '#000000' },
                           ]}
                         >
                           {hour.toString().padStart(2, '0')}
@@ -128,7 +128,7 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
           <TouchableWithoutFeedback onPress={closeDropdowns}>
             <View style={styles.modalOverlay}>
               <TouchableWithoutFeedback onPress={() => {}}>
-                <View style={[styles.dropdown, { backgroundColor: colors.level3, borderColor: colors.border }]}>
+                <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
                   <ScrollView
                     style={styles.dropdownScroll}
                     bounces={false}
@@ -148,7 +148,7 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
                         <Text
                           style={[
                             styles.dropdownItemText,
-                            { color: selectedMinute === minute ? colors.buttonPrimaryText : colors.textPrimary },
+                            { color: selectedMinute === minute ? colors.buttonPrimaryText : '#000000' },
                           ]}
                         >
                           {minute.toString().padStart(2, '0')}
@@ -209,13 +209,13 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     width: 120,
-    maxHeight: 300,
+    maxHeight: 400,
     borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
   },
   dropdownScroll: {
-    maxHeight: 300,
+    maxHeight: 400,
   },
   dropdownItem: {
     paddingVertical: 12,
