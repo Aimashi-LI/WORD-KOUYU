@@ -16,6 +16,7 @@ import { Word } from '@/database/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WheelPicker from '@/components/WheelPicker';
 import WheelTimePicker from '@/components/WheelTimePicker';
+import { requestNotificationPermissions, scheduleReviewReminder, cancelReminderNotification } from '@/utils/notifications';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -383,9 +384,28 @@ export default function ReviewPlanScreen() {
       await AsyncStorage.setItem('reminder_enabled', String(reminderEnabled));
       await AsyncStorage.setItem('reminder_time', timeString);
 
+      // 处理通知设置
       if (reminderEnabled) {
+        // 请求通知权限
+        const hasPermission = await requestNotificationPermissions();
+        if (!hasPermission) {
+          Alert.alert(
+            '权限受限',
+            '需要通知权限才能发送复习提醒。请在设置中开启通知权限。',
+            [
+              { text: '取消', style: 'cancel', onPress: () => setShowReminderModal(false) },
+              { text: '好的', onPress: () => setShowReminderModal(false) }
+            ]
+          );
+          return;
+        }
+
+        // 设置通知
+        await scheduleReviewReminder(reminderHour, reminderMinute);
         Alert.alert('成功', `复习提醒已设置为每天 ${timeString}`);
       } else {
+        // 取消通知
+        await cancelReminderNotification();
         Alert.alert('成功', '复习提醒已关闭');
       }
 

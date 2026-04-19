@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ColorSchemeProvider } from '@/hooks/useColorScheme';
 import { ThemeSwitchProvider } from '@/hooks/useThemeSwitch';
 import { getAllWords, deleteWords } from '@/database/wordDao';
+import { initializeNotifications, scheduleReviewReminder } from '@/utils/notifications';
 
 LogBox.ignoreLogs([
   "TurboModuleRegistry.getEnforcing(...): 'RNMapsAirModule' could not be found",
@@ -55,6 +56,40 @@ export default function RootLayout() {
       executeDelete();
     }
   }, [params.action]);
+
+  // 初始化通知系统
+  useEffect(() => {
+    const initNotificationSystem = async () => {
+      try {
+        await initializeNotifications();
+        console.log('[通知] 通知系统初始化成功');
+      } catch (error) {
+        console.error('[通知] 通知系统初始化失败:', error);
+      }
+    };
+
+    initNotificationSystem();
+  }, []);
+
+  // 恢复通知设置（应用启动时）
+  useEffect(() => {
+    const restoreNotifications = async () => {
+      try {
+        const reminderEnabled = await AsyncStorage.getItem('reminder_enabled');
+        const reminderTime = await AsyncStorage.getItem('reminder_time');
+
+        if (reminderEnabled === 'true' && reminderTime) {
+          const [hour, minute] = reminderTime.split(':').map(Number);
+          await scheduleReviewReminder(hour, minute);
+          console.log(`[通知] 已恢复复习提醒：${reminderTime}`);
+        }
+      } catch (error) {
+        console.error('[通知] 恢复通知设置失败:', error);
+      }
+    };
+
+    restoreNotifications();
+  }, []);
 
   return (
     <AuthProvider>
