@@ -15,7 +15,7 @@ import { calculateNextInterval } from '@/algorithm/fsrs';
 import { Word } from '@/database/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WheelPicker from '@/components/WheelPicker';
-import TimeButtonGrid from '@/components/TimeButtonGrid';
+import TimeDropdownPicker from '@/components/TimeDropdownPicker';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -1002,7 +1002,7 @@ export default function ReviewPlanScreen() {
               {reminderEnabled && (
                 <View style={styles.timeInputContainer}>
                   <ThemedText variant="body" color={theme.textPrimary}>提醒时间</ThemedText>
-                  <TimeButtonGrid
+                  <TimeDropdownPicker
                     selectedHour={reminderHour}
                     selectedMinute={reminderMinute}
                     onHourChange={setReminderHour}
@@ -1013,6 +1013,7 @@ export default function ReviewPlanScreen() {
                       level3: theme.level3,
                       border: theme.border,
                       textSecondary: theme.textSecondary,
+                      textPrimary: theme.textPrimary,
                     }}
                   />
                   <View style={styles.selectedTimeDisplay}>
