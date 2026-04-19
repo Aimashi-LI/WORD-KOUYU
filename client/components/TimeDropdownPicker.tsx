@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     top: 50,
     left: 0,
     width: 100,
-    maxHeight: 400,
+    maxHeight: 300,
     borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   dropdownScroll: {
-    maxHeight: 400,
+    maxHeight: 300,
   },
   dropdownItem: {
     paddingVertical: 12,

@@ -287,6 +287,7 @@ export const createStyles = (theme: any) => StyleSheet.create({
     maxWidth: 400,
     borderRadius: 12,
     maxHeight: SCREEN_HEIGHT * 0.7,
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',
