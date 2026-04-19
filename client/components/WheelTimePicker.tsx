@@ -27,7 +27,7 @@ const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMi
 
   // 滚动到选中项
   useEffect(() => {
-    if (hourRef.current) {
+    if (hourRef.current && selectedHour !== null && selectedHour !== undefined) {
       hourRef.current.scrollTo({
         y: selectedHour * ITEM_HEIGHT,
         animated: false,
@@ -36,7 +36,7 @@ const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMi
   }, [selectedHour]);
 
   useEffect(() => {
-    if (minuteRef.current) {
+    if (minuteRef.current && selectedMinute !== null && selectedMinute !== undefined) {
       minuteRef.current.scrollTo({
         y: selectedMinute * ITEM_HEIGHT,
         animated: false,
@@ -53,24 +53,17 @@ const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMi
     };
   };
 
-  const renderItems = (values: number[], selected: number) => {
+  const renderItems = (values: number[], selected: number | null) => {
     return values.map((value) => {
       const isSelected = value === selected;
       return (
-        <TouchableOpacity
+        <View
           key={value}
           style={[
             styles.item,
             isSelected && styles.itemActive,
             isSelected && { backgroundColor: colors.primary },
           ]}
-          onPress={() => {
-            const ref = values === HOURS ? hourRef : minuteRef;
-            const onChange = values === HOURS ? onHourChange : onMinuteChange;
-            ref.current?.scrollTo({ y: value * ITEM_HEIGHT, animated: true });
-            onChange(value);
-          }}
-          activeOpacity={0.8}
         >
           <Text
             style={[
@@ -81,7 +74,7 @@ const WheelTimePicker = memo(({ selectedHour, selectedMinute, onHourChange, onMi
           >
             {value.toString().padStart(2, '0')}
           </Text>
-        </TouchableOpacity>
+        </View>
       );
     });
   };
