@@ -903,14 +903,26 @@ export default function WordbookScreen() {
                     <WordbookListItem
                       item={item}
                       onPress={handleBatchMoveToBook}
+                      colors={{
+                        primary: theme.primary,
+                        textPrimary: theme.textPrimary,
+                        textMuted: theme.textMuted,
+                      }}
                     />
                   )}
                   style={styles.wordbookList}
                   showsVerticalScrollIndicator={false}
+                  bounces={false}
+                  overScrollMode="never"
                   removeClippedSubviews={true}
-                  maxToRenderPerBatch={10}
-                  windowSize={5}
-                  initialNumToRender={10}
+                  maxToRenderPerBatch={5}
+                  windowSize={3}
+                  initialNumToRender={5}
+                  getItemLayout={(data, index) => ({
+                    length: 60,
+                    offset: 60 * index,
+                    index,
+                  })}
                 />
               </View>
             </TouchableOpacity>

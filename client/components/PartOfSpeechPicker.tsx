@@ -1,39 +1,44 @@
 import React, { memo } from 'react';
-import { TouchableOpacity, View } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
+import { TouchableOpacity, View, StyleSheet, Text } from 'react-native';
 
 interface PartOfSpeechPickerProps {
   options: string[];
   selected: string;
   onSelect: (value: string) => void;
-  theme: any;
+  colors: {
+    primary: string;
+    buttonPrimaryText: string;
+    level3: string;
+    border: string;
+    textSecondary: string;
+  };
 }
 
-const PartOfSpeechPicker = memo(({ options, selected, onSelect, theme }: PartOfSpeechPickerProps) => {
+const PartOfSpeechPicker = memo(({ options, selected, onSelect, colors }: PartOfSpeechPickerProps) => {
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+    <View style={styles.container}>
       {options.map((option) => {
         const isActive = selected === option;
         return (
           <TouchableOpacity
             key={option}
             onPress={() => onSelect(option)}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 8,
-              backgroundColor: isActive ? theme.primary : theme.level3,
-              borderWidth: 1,
-              borderColor: isActive ? theme.primary : theme.border,
-            }}
+            style={[
+              styles.button,
+              isActive ? styles.buttonActive : styles.buttonInactive,
+              isActive && { backgroundColor: colors.primary, borderColor: colors.primary },
+              !isActive && { backgroundColor: colors.level3, borderColor: colors.border },
+            ]}
           >
-            <ThemedText
-              variant="caption"
-              color={isActive ? theme.buttonPrimaryText : theme.textSecondary}
+            <Text
+              style={[
+                styles.text,
+                isActive ? { color: colors.buttonPrimaryText } : { color: colors.textSecondary },
+              ]}
               numberOfLines={1}
             >
               {option}
-            </ThemedText>
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -44,3 +49,22 @@ const PartOfSpeechPicker = memo(({ options, selected, onSelect, theme }: PartOfS
 PartOfSpeechPicker.displayName = 'PartOfSpeechPicker';
 
 export default PartOfSpeechPicker;
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  button: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  buttonActive: {},
+  buttonInactive: {},
+  text: {
+    fontSize: 12,
+  },
+});

@@ -1,44 +1,37 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { ThemedText } from '@/components/ThemedText';
-import { useTheme } from '@/hooks/useTheme';
 import { Wordbook } from '@/database/types';
 
 interface WordbookListItemProps {
   item: Wordbook;
   onPress: (id: number) => void;
+  colors: {
+    primary: string;
+    textPrimary: string;
+    textMuted: string;
+  };
 }
 
-const WordbookListItem = React.memo<WordbookListItemProps>(({ item, onPress }) => {
-  const theme = useTheme();
-
-  const handlePress = () => {
-    onPress(item.id);
-  };
-
+const WordbookListItem = React.memo<WordbookListItemProps>(({ item, onPress, colors }) => {
   return (
     <TouchableOpacity
       style={styles.item}
-      onPress={handlePress}
+      onPress={() => onPress(item.id)}
       activeOpacity={0.6}
     >
-      <FontAwesome6 name="folder" size={20} color={theme.primary} />
+      <FontAwesome6 name="folder" size={20} color={colors.primary} />
       <View style={styles.itemContent}>
-        <ThemedText variant="body" color={theme.textPrimary}>
+        <Text style={[styles.textName, { color: colors.textPrimary }]}>
           {item.name}
-        </ThemedText>
-        <ThemedText variant="caption" color={theme.textMuted}>
+        </Text>
+        <Text style={[styles.textCount, { color: colors.textMuted }]}>
           {item.word_count} 个单词
-        </ThemedText>
+        </Text>
       </View>
-      <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
+      <FontAwesome6 name="chevron-right" size={16} color={colors.textMuted} />
     </TouchableOpacity>
   );
-}, (prevProps, nextProps) => {
-  return prevProps.item.id === nextProps.item.id &&
-         prevProps.item.name === nextProps.item.name &&
-         prevProps.item.word_count === nextProps.item.word_count;
 });
 
 WordbookListItem.displayName = 'WordbookListItem';
@@ -57,5 +50,13 @@ const styles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
+  },
+  textName: {
+    fontSize: 16,
+    fontWeight: '400',
+  },
+  textCount: {
+    fontSize: 12,
+    marginTop: 2,
   },
 });

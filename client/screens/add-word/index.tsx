@@ -676,7 +676,13 @@ export default function AddWordScreen() {
               console.log('[词性选择] 选择了词性:', value);
               setPartOfSpeech(value);
             }}
-            theme={theme}
+            colors={{
+              primary: theme.primary,
+              buttonPrimaryText: theme.buttonPrimaryText,
+              level3: theme.level3,
+              border: theme.border,
+              textSecondary: theme.textSecondary,
+            }}
           />
         </ThemedView>
 
