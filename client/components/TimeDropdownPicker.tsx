@@ -65,7 +65,7 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
             </TouchableOpacity>
 
             {showHourDropdown && (
-              <View style={[styles.dropdown, { backgroundColor: colors.level3, borderColor: colors.border }]}>
+              <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
                 <ScrollView
                   style={styles.dropdownScroll}
                   bounces={false}
@@ -85,7 +85,7 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
                       <Text
                         style={[
                           styles.dropdownItemText,
-                          { color: selectedHour === hour ? colors.buttonPrimaryText : colors.textPrimary },
+                          { color: selectedHour === hour ? colors.buttonPrimaryText : '#000000' },
                         ]}
                       >
                         {hour.toString().padStart(2, '0')}
@@ -117,7 +117,7 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
             </TouchableOpacity>
 
             {showMinuteDropdown && (
-              <View style={[styles.dropdown, { backgroundColor: colors.level3, borderColor: colors.border }]}>
+              <View style={[styles.dropdown, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
                 <ScrollView
                   style={styles.dropdownScroll}
                   bounces={false}
@@ -137,7 +137,7 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
                       <Text
                         style={[
                           styles.dropdownItemText,
-                          { color: selectedMinute === minute ? colors.buttonPrimaryText : colors.textPrimary },
+                          { color: selectedMinute === minute ? colors.buttonPrimaryText : '#000000' },
                         ]}
                       >
                         {minute.toString().padStart(2, '0')}
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   selectItem: {
-    width: 80,
+    width: 100,
     height: 44,
     flexDirection: 'row',
     alignItems: 'center',
@@ -202,9 +202,8 @@ const styles = StyleSheet.create({
   dropdown: {
     position: 'absolute',
     top: 50,
-    left: '50%',
-    transform: [{ translateX: -50 }],
-    width: 80,
+    left: 0,
+    width: 100,
     maxHeight: 300,
     borderRadius: 8,
     borderWidth: 1,
@@ -224,7 +223,7 @@ const styles = StyleSheet.create({
   },
   dropdownItem: {
     paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: 44,
