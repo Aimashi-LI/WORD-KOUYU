@@ -195,7 +195,11 @@ export default function ReviewHomeScreen() {
           <ThemedText variant="h1" color={theme.textPrimary}>复习</ThemedText>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          bounces={false}
+          overScrollMode="never"
+        >
           {/* 复习计划入口 */}
           <TouchableOpacity
             style={styles.planCard}

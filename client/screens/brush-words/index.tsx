@@ -604,6 +604,8 @@ export default function BrushWordsScreen() {
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
           onScroll={scrollHandler}
           onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={16}

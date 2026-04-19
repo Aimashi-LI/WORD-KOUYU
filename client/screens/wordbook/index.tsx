@@ -914,15 +914,10 @@ export default function WordbookScreen() {
                   showsVerticalScrollIndicator={false}
                   bounces={false}
                   overScrollMode="never"
-                  removeClippedSubviews={true}
+                  removeClippedSubviews={false}
                   maxToRenderPerBatch={5}
-                  windowSize={3}
+                  windowSize={5}
                   initialNumToRender={5}
-                  getItemLayout={(data, index) => ({
-                    length: 60,
-                    offset: 60 * index,
-                    index,
-                  })}
                 />
               </View>
             </TouchableOpacity>

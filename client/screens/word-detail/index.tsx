@@ -463,7 +463,11 @@ export default function WordDetailScreen() {
     // 编辑模式 - 使用 add-word 页面的样式
     return (
       <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          bounces={false}
+          overScrollMode="never"
+        >
           {/* 顶部操作栏 */}
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={handleCancelEdit}>
@@ -526,7 +530,12 @@ export default function WordDetailScreen() {
               词性 *
             </ThemedText>
             <View style={styles.posScroll}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                bounces={false}
+                overScrollMode="never"
+              >
                 {PART_OF_SPEECH_LIST.map(pos => (
                   <TouchableOpacity
                     key={pos}
