@@ -391,7 +391,15 @@ export default function ReviewPlanScreen() {
 
       // 处理通知设置
       if (reminderEnabled) {
-        // 请求通知权限
+        // Web 平台直接保存，不要求通知权限
+        if (Platform.OS === 'web') {
+          console.log('[调试] Web 平台：直接保存设置');
+          Alert.alert('成功', `复习提醒已设置为每天 ${timeString}（Web 平台暂不支持实际通知）`);
+          setShowReminderModal(false);
+          return;
+        }
+
+        // 移动端：请求通知权限
         console.log('[调试] 请求通知权限...');
         const hasPermission = await requestNotificationPermissions();
         console.log('[调试] 通知权限:', hasPermission);
