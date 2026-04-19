@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, Modal, Dimensions, Alert, Animated, Platform, FlatList, Pressable } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, ScrollView, TouchableOpacity, Modal, Dimensions, Alert, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -37,12 +38,8 @@ export default function ReviewPlanScreen() {
   const [listDays, setListDays] = useState<'7' | '30'>('7');
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderHour, setReminderHour] = useState(9); // 小时（8-20）
-  const [reminderMinute, setReminderMinute] = useState(0); // 分钟（0-55，间隔5）
-  const [showHourDropdown, setShowHourDropdown] = useState(false); // 控制小时下拉菜单
-  const [showMinuteDropdown, setShowMinuteDropdown] = useState(false); // 控制分钟下拉菜单
-  const dropdownButtonRef = useRef<View>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [reminderDate, setReminderDate] = useState(new Date()); // 用于时间选择器
+  const [showTimePicker, setShowTimePicker] = useState(false); // 控制时间选择器显示
   const [bestReviewTime, setBestReviewTime] = useState('09:00');
   const [loading, setLoading] = useState(true);
   const [showEarlyReviewModal, setShowEarlyReviewModal] = useState(false);
@@ -360,12 +357,14 @@ export default function ReviewPlanScreen() {
 
       if (time) {
         const [hour, minute] = time.split(':').map(Number);
-        setReminderHour(hour);
-        setReminderMinute(minute);
+        const date = new Date();
+        date.setHours(hour, minute, 0, 0);
+        setReminderDate(date);
       } else {
         // 默认时间：9:00
-        setReminderHour(9);
-        setReminderMinute(0);
+        const date = new Date();
+        date.setHours(9, 0, 0, 0);
+        setReminderDate(date);
       }
     } catch (error) {
       console.error('加载提醒设置失败:', error);
@@ -375,8 +374,11 @@ export default function ReviewPlanScreen() {
   // 保存提醒设置
   const saveReminderSettings = async () => {
     try {
+      const hour = reminderDate.getHours();
+      const minute = reminderDate.getMinutes();
+
       // 验证提醒时间范围（8:00-20:00）
-      const totalMinutes = reminderHour * 60 + reminderMinute;
+      const totalMinutes = hour * 60 + minute;
       const startTime = 8 * 60; // 8:00 = 480 分钟
       const endTime = 20 * 60;  // 20:00 = 1200 分钟
 
@@ -386,7 +388,7 @@ export default function ReviewPlanScreen() {
       }
 
       // 将时间转换为 HH:mm 格式
-      const timeString = `${reminderHour.toString().padStart(2, '0')}:${reminderMinute.toString().padStart(2, '0')}`;
+      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 
       await AsyncStorage.setItem('reminder_enabled', String(reminderEnabled));
       await AsyncStorage.setItem('reminder_time', timeString);
@@ -1004,46 +1006,28 @@ export default function ReviewPlanScreen() {
               {reminderEnabled && (
                 <View style={styles.timeInputContainer}>
                   <ThemedText variant="body" color={theme.textPrimary}>提醒时间</ThemedText>
-                  <View style={styles.dropdownContainer}>
-                    {/* 小时下拉选择 */}
-                    <View style={styles.dropdownWrapper}>
-                      <TouchableOpacity
-                        style={[styles.dropdownButton, { borderColor: theme.border }]}
-                        onPress={() => {
-                          setShowHourDropdown(!showHourDropdown);
-                          setShowMinuteDropdown(false);
-                        }}
-                      >
-                        <ThemedText variant="body" color={theme.textPrimary} style={styles.dropdownButtonText}>
-                          {reminderHour.toString().padStart(2, '0')} 时
-                        </ThemedText>
-                        <FontAwesome6
-                          name={showHourDropdown ? "chevron-up" : "chevron-down"}
-                          size={16}
-                          color={theme.textMuted}
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* 分钟下拉选择 */}
-                    <View style={styles.dropdownWrapper}>
-                      <TouchableOpacity
-                        style={[styles.dropdownButton, { borderColor: theme.border }]}
-                        onPress={() => {
-                          setShowMinuteDropdown(!showMinuteDropdown);
-                          setShowHourDropdown(false);
-                        }}
-                      >
-                        <ThemedText variant="body" color={theme.textPrimary} style={styles.dropdownButtonText}>
-                          {reminderMinute.toString().padStart(2, '0')} 分
-                        </ThemedText>
-                        <FontAwesome6
-                          name={showMinuteDropdown ? "chevron-up" : "chevron-down"}
-                          size={16}
-                          color={theme.textMuted}
-                        />
-                      </TouchableOpacity>
-                    </View>
+                  <View style={styles.timePickerWrapper}>
+                    <DateTimePicker
+                      value={reminderDate}
+                      mode="time"
+                      is24Hour={true}
+                      display="spinner"
+                      onChange={(event, selectedDate) => {
+                        if (selectedDate) {
+                          setReminderDate(selectedDate);
+                        }
+                      }}
+                      style={styles.timePicker}
+                      themeVariant={isDark ? 'dark' : 'light'}
+                    />
+                  </View>
+                  <View style={styles.selectedTimeDisplay}>
+                    <ThemedText variant="body" color={theme.textPrimary}>
+                      已选择时间：
+                    </ThemedText>
+                    <ThemedText variant="body" color={theme.primary} style={styles.selectedTimeText}>
+                      {reminderDate.getHours().toString().padStart(2, '0')}:{reminderDate.getMinutes().toString().padStart(2, '0')}
+                    </ThemedText>
                   </View>
                   <ThemedText variant="caption" color={theme.textMuted}>
                     请设置 8:00-20:00 之间的时间
@@ -1069,100 +1053,6 @@ export default function ReviewPlanScreen() {
           </ThemedView>
         </View>
       </Modal>
-
-      {/* 小时下拉菜单 */}
-      {showHourDropdown && (
-        <Modal
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowHourDropdown(false)}
-        >
-          <Pressable
-            style={styles.dropdownOverlay}
-            onPress={() => setShowHourDropdown(false)}
-          >
-            <Pressable
-              style={[styles.dropdownMenu, { backgroundColor: theme.backgroundDefault, borderColor: theme.border }]}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <ScrollView
-                nestedScrollEnabled={true}
-                showsVerticalScrollIndicator={true}
-                style={styles.dropdownScroll}
-              >
-                {Array.from({ length: 13 }, (_, i) => i + 8).map((hour) => (
-                  <TouchableOpacity
-                    key={hour}
-                    style={[
-                      styles.dropdownItem,
-                      reminderHour === hour && { backgroundColor: theme.primary }
-                    ]}
-                    onPress={() => {
-                      setReminderHour(hour);
-                      setShowHourDropdown(false);
-                    }}
-                  >
-                    <ThemedText
-                      variant="body"
-                      color={reminderHour === hour ? theme.buttonPrimaryText : theme.textPrimary}
-                      style={styles.dropdownItemText}
-                    >
-                      {hour.toString().padStart(2, '0')} 时
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
-      )}
-
-      {/* 分钟下拉菜单 */}
-      {showMinuteDropdown && (
-        <Modal
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowMinuteDropdown(false)}
-        >
-          <Pressable
-            style={styles.dropdownOverlay}
-            onPress={() => setShowMinuteDropdown(false)}
-          >
-            <Pressable
-              style={[styles.dropdownMenu, { backgroundColor: theme.backgroundDefault, borderColor: theme.border }]}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <ScrollView
-                nestedScrollEnabled={true}
-                showsVerticalScrollIndicator={true}
-                style={styles.dropdownScroll}
-              >
-                {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
-                  <TouchableOpacity
-                    key={minute}
-                    style={[
-                      styles.dropdownItem,
-                      reminderMinute === minute && { backgroundColor: theme.primary }
-                    ]}
-                    onPress={() => {
-                      setReminderMinute(minute);
-                      setShowMinuteDropdown(false);
-                    }}
-                  >
-                    <ThemedText
-                      variant="body"
-                      color={reminderMinute === minute ? theme.buttonPrimaryText : theme.textPrimary}
-                      style={styles.dropdownItemText}
-                    >
-                      {minute.toString().padStart(2, '0')} 分
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
-      )}
 
       {/* 提前复习提醒弹窗 */}
       <Modal

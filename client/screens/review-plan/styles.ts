@@ -348,52 +348,26 @@ export const createStyles = (theme: any) => StyleSheet.create({
   timeInputContainer: {
     marginBottom: 16,
   },
-  dropdownContainer: {
+  timePickerWrapper: {
     marginTop: 8,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  dropdownWrapper: {
-    flex: 1,
-  },
-  dropdownButton: {
-    height: 48,
-    borderWidth: 1,
+    height: 150,
+    backgroundColor: theme.backgroundDefault,
     borderRadius: 8,
-    paddingHorizontal: 12,
+    overflow: 'hidden',
+  },
+  timePicker: {
+    height: 150,
+    width: '100%',
+  },
+  selectedTimeDisplay: {
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: theme.backgroundDefault,
+    gap: 8,
   },
-  dropdownButtonText: {
-    fontSize: 16,
-  },
-  // 下拉菜单
-  dropdownOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  dropdownMenu: {
-    maxHeight: 300,
-    borderTopWidth: 1,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 8,
-  },
-  dropdownScroll: {
-    maxHeight: 250,
-  },
-  dropdownItem: {
-    height: 48,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  dropdownItemText: {
-    fontSize: 16,
+  selectedTimeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   // 历史统计
   historyStatsContainer: {
