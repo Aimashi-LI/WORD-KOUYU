@@ -169,7 +169,6 @@ export const Screen = ({
       if (t === Modal) return false;
       const props = element.props as Record<string, unknown> | undefined;
       // 仅识别“垂直”滚动容器；横向滚动不视为页面已处理垂直滚动
-      // eslint-disable-next-line react/prop-types
       const isHorizontal = !!(props && (props as any).horizontal === true);
       if ((t === ScrollView || t === FlatList || t === SectionList) && !isHorizontal) return true;
       const c: React.ReactNode | undefined = props && 'children' in props

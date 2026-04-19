@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, FlatList } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@/hooks/useTheme';
@@ -14,8 +14,8 @@ import { getAllWords, getWordStats, deleteWord, searchWords, searchWordsInWordbo
 import { getAllWordbooks, createWordbook, getWordbookWithCount, addWordToWordbook, getWordsInWordbook, getWordbookStats, getWordbookNamesByWordId, updateWordbook, deleteWordbook } from '@/database/wordbookDao';
 import { initDatabase } from '@/database';
 import { Wordbook } from '@/database/types';
-import { useCallback } from 'react';
 import { isWordIncomplete } from '@/utils';
+import WordbookListItem from '@/components/WordbookListItem';
 
 const SPLASH_SHOWN_KEY = '@app:splash_shown';
 
@@ -895,24 +895,24 @@ export default function WordbookScreen() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={styles.modalBody}>
-                <View style={styles.wordbookList}>
-                  {wordbooks.filter(book => book.id !== currentWordbookId).map((book) => (
-                    <TouchableOpacity
-                      key={book.id}
-                      style={styles.wordbookListItem}
-                      onPress={() => handleBatchMoveToBook(book.id)}
-                    >
-                      <FontAwesome6 name="folder" size={20} color={theme.primary} />
-                      <View style={styles.wordbookListItemContent}>
-                        <ThemedText variant="body" color={theme.textPrimary}>{book.name}</ThemedText>
-                        <ThemedText variant="caption" color={theme.textMuted}>{book.word_count} 个单词</ThemedText>
-                      </View>
-                      <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+              <View style={styles.modalBody}>
+                <FlatList
+                  data={wordbooks.filter(book => book.id !== currentWordbookId)}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <WordbookListItem
+                      item={item}
+                      onPress={handleBatchMoveToBook}
+                    />
+                  )}
+                  style={styles.wordbookList}
+                  showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                />
+              </View>
             </TouchableOpacity>
           </TouchableOpacity>
         </KeyboardAvoidingView>

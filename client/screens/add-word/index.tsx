@@ -36,6 +36,7 @@ import {
 } from '@/utils/splitHelper';
 import { fetchPhoneticByWord } from '@/utils';
 import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
+import { PartOfSpeechPicker } from '@/components/PartOfSpeechPicker';
 
   // 词性列表
 const PART_OF_SPEECH_LIST = [
@@ -668,30 +669,15 @@ export default function AddWordScreen() {
           <ThemedText variant="body" color={theme.textSecondary} style={styles.label}>
             词性 *
           </ThemedText>
-          <View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.posScroll}>
-              {PART_OF_SPEECH_LIST.map((pos) => (
-                <TouchableOpacity
-                  key={pos}
-                  style={[
-                    styles.posButton,
-                    partOfSpeech === pos && styles.posButtonActive
-                  ]}
-                  onPress={() => {
-                    console.log('[词性选择] 选择了词性:', pos);
-                    setPartOfSpeech(pos);
-                  }}
-                >
-                  <ThemedText
-                    variant="caption"
-                    color={partOfSpeech === pos ? theme.buttonPrimaryText : theme.textSecondary}
-                  >
-                    {pos}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+          <PartOfSpeechPicker
+            options={PART_OF_SPEECH_LIST}
+            selected={partOfSpeech}
+            onSelect={(value) => {
+              console.log('[词性选择] 选择了词性:', value);
+              setPartOfSpeech(value);
+            }}
+            theme={theme}
+          />
         </ThemedView>
 
         {/* 释义输入 */}

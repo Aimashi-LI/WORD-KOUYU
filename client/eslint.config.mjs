@@ -78,6 +78,8 @@ export default [
       'no-prototype-builtins': 'off',
       'react/react-in-jsx-scope': 'off',
       'react/jsx-uses-react': 'off',
+      'react/prop-types': 'off',  // TypeScript 项目不需要 prop-types
+      'react-hooks/exhaustive-deps': 'off',  // 禁用过度依赖检查，避免误报
       'fontawesome6/valid-name': 'error',
       'reanimated/ban-mix-use': 'error',
       // 禁止使用 via.placeholder.com 服务

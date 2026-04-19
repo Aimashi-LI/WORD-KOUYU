@@ -35,8 +35,6 @@ import { isWordIncomplete } from '@/utils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-/* eslint-disable react/prop-types */
-
 // WordCard 的 Props 类型
 interface WordCardProps {
   word: Word;
