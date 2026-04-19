@@ -1,5 +1,12 @@
-import React from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { View, ScrollView, StyleSheet, Text, Dimensions } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withDecay,
+  runOnJS,
+} from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 
 interface WheelPickerProps {
@@ -22,13 +29,15 @@ const WheelPicker: React.FC<WheelPickerProps> = ({
   label = '',
 }) => {
   const theme = useTheme();
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const isScrolling = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 计算初始滚动位置
   const initialScrollOffset = data.indexOf(selectedItem) * itemHeight;
 
   // 滚动到选中项
-  React.useEffect(() => {
+  useEffect(() => {
     if (scrollViewRef.current) {
       scrollViewRef.current.scrollTo({
         y: initialScrollOffset,
@@ -38,7 +47,16 @@ const WheelPicker: React.FC<WheelPickerProps> = ({
   }, []);
 
   // 处理滚动
-  const handleScroll = (event: any) => {
+  const handleScroll = useCallback((event: any) => {
+    if (!isScrolling.current) {
+      isScrolling.current = true;
+    }
+
+    // 清除之前的超时
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
     const offsetY = event.nativeEvent.contentOffset.y;
     const selectedIndex = Math.round(offsetY / itemHeight);
 
@@ -48,10 +66,10 @@ const WheelPicker: React.FC<WheelPickerProps> = ({
         onValueChange(value);
       }
     }
-  };
+  }, [data, itemHeight, selectedItem, onValueChange]);
 
   // 滚动结束
-  const handleScrollEnd = (event: any) => {
+  const handleScrollEnd = useCallback((event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     const selectedIndex = Math.round(offsetY / itemHeight);
 
@@ -63,8 +81,26 @@ const WheelPicker: React.FC<WheelPickerProps> = ({
           animated: true,
         });
       }
+
+      // 确保选中值正确
+      const value = data[selectedIndex];
+      onValueChange(value);
     }
-  };
+
+    // 标记滚动结束
+    scrollTimeoutRef.current = setTimeout(() => {
+      isScrolling.current = false;
+    }, 300);
+  }, [data, itemHeight, onValueChange]);
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <View style={[styles.container, { height }]}>
@@ -85,15 +121,17 @@ const WheelPicker: React.FC<WheelPickerProps> = ({
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         snapToInterval={itemHeight}
-        decelerationRate="fast"
+        snapToAlignment="center"
+        decelerationRate={0.968}
         onScroll={handleScroll}
         onScrollEndDrag={handleScrollEnd}
         onMomentumScrollEnd={handleScrollEnd}
         scrollEventThrottle={16}
+        bounces={false}
+        contentContainerStyle={{
+          paddingVertical: (height - itemHeight) / 2,
+        }}
       >
-        {/* 顶部占位 */}
-        <View style={{ height: (height - itemHeight) / 2 }} />
-
         {data.map((item, index) => {
           const isSelected = item === selectedItem;
           return (
@@ -107,7 +145,8 @@ const WheelPicker: React.FC<WheelPickerProps> = ({
                   {
                     color: isSelected ? theme.primary : theme.textMuted,
                     fontSize: isSelected ? 18 : 16,
-                    fontWeight: isSelected ? 'bold' : 'normal',
+                    fontWeight: isSelected ? '600' : '400',
+                    opacity: isSelected ? 1 : 0.6,
                   }
                 ]}
               >
@@ -116,9 +155,6 @@ const WheelPicker: React.FC<WheelPickerProps> = ({
             </View>
           );
         })}
-
-        {/* 底部占位 */}
-        <View style={{ height: (height - itemHeight) / 2 }} />
       </ScrollView>
     </View>
   );
@@ -134,9 +170,8 @@ const styles = StyleSheet.create({
   },
   selectionIndicator: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    borderWidth: 1,
+    left: 8,
+    right: 8,
     borderRadius: 8,
   },
   item: {
@@ -145,6 +180,7 @@ const styles = StyleSheet.create({
   },
   itemText: {
     textAlign: 'center',
+    includeFontPadding: false,
   },
 });
 
