@@ -1,0 +1,66 @@
+# GitLab CI/CD 配置 - 构建 Android APK
+# 使用 GitLab 的免费 Runner 构建能力
+
+image: reactnativecommunity/react-native-android:latest
+
+variables:
+  ANDROID_COMPILE_SDK: "34"
+  ANDROID_BUILD_TOOLS: "34.0.0"
+  ANDROID_SDK_TOOLS: "9477386"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.jvmargs=\"-Xmx4096m -XX:MaxPermSize=512m\""
+
+stages:
+  - build
+  - package
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - client/node_modules/
+    - client/.gradle/
+
+before_script:
+  - cd client
+  - npm install -g pnpm
+  - pnpm install
+
+build:android:
+  stage: build
+  script:
+    - pnpm install
+    # 设置 Android SDK
+    - export ANDROID_HOME=$ANDROID_SDK_ROOT
+    - export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
+    # 接受 licenses
+    - yes | sdkmanager --licenses || true
+    # 安装必要的 SDK 组件
+    - sdkmanager "platform-tools" "platforms;android-$ANDROID_COMPILE_SDK" "build-tools;$ANDROID_BUILD_TOOLS"
+    # 运行 Expo prebuild
+    - npx expo prebuild --platform android --clean
+    # 构建 APK
+    - cd android
+    - chmod +x gradlew
+    - ./gradlew assembleRelease
+  artifacts:
+    paths:
+      - client/android/app/build/outputs/apk/release/*.apk
+    expire_in: 30 days
+  only:
+    - main
+    - master
+
+package:apk:
+  stage: package
+  script:
+    - echo "Packaging APK..."
+    - mkdir -p build
+    - find client/android/app/build/outputs/apk/release/ -name "*.apk" -exec cp {} build/ \;
+  artifacts:
+    paths:
+      - build/*.apk
+    expire_in: 30 days
+  only:
+    - main
+    - master
+  dependencies:
+    - build:android

@@ -1,0 +1,114 @@
+format_version: '13'
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+project_type: react-native
+
+workflows:
+  build-android-apk:
+    description: 构建 Android APK（无需 Expo Token）
+    steps:
+      # 1. 激活 SSH 密钥（如果需要访问私有依赖）
+      - activate-ssh-key:
+          run_if: false
+          is_detect_private_repo: false
+          is_remove_ssh_key_after_run: true
+
+      # 2. 检出代码
+      - git-clone: {}
+
+      # 3. 安装 Node.js
+      - nodejs-and-npm-install@2:
+          inputs:
+            - node_version: '20.11.1'
+
+      # 4. 安装依赖
+      - script:
+          title: 安装项目依赖
+          inputs:
+            - content: |-
+                #!/bin/bash
+                set -e
+                cd client
+                npm install -g pnpm
+                pnpm install
+
+      # 5. 安装 Expo CLI
+      - script:
+          title: 安装 Expo CLI
+          inputs:
+            - content: |-
+                #!/bin/bash
+                set -e
+                cd client
+                npm install -g @expo/cli
+
+      # 6. 设置 Android 环境
+      - script:
+          title: 设置 Android 环境
+          inputs:
+            - content: |-
+                #!/bin/bash
+                set -e
+                export ANDROID_HOME=$ANDROID_SDK_ROOT
+                export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
+
+                # 接受 licenses
+                yes | sdkmanager --licenses || true
+
+                # 安装必要的 SDK 组件
+                sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
+
+      # 7. Expo Prebuild（生成 Android 原生项目）
+      - script:
+          title: Expo Prebuild
+          inputs:
+            - content: |-
+                #!/bin/bash
+                set -e
+                cd client
+                npx expo prebuild --platform android --clean
+
+      # 8. 构建 APK
+      - script:
+          title: 构建 Android APK
+          inputs:
+            - content: |-
+                #!/bin/bash
+                set -e
+                cd client/android
+
+                # 赋予 gradlew 执行权限
+                chmod +x gradlew
+
+                # 构建 Release APK
+                ./gradlew assembleRelease --stacktrace
+
+                # 输出构建信息
+                echo "APK 构建成功！"
+                ls -la app/build/outputs/apk/release/
+
+      # 9. 导出 APK
+      - script:
+          title: 导出 APK
+          inputs:
+            - content: |-
+                #!/bin/bash
+                set -e
+                APK_DIR=$BITRISE_DEPLOY_DIR
+                mkdir -p $APK_DIR
+
+                # 复制 APK 文件
+                cp client/android/app/build/outputs/apk/release/*.apk $APK_DIR/
+
+                # 输出文件列表
+                echo "导出的 APK 文件："
+                ls -la $APK_DIR/
+
+      # 10. 部署到 Bitrise（自动提供下载链接）
+      - deploy-to-bitrise-io:
+          is_always_run: true
+
+    meta:
+      bitrise.io:
+        stack: linux-docker-android-20.04
+        machine_type_id: standard
