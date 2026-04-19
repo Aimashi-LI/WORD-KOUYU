@@ -1,4 +1,4 @@
-name: Build Android APK (Local Build)
+name: Build Android APK
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest  # 使用 macOS，支持更好的 Android 构建
+    runs-on: ubuntu-latest  # 使用免费的 Ubuntu 运行器
 
     steps:
       - name: 📥 Checkout repository
@@ -21,12 +21,6 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
           cache-dependency-path: 'client/pnpm-lock.yaml'
-
-      - name: 🔧 Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
 
       - name: 🔧 Install pnpm
         uses: pnpm/action-setup@v4
@@ -73,15 +67,17 @@ jobs:
           }
           EOF
 
-      - name: 🏗️ Build Android APK (Local)
+      - name: 🏗️ Build Android APK with EAS
         working-directory: ./client
-        timeout-minutes: 60
+        timeout-minutes: 90
         run: |
           # 初始化 EAS 项目
           eas build:configure || true
 
-          # 本地构建 APK
-          eas build --platform android --profile preview --non-interactive --local --output ./app-release.apk
+          # 使用 EAS 云端构建（免费额度每月 30 次）
+          eas build --platform android --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: 📤 Find and Upload APK
         run: |
