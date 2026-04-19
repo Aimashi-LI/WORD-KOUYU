@@ -356,6 +356,23 @@ export const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
   },
+  // 时间选择器
+  pickerContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+    gap: 12,
+  },
+  pickerWrapper: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 120,
+    backgroundColor: theme.backgroundDefault,
+  },
   // 历史统计
   historyStatsContainer: {
     flexDirection: 'row',

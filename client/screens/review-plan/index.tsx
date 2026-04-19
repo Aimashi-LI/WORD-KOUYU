@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Dimensions } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Modal, Dimensions, Alert } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -36,8 +37,9 @@ export default function ReviewPlanScreen() {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [listDays, setListDays] = useState<'7' | '30'>('7');
   const [showReminderModal, setShowReminderModal] = useState(false);
-  const [reminderTime, setReminderTime] = useState('09:00');
   const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderHour, setReminderHour] = useState(9); // 小时（0-23）
+  const [reminderMinute, setReminderMinute] = useState(0); // 分钟（0-59）
   const [bestReviewTime, setBestReviewTime] = useState('09:00');
   const [loading, setLoading] = useState(true);
   const [showEarlyReviewModal, setShowEarlyReviewModal] = useState(false);
@@ -352,7 +354,12 @@ export default function ReviewPlanScreen() {
       const time = await AsyncStorage.getItem('reminder_time');
 
       setReminderEnabled(enabled === 'true');
-      setReminderTime(time || '09:00');
+
+      if (time) {
+        const [hour, minute] = time.split(':').map(Number);
+        setReminderHour(hour);
+        setReminderMinute(minute);
+      }
     } catch (error) {
       console.error('加载提醒设置失败:', error);
     }
@@ -361,16 +368,8 @@ export default function ReviewPlanScreen() {
   // 保存提醒设置
   const saveReminderSettings = async () => {
     try {
-      // 验证提醒时间格式
-      const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
-      if (!timeRegex.test(reminderTime)) {
-        Alert.alert('错误', '请输入有效的时间格式（如 09:00）');
-        return;
-      }
-
       // 验证提醒时间范围（8:00-20:00）
-      const [hours, minutes] = reminderTime.split(':').map(Number);
-      const totalMinutes = hours * 60 + minutes;
+      const totalMinutes = reminderHour * 60 + reminderMinute;
       const startTime = 8 * 60; // 8:00 = 480 分钟
       const endTime = 20 * 60;  // 20:00 = 1200 分钟
 
@@ -379,11 +378,14 @@ export default function ReviewPlanScreen() {
         return;
       }
 
+      // 将小时和分钟转换为时间字符串
+      const timeString = `${reminderHour.toString().padStart(2, '0')}:${reminderMinute.toString().padStart(2, '0')}`;
+
       await AsyncStorage.setItem('reminder_enabled', String(reminderEnabled));
-      await AsyncStorage.setItem('reminder_time', reminderTime);
+      await AsyncStorage.setItem('reminder_time', timeString);
 
       if (reminderEnabled) {
-        Alert.alert('成功', `复习提醒已设置为每天 ${reminderTime}`);
+        Alert.alert('成功', `复习提醒已设置为每天 ${timeString}`);
       } else {
         Alert.alert('成功', '复习提醒已关闭');
       }
@@ -995,13 +997,45 @@ export default function ReviewPlanScreen() {
               {reminderEnabled && (
                 <View style={styles.timeInputContainer}>
                   <ThemedText variant="body" color={theme.textPrimary}>提醒时间</ThemedText>
-                  <TextInput
-                    style={[styles.timeInput, { color: theme.textPrimary, borderColor: theme.border }]}
-                    value={reminderTime}
-                    onChangeText={setReminderTime}
-                    placeholder="08:00-20:00"
-                    maxLength={5}
-                  />
+                  <View style={styles.pickerContainer}>
+                    {/* 小时选择器 */}
+                    <View style={styles.pickerWrapper}>
+                      <Picker
+                        selectedValue={reminderHour}
+                        onValueChange={(itemValue) => setReminderHour(itemValue)}
+                        style={styles.picker}
+                        dropdownIconColor={theme.textPrimary}
+                      >
+                        {Array.from({ length: 13 }, (_, i) => i + 8).map((hour) => (
+                          <Picker.Item
+                            key={hour}
+                            label={`${hour.toString().padStart(2, '0')} 时`}
+                            value={hour}
+                            color={isDark ? '#ffffff' : '#000000'}
+                          />
+                        ))}
+                      </Picker>
+                    </View>
+
+                    {/* 分钟选择器 */}
+                    <View style={styles.pickerWrapper}>
+                      <Picker
+                        selectedValue={reminderMinute}
+                        onValueChange={(itemValue) => setReminderMinute(itemValue)}
+                        style={styles.picker}
+                        dropdownIconColor={theme.textPrimary}
+                      >
+                        {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
+                          <Picker.Item
+                            key={minute}
+                            label={`${minute.toString().padStart(2, '0')} 分`}
+                            value={minute}
+                            color={isDark ? '#ffffff' : '#000000'}
+                          />
+                        ))}
+                      </Picker>
+                    </View>
+                  </View>
                   <ThemedText variant="caption" color={theme.textMuted}>
                     请设置 8:00-20:00 之间的时间
                   </ThemedText>
