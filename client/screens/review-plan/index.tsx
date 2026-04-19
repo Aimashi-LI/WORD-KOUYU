@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, ScrollView, TouchableOpacity, Modal, Dimensions, Alert } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { View, ScrollView, TouchableOpacity, Modal, Dimensions, Alert, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -38,8 +38,8 @@ export default function ReviewPlanScreen() {
   const [listDays, setListDays] = useState<'7' | '30'>('7');
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderHour, setReminderHour] = useState(9); // 小时（0-23）
-  const [reminderMinute, setReminderMinute] = useState(0); // 分钟（0-59）
+  const [reminderDate, setReminderDate] = useState(new Date()); // 用于时间选择器
+  const [showTimePicker, setShowTimePicker] = useState(false); // 控制时间选择器显示
   const [bestReviewTime, setBestReviewTime] = useState('09:00');
   const [loading, setLoading] = useState(true);
   const [showEarlyReviewModal, setShowEarlyReviewModal] = useState(false);
@@ -357,8 +357,14 @@ export default function ReviewPlanScreen() {
 
       if (time) {
         const [hour, minute] = time.split(':').map(Number);
-        setReminderHour(hour);
-        setReminderMinute(minute);
+        const date = new Date();
+        date.setHours(hour, minute, 0, 0);
+        setReminderDate(date);
+      } else {
+        // 默认时间：9:00
+        const date = new Date();
+        date.setHours(9, 0, 0, 0);
+        setReminderDate(date);
       }
     } catch (error) {
       console.error('加载提醒设置失败:', error);
@@ -368,8 +374,11 @@ export default function ReviewPlanScreen() {
   // 保存提醒设置
   const saveReminderSettings = async () => {
     try {
+      const hour = reminderDate.getHours();
+      const minute = reminderDate.getMinutes();
+
       // 验证提醒时间范围（8:00-20:00）
-      const totalMinutes = reminderHour * 60 + reminderMinute;
+      const totalMinutes = hour * 60 + minute;
       const startTime = 8 * 60; // 8:00 = 480 分钟
       const endTime = 20 * 60;  // 20:00 = 1200 分钟
 
@@ -378,8 +387,8 @@ export default function ReviewPlanScreen() {
         return;
       }
 
-      // 将小时和分钟转换为时间字符串
-      const timeString = `${reminderHour.toString().padStart(2, '0')}:${reminderMinute.toString().padStart(2, '0')}`;
+      // 将时间转换为 HH:mm 格式
+      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 
       await AsyncStorage.setItem('reminder_enabled', String(reminderEnabled));
       await AsyncStorage.setItem('reminder_time', timeString);
@@ -997,45 +1006,15 @@ export default function ReviewPlanScreen() {
               {reminderEnabled && (
                 <View style={styles.timeInputContainer}>
                   <ThemedText variant="body" color={theme.textPrimary}>提醒时间</ThemedText>
-                  <View style={styles.pickerContainer}>
-                    {/* 小时选择器 */}
-                    <View style={styles.pickerWrapper}>
-                      <Picker
-                        selectedValue={reminderHour}
-                        onValueChange={(itemValue) => setReminderHour(itemValue)}
-                        style={styles.picker}
-                        dropdownIconColor={theme.textPrimary}
-                      >
-                        {Array.from({ length: 13 }, (_, i) => i + 8).map((hour) => (
-                          <Picker.Item
-                            key={hour}
-                            label={`${hour.toString().padStart(2, '0')} 时`}
-                            value={hour}
-                            color={isDark ? '#ffffff' : '#000000'}
-                          />
-                        ))}
-                      </Picker>
-                    </View>
-
-                    {/* 分钟选择器 */}
-                    <View style={styles.pickerWrapper}>
-                      <Picker
-                        selectedValue={reminderMinute}
-                        onValueChange={(itemValue) => setReminderMinute(itemValue)}
-                        style={styles.picker}
-                        dropdownIconColor={theme.textPrimary}
-                      >
-                        {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
-                          <Picker.Item
-                            key={minute}
-                            label={`${minute.toString().padStart(2, '0')} 分`}
-                            value={minute}
-                            color={isDark ? '#ffffff' : '#000000'}
-                          />
-                        ))}
-                      </Picker>
-                    </View>
-                  </View>
+                  <TouchableOpacity
+                    style={[styles.timePickerButton, { borderColor: theme.border }]}
+                    onPress={() => setShowTimePicker(true)}
+                  >
+                    <ThemedText variant="body" color={theme.textPrimary} style={styles.timePickerButtonText}>
+                      {reminderDate.getHours().toString().padStart(2, '0')}:{reminderDate.getMinutes().toString().padStart(2, '0')}
+                    </ThemedText>
+                    <FontAwesome6 name="clock" size={20} color={theme.primary} />
+                  </TouchableOpacity>
                   <ThemedText variant="caption" color={theme.textMuted}>
                     请设置 8:00-20:00 之间的时间
                   </ThemedText>
@@ -1060,6 +1039,24 @@ export default function ReviewPlanScreen() {
           </ThemedView>
         </View>
       </Modal>
+
+      {/* 时间选择器 */}
+      {showTimePicker && (
+        <DateTimePicker
+          value={reminderDate}
+          mode="time"
+          is24Hour={true}
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowTimePicker(false);
+            if (selectedDate) {
+              setReminderDate(selectedDate);
+            }
+          }}
+          minimumDate={new Date().setHours(8, 0, 0, 0)}
+          maximumDate={new Date().setHours(20, 59, 0, 0)}
+        />
+      )}
 
       {/* 提前复习提醒弹窗 */}
       <Modal

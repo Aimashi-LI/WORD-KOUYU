@@ -348,30 +348,19 @@ export const createStyles = (theme: any) => StyleSheet.create({
   timeInputContainer: {
     marginBottom: 16,
   },
-  timeInput: {
+  timePickerButton: {
     marginTop: 8,
     height: 48,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 16,
-    fontSize: 16,
-  },
-  // 时间选择器
-  pickerContainer: {
     flexDirection: 'row',
-    marginTop: 8,
-    gap: 12,
-  },
-  pickerWrapper: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 120,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: theme.backgroundDefault,
+  },
+  timePickerButtonText: {
+    fontSize: 16,
   },
   // 历史统计
   historyStatsContainer: {
