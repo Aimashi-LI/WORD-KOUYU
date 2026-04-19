@@ -15,6 +15,7 @@ import { calculateNextInterval } from '@/algorithm/fsrs';
 import { Word } from '@/database/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WheelPicker from '@/components/WheelPicker';
+import TimeButtonGrid from '@/components/TimeButtonGrid';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -1001,31 +1002,19 @@ export default function ReviewPlanScreen() {
               {reminderEnabled && (
                 <View style={styles.timeInputContainer}>
                   <ThemedText variant="body" color={theme.textPrimary}>提醒时间</ThemedText>
-                  <View style={styles.wheelPickerContainer}>
-                    {/* 小时滚轮 */}
-                    <View style={styles.wheelPickerWrapper}>
-                      <WheelPicker
-                        data={Array.from({ length: 13 }, (_, i) => i + 8)}
-                        selectedItem={reminderHour}
-                        onValueChange={setReminderHour}
-                        height={150}
-                        itemHeight={50}
-                        label=" 时"
-                      />
-                    </View>
-
-                    {/* 分钟滚轮 */}
-                    <View style={styles.wheelPickerWrapper}>
-                      <WheelPicker
-                        data={Array.from({ length: 60 }, (_, i) => i)}
-                        selectedItem={reminderMinute}
-                        onValueChange={setReminderMinute}
-                        height={150}
-                        itemHeight={50}
-                        label=" 分"
-                      />
-                    </View>
-                  </View>
+                  <TimeButtonGrid
+                    selectedHour={reminderHour}
+                    selectedMinute={reminderMinute}
+                    onHourChange={setReminderHour}
+                    onMinuteChange={setReminderMinute}
+                    colors={{
+                      primary: theme.primary,
+                      buttonPrimaryText: theme.buttonPrimaryText,
+                      level3: theme.level3,
+                      border: theme.border,
+                      textSecondary: theme.textSecondary,
+                    }}
+                  />
                   <View style={styles.selectedTimeDisplay}>
                     <ThemedText variant="body" color={theme.textPrimary}>
                       已选择时间：
