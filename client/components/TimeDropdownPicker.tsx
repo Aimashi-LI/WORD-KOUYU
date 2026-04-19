@@ -17,7 +17,7 @@ interface TimeDropdownPickerProps {
 }
 
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-const MINUTES = [0, 15, 30, 45];
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
 const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, onMinuteChange, colors }: TimeDropdownPickerProps) => {
   const [showHourDropdown, setShowHourDropdown] = useState(false);
@@ -58,12 +58,11 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
 
         <Modal
           visible={showHourDropdown}
-          transparent
           animationType="fade"
           onRequestClose={closeDropdowns}
         >
           <TouchableWithoutFeedback onPress={closeDropdowns}>
-            <View style={styles.modalOverlay}>
+            <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
               <TouchableWithoutFeedback onPress={() => {}}>
                 <View style={[styles.dropdown, { backgroundColor: colors.level3, borderColor: colors.border }]}>
                   <ScrollView
@@ -121,12 +120,11 @@ const TimeDropdownPicker = memo(({ selectedHour, selectedMinute, onHourChange, o
 
         <Modal
           visible={showMinuteDropdown}
-          transparent
           animationType="fade"
           onRequestClose={closeDropdowns}
         >
           <TouchableWithoutFeedback onPress={closeDropdowns}>
-            <View style={styles.modalOverlay}>
+            <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
               <TouchableWithoutFeedback onPress={() => {}}>
                 <View style={[styles.dropdown, { backgroundColor: colors.level3, borderColor: colors.border }]}>
                   <ScrollView
@@ -203,7 +201,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
