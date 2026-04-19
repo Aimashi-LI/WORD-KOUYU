@@ -122,14 +122,17 @@ const WheelPicker: React.FC<WheelPickerProps> = ({
         showsVerticalScrollIndicator={false}
         snapToInterval={itemHeight}
         snapToAlignment="center"
-        decelerationRate={0.968}
+        decelerationRate={0.975}
+        bounces={false}
+        overScrollMode="never"
         onScroll={handleScroll}
         onScrollEndDrag={handleScrollEnd}
         onMomentumScrollEnd={handleScrollEnd}
         scrollEventThrottle={16}
-        bounces={false}
         contentContainerStyle={{
-          paddingVertical: (height - itemHeight) / 2,
+          paddingTop: (height - itemHeight) / 2,
+          paddingBottom: (height - itemHeight) / 2,
+          minHeight: height + (data.length * itemHeight),
         }}
       >
         {data.map((item, index) => {
