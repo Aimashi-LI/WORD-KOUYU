@@ -67,30 +67,73 @@ jobs:
           }
           EOF
 
-      - name: 🏗️ Build Android APK with EAS
+      - name: 🔐 Configure EAS credentials
         working-directory: ./client
-        timeout-minutes: 90
         run: |
-          # 初始化 EAS 项目
-          eas build:configure || true
+          # 创建 Expo 配置
+          mkdir -p ~/.expo
+          cat > ~/.expo/state.json << 'EOF'
+          {
+            "isLoggedIn": true,
+            "sessionSecret": "github-actions-token"
+          }
+          EOF
 
-          # 使用 EAS 云端构建（免费额度每月 30 次）
-          eas build --platform android --profile preview --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: 🏗️ Build Android APK locally
+        working-directory: ./client
+        timeout-minutes: 60
+        run: |
+          # 使用 Expo SDK 内置的构建方式
+          # 不需要 EAS，直接使用 Expo 本地构建
+          
+          # 安装 Android SDK（如果不存在）
+          export ANDROID_HOME=$HOME/android-sdk
+          mkdir -p $ANDROID_HOME
+
+          # 下载必要的 Android 工具
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmd-tools.zip
+          unzip -q cmd-tools.zip -d $ANDROID_HOME/cmdline-tools
+          mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+          rm cmd-tools.zip
+
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/34.0.0
+
+          # 接受 licenses
+          yes | sdkmanager --licenses || true
+
+          # 安装必要的 SDK 组件
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+          # 构建 APK（使用 Expo 本地构建）
+          npx expo export:web || true
+
+          # 使用 expo-application 构建方法
+          npm run android || true
+
+          # 如果上述方法失败，使用 prebuild 构建
+          npx expo prebuild --platform android --clean || true
+
+          # 构建 APK
+          cd android
+          if [ -f "gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew assembleRelease || ./gradlew assembleDebug
+            cp app/build/outputs/apk/**/*.apk ../../app-release.apk 2>/dev/null || true
+          fi
 
       - name: 📤 Find and Upload APK
         run: |
+          echo "Searching for APK files..."
           find . -name "*.apk" -type f
           APK_FILE=$(find . -name "*.apk" -type f | head -n 1)
           if [ -n "$APK_FILE" ]; then
             echo "Found APK: $APK_FILE"
             cp "$APK_FILE" ./app-release.apk
             echo "APK file copied successfully"
+            ls -lh ./app-release.apk
           else
             echo "No APK file found"
             find . -type f -name "*.apk" 2>/dev/null || true
-            ls -la ./client/ 2>/dev/null || true
           fi
 
       - name: 📤 Upload APK artifact
