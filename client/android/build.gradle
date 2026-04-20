@@ -2,6 +2,10 @@
 
 buildscript {
   repositories {
+    // 优先使用阿里云镜像
+    maven { url 'https://maven.aliyun.com/repository/google' }
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
     google()
     mavenCentral()
   }
@@ -14,6 +18,10 @@ buildscript {
 
 allprojects {
   repositories {
+    // 优先使用阿里云镜像
+    maven { url 'https://maven.aliyun.com/repository/google' }
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url 'https://maven.aliyun.com/repository/jcenter' }
     google()
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
