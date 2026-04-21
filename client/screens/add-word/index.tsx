@@ -36,7 +36,7 @@ import {
 } from '@/utils/splitHelper';
 import { fetchPhoneticByWord } from '@/utils';
 import { PhoneticKeyboard } from '@/components/PhoneticKeyboard';
-import { PartOfSpeechPicker } from '@/components/PartOfSpeechPicker';
+import PartOfSpeechPicker from '@/components/PartOfSpeechPicker';
 
   // 词性列表
 const PART_OF_SPEECH_LIST = [
